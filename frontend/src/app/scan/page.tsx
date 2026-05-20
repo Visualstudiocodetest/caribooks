@@ -201,7 +201,7 @@ export default function ScanPage() {
         }
       }
 
-      setError('Livre introuvable dans la base PLOBOOKS pour cet ISBN.')
+      setError('Livre introuvable dans la base Caribooks pour cet ISBN.')
     } catch (e) {
       const err = e as unknown
       setError(err instanceof ApiError ? err.message : 'Recherche impossible')

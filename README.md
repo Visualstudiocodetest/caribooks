@@ -1,4 +1,4 @@
-# PLOBOOKS - Plateforme E-Commerce Solidaire
+# Caribooks - Plateforme E-Commerce Solidaire
 
 ![Next.js](https://img.shields.io/badge/Next.js-15-black?style=flat&logo=next.js)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.100+-009688?style=flat&logo=fastapi)
@@ -6,7 +6,7 @@
 
 ## 📖 Contexte du Projet
 
-**PLOBOOKS** est une plateforme de vente en ligne de livres de seconde main, développée pour **Caritas**. Ce projet a été initié pour résoudre le problème des livres invendus dans les recycleries, dont les bénéfices financent la réinsertion professionnelle.
+**Caribooks** est une plateforme de vente en ligne de livres de seconde main, développée pour **Caritas**. Ce projet a été initié pour résoudre le problème des livres invendus dans les recycleries, dont les bénéfices financent la réinsertion professionnelle.
 
 ### Contraintes spécifiques :
 - **Devise unique :** Toutes les transactions sont exclusivement en Francs Suisses (CHF).
@@ -40,8 +40,8 @@ Le projet suit les principes **SOLID**, **Clean Architecture** et **KISS**, et e
 
 ### 1. Cloner le dépôt
 ```bash
-git clone https://github.com/votre-utilisateur/plobooks.git
-cd plobooks
+git clone https://github.com/votre-utilisateur/caribooks.git
+cd caribooks
 ```
 
 ### 2. Lancer le Backend (FastAPI)

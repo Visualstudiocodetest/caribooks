@@ -66,8 +66,8 @@ export function AddToCartButton(props: {
         : existing && available !== null && existing.quantity >= available
         ? 'Quantité max'
         : loading
-        ? 'Ajout…'
-        : 'Ajouter au panier'}
+        ? 'Achat…'
+        : 'Acheter'}
     </button>
   )
 }

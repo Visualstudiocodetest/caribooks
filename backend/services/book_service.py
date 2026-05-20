@@ -38,10 +38,20 @@ class BookService:
 
     def _to_domain_book(self, db_livre):
         article = db_livre.article
+        etat_label = None
+        try:
+            etat_label = article.etat_usure.libelle if getattr(article, 'etat_usure', None) else None
+        except Exception:
+            etat_label = None
+
+        categorie_labels = [c.libelle for c in article.categories] if getattr(article, 'categories', None) else []
+
         return Book(
             id_article=db_livre.id_article,
             titre=article.titre,
             isbn=db_livre.isbn,
+            id_type_objet=article.id_type_objet,
+            id_etat_usure=article.id_etat_usure,
             auteur=db_livre.auteur,
             editeur=db_livre.editeur,
             date_publication=db_livre.date_publication,
@@ -50,4 +60,8 @@ class BookService:
             image_link=article.image_link,
             prix_chf=float(article.prix_chf),
             actif=article.actif,
+            date_creation=article.date_creation,
+            categorie_ids=[int(c.id_categorie) for c in article.categories],
+            etat_libelle=etat_label,
+            categorie_libelles=categorie_labels,
         )

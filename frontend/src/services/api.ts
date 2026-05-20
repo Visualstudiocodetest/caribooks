@@ -15,7 +15,7 @@ export class ApiError extends Error {
 
 function getAuthToken(): string | null {
   if (typeof window === 'undefined') return null
-  const raw = window.localStorage.getItem('plobooks_token')
+  const raw = window.localStorage.getItem('caribooks_token')
   if (!raw) return null
   try {
     const parsed = JSON.parse(raw) as unknown

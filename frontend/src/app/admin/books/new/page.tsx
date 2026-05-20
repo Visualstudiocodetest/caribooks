@@ -322,7 +322,7 @@ export default function AdminNewBookPage() {
             </select>
 
             <select className="input" value={idEtat} onChange={(e) => setIdEtat(e.target.value)} required>
-              <option value="">Etat d'usure...</option>
+              <option value="">État</option>
               {etatList.map((e) => (
                 <option key={e.id_etat_usure} value={String(e.id_etat_usure)}>
                   {e.libelle}

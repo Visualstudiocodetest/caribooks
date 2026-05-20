@@ -44,6 +44,10 @@ class BookUpdate(BaseModel):
 
 class BookRead(BookBase, ORMBase):
     id_article: int
+    date_creation: datetime
+    categorie_ids: List[int] = Field(default_factory=list)
+    etat_libelle: Optional[str] = None
+    categorie_libelles: List[str] = Field(default_factory=list)
 
 
 class TypeObjetBase(BaseModel):

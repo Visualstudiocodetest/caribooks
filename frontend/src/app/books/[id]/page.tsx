@@ -16,14 +16,16 @@ export default async function BookDetailPage({ params }: { params: Promise<{ id:
       <div className="book-detail-grid">
           <div className="card book-image-wrap large">
             {book.image_link ? (
-              <Image
-                src={book.image_link}
-                alt={book.titre}
-                width={220}
-                height={240}
-                style={{ objectFit: 'contain' }}
-                unoptimized={isExternal}
-              />
+              <div className="book-image-inner">
+                <Image
+                  src={book.image_link}
+                  alt={book.titre}
+                  fill
+                  style={{ objectFit: 'cover' }}
+                  sizes="(max-width: 640px) 100vw, 320px"
+                  unoptimized={isExternal}
+                />
+              </div>
             ) : (
               <div className="muted" style={{ fontWeight: 700 }}>
                 Pas d'image
@@ -38,8 +40,10 @@ export default async function BookDetailPage({ params }: { params: Promise<{ id:
             </div>
 
             <div style={{ display: 'flex', gap: 14, alignItems: 'baseline', flexWrap: 'wrap' }}>
-              <Money amount={book.prix_chf} />
-              <span className="muted">ISBN {book.isbn}</span>
+              <div style={{ display: 'grid', gap: 4 }}>
+                <Money amount={book.prix_chf} />
+                <div className="muted">Frais de port: 9 CHF</div>
+              </div>
             </div>
 
             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
@@ -48,11 +52,17 @@ export default async function BookDetailPage({ params }: { params: Promise<{ id:
               {book.date_publication ? (
                 <span className="muted">Publication: {book.date_publication}</span>
               ) : null}
+              {book.etat_libelle ? <span className="muted">État: {book.etat_libelle}</span> : null}
+              {book.categorie_libelles && book.categorie_libelles.length ? (
+                <span className="muted">Catégorie: {book.categorie_libelles[0]}</span>
+              ) : null}
             </div>
 
-            <div className="muted" style={{ lineHeight: 1.55 }}>
-              {book.description || 'Aucune description.'}
-            </div>
+            {book.description ? (
+              <div className="muted" style={{ lineHeight: 1.55 }}>
+                {book.description}
+              </div>
+            ) : null}
 
             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
               <AddToCartButton

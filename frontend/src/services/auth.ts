@@ -10,15 +10,15 @@ export async function register(payload: UserCreate): Promise<UserRead> {
 }
 
 export function persistToken(token: string) {
-  window.localStorage.setItem('plobooks_token', JSON.stringify(token))
+  window.localStorage.setItem('caribooks_token', JSON.stringify(token))
 }
 
 export function clearToken() {
-  window.localStorage.removeItem('plobooks_token')
+  window.localStorage.removeItem('caribooks_token')
 }
 
 export function readToken(): string | null {
-  const raw = window.localStorage.getItem('plobooks_token')
+  const raw = window.localStorage.getItem('caribooks_token')
   if (!raw) return null
   try {
     const parsed = JSON.parse(raw) as unknown

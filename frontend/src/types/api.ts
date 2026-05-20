@@ -12,6 +12,10 @@ export type BookRead = {
   image_link: string | null
   prix_chf: number
   actif: boolean
+  date_creation: string
+  categorie_ids: number[]
+  etat_libelle?: string | null
+  categorie_libelles?: string[]
 }
 
 export type LoginRequest = {

@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import Image from 'next/image'
 import { useState } from 'react'
 import { useAuth } from '@/components/auth/AuthProvider'
 import { useCart } from '@/components/cart/CartProvider'
@@ -14,8 +15,8 @@ export function Header() {
     <header className="site-header">
       <div className="container header-inner">
         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-          <Link href="/" className="brand">
-            PLOBOOKS
+          <Link href="/" className="brand" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Image src="/logo-caritas.png" alt="Caribooks" width={140} height={36} />
           </Link>
           <nav className="main-nav">
             <Link className="muted" href="/catalog">

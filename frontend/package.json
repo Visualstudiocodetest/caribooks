@@ -2,7 +2,7 @@
   "name": "frontend",
   "version": "1.0.0",
   "private": true,
-  "description": "PLOBOOKS frontend (Next.js)",
+  "description": "Caribooks frontend (Next.js)",
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build",

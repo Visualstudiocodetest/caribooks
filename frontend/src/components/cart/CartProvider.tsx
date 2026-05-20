@@ -25,7 +25,7 @@ type CartContextValue = {
 const CartContext = createContext<CartContextValue | null>(null)
 
 export function CartProvider({ children }: { children: ReactNode }) {
-  const { value: items, setValue: setItems } = useLocalStorageState<CartItem[]>('plobooks_cart', [])
+  const { value: items, setValue: setItems } = useLocalStorageState<CartItem[]>('caribooks_cart', [])
 
   const value = useMemo<CartContextValue>(() => {
     const count = items.reduce((acc, it) => acc + it.quantity, 0)

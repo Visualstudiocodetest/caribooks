@@ -16,7 +16,7 @@ type AuthContextValue = {
 const AuthContext = createContext<AuthContextValue | null>(null)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const { value: token, setValue: setTokenRaw } = useLocalStorageState<string | null>('plobooks_token', null)
+  const { value: token, setValue: setTokenRaw } = useLocalStorageState<string | null>('caribooks_token', null)
   const role = getJwtRole(token)
   const value = useMemo<AuthContextValue>(
     () => ({ token, isLoggedIn: Boolean(token), role, isAdmin: role === 'admin', setToken: setTokenRaw }),

@@ -1,5 +1,5 @@
-from typing import Optional
-from datetime import date
+from typing import Optional, List
+from datetime import date, datetime
 
 class Book:
     def __init__(
@@ -17,6 +17,10 @@ class Book:
         image_link: Optional[str] = None,
         prix_chf: float = 0.0,
         actif: bool = True,
+        date_creation: Optional[datetime] = None,
+        categorie_ids: Optional[List[int]] = None,
+        etat_libelle: Optional[str] = None,
+        categorie_libelles: Optional[List[str]] = None,
     ):
         self.id_article = id_article
         self.id_type_objet = id_type_objet
@@ -31,3 +35,7 @@ class Book:
         self.image_link = image_link
         self.prix_chf = prix_chf
         self.actif = actif
+        self.date_creation = date_creation
+        self.categorie_ids = categorie_ids or []
+        self.etat_libelle = etat_libelle
+        self.categorie_libelles = categorie_libelles or []
