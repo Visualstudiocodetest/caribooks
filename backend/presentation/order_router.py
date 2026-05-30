@@ -7,6 +7,7 @@ from sqlalchemy.sql import func
 from  infrastructure import models
 from  infrastructure.crud_base import CrudBase
 from  presentation.deps import get_current_user, get_db
+from  presentation.deps import require_admin
 from  presentation.schemas import (
     CommandeCreate,
     CommandeRead,
@@ -18,6 +19,12 @@ from  presentation.schemas import (
     PaiementRead,
     PaiementUpdate,
 )
+from services.payrexx_service import create_payrexx_payment, parse_webhook
+from fastapi import Request
+import os
+import hmac
+import hashlib
+from datetime import datetime
 
 router = APIRouter(prefix="/orders", tags=["orders"])
 
@@ -52,22 +59,22 @@ def _finalize_commande(db: Session, id_commande: int):
         remaining = l.quantite
         # first reduce reserved counts where possible
         for s in stocks:
-            if remaining <= 0:
+            if remaining <= 0:  # type: ignore
                 break
-            reserve = s.quantite_reservee or 0
-            take_from_reserve = min(reserve, remaining)
-            if take_from_reserve > 0:
-                s.quantite_reservee = reserve - take_from_reserve
+            reserve = s.quantite_reservee or 0  # type: ignore
+            take_from_reserve = min(reserve, remaining)  # type: ignore
+            if take_from_reserve > 0:  # type: ignore
+                s.quantite_reservee = reserve - take_from_reserve  # type: ignore
                 remaining -= take_from_reserve
         # if still remaining, deduct from available quantities
         for s in stocks:
-            if remaining <= 0:
+            if remaining <= 0:  # type: ignore
                 break
-            avail = s.quantite_disponible or 0
-            take = min(avail, remaining)
-            if take <= 0:
+            avail = s.quantite_disponible or 0  # type: ignore
+            take = min(avail, remaining)  # type: ignore
+            if take <= 0:  # type: ignore
                 continue
-            s.quantite_disponible = avail - take
+            s.quantite_disponible = avail - take  # type: ignore
             remaining -= take
     # mark articles inactive if no stock left
     art_ids = [a.id_article for a in db.query(models.Article).all()]
@@ -78,10 +85,10 @@ def _finalize_commande(db: Session, id_commande: int):
             .with_entities(func.sum(models.Stock.quantite_disponible))
             .scalar()
         )
-        if not total_left:
+        if not total_left:  # type: ignore
             art = db.query(models.Article).filter(models.Article.id_article == aid).first()
             if art:
-                art.actif = False
+                art.actif = False  # type: ignore
 
 
 def _refund_commande(db: Session, id_commande: int):
@@ -95,14 +102,14 @@ def _refund_commande(db: Session, id_commande: int):
             .with_for_update()
             .all()
         )
-        if not stocks:
+        if not stocks:  # type: ignore
             continue
         remaining = l.quantite
         # add back to first stock rows
         for s in stocks:
-            if remaining <= 0:
+            if remaining <= 0:  # type: ignore
                 break
-            s.quantite_disponible = (s.quantite_disponible or 0) + remaining
+            s.quantite_disponible = (s.quantite_disponible or 0) + remaining  # type: ignore
             remaining = 0
     # reactivate articles that have stock
     for aid in {l.id_article for l in lignes}:
@@ -112,10 +119,10 @@ def _refund_commande(db: Session, id_commande: int):
             .with_entities(func.sum(models.Stock.quantite_disponible))
             .scalar()
         )
-        if total_left and total_left > 0:
+        if total_left and total_left > 0:  # type: ignore
             art = db.query(models.Article).filter(models.Article.id_article == aid).first()
             if art:
-                art.actif = True
+                art.actif = True  # type: ignore
 
 
 @router.get("/commandes", response_model=list[CommandeRead])
@@ -206,22 +213,22 @@ def create_ligne(payload: LigneCommandeCreate, db: Session = Depends(get_db), cu
             .all()
         )
 
-        if stocks:
+        if stocks:  # type: ignore
             # compute total available (available = quantite_disponible - quantite_reservee)
-            total_available = sum((s.quantite_disponible or 0) - (s.quantite_reservee or 0) for s in stocks)
-            if payload.quantite > total_available:
+            total_available = sum((s.quantite_disponible or 0) - (s.quantite_reservee or 0) for s in stocks)  # type: ignore
+            if payload.quantite > total_available:  # type: ignore
                 raise HTTPException(status_code=400, detail="Not enough stock")
 
             # reserve across stock sources
             remaining = payload.quantite
             for s in stocks:
-                if remaining <= 0:
+                if remaining <= 0:  # type: ignore
                     break
-                avail = (s.quantite_disponible or 0) - (s.quantite_reservee or 0)
-                take = min(avail, remaining)
-                if take <= 0:
+                avail = (s.quantite_disponible or 0) - (s.quantite_reservee or 0)  # type: ignore
+                take = min(avail, remaining)  # type: ignore
+                if take <= 0:  # type: ignore
                     continue
-                s.quantite_reservee = (s.quantite_reservee or 0) + take
+                s.quantite_reservee = (s.quantite_reservee or 0) + take  # type: ignore
                 remaining -= take
 
         # create the ligne and commit once (for articles without stock rows, we allow creation)
@@ -229,12 +236,12 @@ def create_ligne(payload: LigneCommandeCreate, db: Session = Depends(get_db), cu
         db.add(obj)
 
         # If article now out of stock, mark inactive
-        if stocks:
-            total_left = sum((s.quantite_disponible or 0) - (s.quantite_reservee or 0) for s in stocks)
-            if total_left <= 0:
+        if stocks:  # type: ignore
+            total_left = sum((s.quantite_disponible or 0) - (s.quantite_reservee or 0) for s in stocks)  # type: ignore
+            if total_left <= 0:  # type: ignore
                 art = db.query(models.Article).filter(models.Article.id_article == payload.id_article).first()
                 if art:
-                    art.actif = False
+                    art.actif = False  # type: ignore
 
         db.commit()
         db.refresh(obj)
@@ -320,13 +327,90 @@ def create_paiement(payload: PaiementCreate, db: Session = Depends(get_db), curr
     created = paiement_crud.create(db, obj)
     # finalize immediately if payment is captured/paid
     try:
-        if created.statut and created.statut.upper() in ("CAPTURED", "PAID", "COMPLETED"):
-            _finalize_commande(db, created.id_commande)
+        if created.statut and str(created.statut).upper() in ("CAPTURED", "PAID", "COMPLETED"):  # type: ignore
+            _finalize_commande(db, int(created.id_commande))  # type: ignore
             db.commit()
     except Exception:
         # don't fail payment creation on finalization errors
         db.rollback()
     return created
+
+
+@router.post("/paiements/payrexx", status_code=status.HTTP_201_CREATED)
+def create_paiement_payrexx(payload: PaiementCreate, db: Session = Depends(get_db), current_user=Depends(get_current_user)):
+    # Create local paiement record and request a Payrexx payment session
+    if _get_commande_owned(db, payload.id_commande, int(current_user.id_utilisateur)) is None:
+        raise HTTPException(status_code=404, detail="Commande not found")
+
+    # create local record with pending status
+    obj = models.Paiement(**payload.model_dump())
+    obj.fournisseur_paiement = payload.fournisseur_paiement or "PAYREXX"
+    obj.statut = payload.statut or "PENDING"
+    created = paiement_crud.create(db, obj)
+
+    # call Payrexx service
+    return_url = payload.model_dump().get("return_url") or ""
+    cancel_url = payload.model_dump().get("cancel_url") or ""
+    description = f"Commande {int(created.id_commande)}"  # type: ignore
+    pr_resp = create_payrexx_payment(float(created.montant_chf), str(created.id_paiement), return_url, cancel_url, description)  # type: ignore
+
+    # update reference_externe with provider id if available
+    ref = pr_resp.get("id")
+    if ref:
+        created.reference_externe = str(ref)  # type: ignore
+    if pr_resp.get("status"):
+        created.statut = pr_resp.get("status")  # type: ignore
+    db.commit()
+    db.refresh(created)
+
+    return {"paiement": created, "redirect_url": pr_resp.get("redirect_url"), "raw": pr_resp.get("raw")}
+
+
+@router.post("/paiements/webhook/payrexx")
+async def payrexx_webhook(request: Request, db: Session = Depends(get_db)):
+    # Mandatory signature verification for production
+    secret = os.getenv("PAYREXX_WEBHOOK_SECRET")
+    raw_body = await request.body()
+    # Require signature verification in production (when secret is set)
+    if not secret:
+        raise HTTPException(status_code=403, detail="PAYREXX_WEBHOOK_SECRET not configured; webhook verification disabled")
+    # try common header names
+    sig_header = request.headers.get("X-Payrexx-Signature") or request.headers.get("X-Signature") or request.headers.get("Signature")
+    if not sig_header:
+        raise HTTPException(status_code=403, detail="Missing webhook signature")
+    computed = hmac.new(secret.encode("utf-8"), raw_body, hashlib.sha256).hexdigest()
+    if not hmac.compare_digest(computed, sig_header):
+        raise HTTPException(status_code=403, detail="Invalid webhook signature")
+
+    # parse JSON payload after signature check
+    payload = await request.json()
+    parsed = parse_webhook(payload)
+    # try match by reference (metadata) or id
+    ref = parsed.get("reference")
+    pay_id = parsed.get("id")
+    obj = None
+    if ref:
+        obj = db.query(models.Paiement).filter(models.Paiement.reference_externe == str(ref)).first()
+    if obj is None and pay_id:
+        obj = db.query(models.Paiement).filter(models.Paiement.reference_externe == str(pay_id)).first()
+    if obj is None:
+        # no matching payment; ignore
+        return {"ok": False, "reason": "not_found"}
+
+    new_status = parsed.get("status") or "UNKNOWN"
+    obj.statut = new_status  # type: ignore
+    obj.date_paiement = datetime.utcnow()  # type: ignore
+    db.commit()
+    db.refresh(obj)
+
+    try:
+        if new_status and str(new_status).upper() in ("CAPTURED", "PAID", "COMPLETED"):
+            _finalize_commande(db, int(obj.id_commande))  # type: ignore
+            db.commit()
+    except Exception:
+        db.rollback()
+
+    return {"ok": True}
 
 
 @router.put("/paiements/{id_paiement}", response_model=PaiementRead)
@@ -381,4 +465,50 @@ def delete_paiement(id_paiement: int, db: Session = Depends(get_db), current_use
     db.delete(obj)
     db.commit()
     return None
+
+
+@router.get("/admin/commandes", response_model=list[CommandeRead])
+def admin_list_commandes(db: Session = Depends(get_db), _admin=Depends(require_admin)):
+    return db.query(models.Commande).all()
+
+
+@router.put("/admin/commandes/{id_commande}/status", response_model=CommandeRead)
+def admin_set_status(id_commande: int, payload: CommandeUpdate, db: Session = Depends(get_db), _admin=Depends(require_admin)):
+    obj = db.query(models.Commande).filter(models.Commande.id_commande == id_commande).first()
+    if obj is None:
+        raise HTTPException(status_code=404, detail="Commande not found")
+    data = payload.model_dump(exclude_unset=True)
+    for k, v in data.items():
+        if hasattr(obj, k):
+            setattr(obj, k, v)
+    db.commit()
+    db.refresh(obj)
+    return obj
+
+
+@router.post("/admin/commandes/{id_commande}/advance", response_model=CommandeRead)
+def admin_advance(id_commande: int, db: Session = Depends(get_db), _admin=Depends(require_admin)):
+    obj = db.query(models.Commande).filter(models.Commande.id_commande == id_commande).first()
+    if obj is None:
+        raise HTTPException(status_code=404, detail="Commande not found")
+    # Simple state machine for order progression
+    cur = (obj.statut or "").upper()
+    sm = (obj.shipping_method or "POST").upper()
+    if cur in ("CREATED", "PENDING"):
+        obj.statut = "PAID"
+    elif cur == "PAID":
+        if sm == "CLICK_COLLECT":
+            obj.statut = "AT_RECEPTION"
+        else:
+            obj.statut = "SENT"
+    elif cur == "AT_RECEPTION":
+        obj.statut = "FINISHED"
+    elif cur == "SENT":
+        obj.statut = "FINISHED"
+    else:
+        # leave unchanged
+        pass
+    db.commit()
+    db.refresh(obj)
+    return obj
 

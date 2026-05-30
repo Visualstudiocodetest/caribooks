@@ -393,7 +393,7 @@ export default function AdminNewBookPage() {
                 </button>
               </div>
               <div style={{ marginTop: 8 }}>
-                <video ref={(el) => (videoRef.current = el)} style={{ width: '100%', borderRadius: 8 }} />
+                <video ref={videoRef} style={{ width: '100%', borderRadius: 8 }} />
               </div>
             </div>
           </div>

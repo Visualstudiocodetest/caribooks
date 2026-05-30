@@ -36,6 +36,17 @@ export function createPaiement(payload: PaiementCreate): Promise<PaiementRead> {
   })
 }
 
+export async function createPaiementPayrexx(payload: PaiementCreate): Promise<{ paiement: PaiementRead; redirect_url?: string | null } > {
+  return apiFetch<any>('/orders/paiements/payrexx', {
+    method: 'POST',
+    auth: true,
+    body: JSON.stringify(payload),
+  })
+}
+export function getMyCommandes(): Promise<CommandeRead[]> {
+  return apiFetch<CommandeRead[]>('/orders/commandes', { auth: true })
+}
+
 export function updatePaiement(id_paiement: number, payload: PaiementUpdate): Promise<PaiementRead> {
   return apiFetch<PaiementRead>(`/orders/paiements/${id_paiement}`, {
     method: 'PUT',

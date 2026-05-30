@@ -1,0 +1,3226 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.12.1, pytest-8.3.5, pluggy-1.6.0 -- /Library/Frameworks/Python.framework/Versions/3.12/bin/python3.12
+cachedir: .pytest_cache
+rootdir: /Users/alexandrerey/Documents/plobooks/backend
+plugins: anyio-4.3.0, time-machine-2.14.0, mock-3.14.1
+collecting ... collected 13 items
+
+test/fonctionnal/test_book_flow.py::test_book_crud_flow FAILED           [  7%]
+test/integration/test_article_api.py::test_article_crud FAILED           [ 15%]
+test/integration/test_book_api.py::test_create_and_get_book FAILED       [ 23%]
+test/integration/test_catalog_api.py::test_catalog_crud FAILED           [ 30%]
+test/integration/test_order_api.py::test_orders_lignes_paiements_scoped_to_user FAILED [ 38%]
+test/integration/test_scan_api.py::test_scan_isbn_crud FAILED            [ 46%]
+test/integration/test_stock_api.py::test_stock_and_sources_crud FAILED   [ 53%]
+test/integration/test_user_admin_api.py::test_users_admin_only FAILED    [ 61%]
+test/unit/test_crud_book.py::TestCrudBook::test_create_book PASSED       [ 69%]
+test/unit/test_crud_book.py::TestCrudBook::test_delete_book_not_found PASSED [ 76%]
+test/unit/test_crud_book.py::TestCrudBook::test_get_book PASSED          [ 84%]
+test/unit/test_crud_book.py::TestCrudBook::test_get_books PASSED         [ 92%]
+test/unit/test_crud_book.py::TestCrudBook::test_update_book_not_found PASSED [100%]
+
+=================================== FAILURES ===================================
+_____________________________ test_book_crud_flow ______________________________
+
+self = <mysql.connector.network.MySQLTCPSocket object at 0x109fb52b0>
+
+    def open_connection(self) -> None:
+        """Open the TCP/IP connection to the MySQL server."""
+        # pylint: disable=no-member
+        # Get address information
+        addrinfo: Tuple[
+            socket.AddressFamily,
+            socket.SocketKind,
+            int,
+            str,
+            Union[tuple[str, int], tuple[str, int, int, int], tuple[int, bytes]],
+        ] = (None, None, None, None, None)
+        try:
+            addrinfos = socket.getaddrinfo(
+                self.server_host,
+                self.server_port,
+                0,
+                socket.SOCK_STREAM,
+                socket.SOL_TCP,
+            )
+            # If multiple results we favor IPv4, unless IPv6 was forced.
+            for info in addrinfos:
+                if self.force_ipv6 and info[0] == socket.AF_INET6:
+                    addrinfo = info
+                    break
+                if info[0] == socket.AF_INET:
+                    addrinfo = info
+                    break
+            if self.force_ipv6 and addrinfo[0] is None:
+                raise InterfaceError(f"No IPv6 address found for {self.server_host}")
+            if addrinfo[0] is None:
+                addrinfo = addrinfos[0]
+        except IOError as err:
+            raise InterfaceError(
+                errno=2003,
+                values=(self.server_host, self.server_port, _strioerror(err)),
+            ) from err
+    
+        (self._family, socktype, proto, _, sockaddr) = addrinfo
+    
+        # Instantiate the socket and connect
+        try:
+            self.sock = socket.socket(self._family, socktype, proto)
+            self.sock.settimeout(self._connection_timeout)
+>           self.sock.connect(sockaddr)
+E           PermissionError: [Errno 1] Operation not permitted
+
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/mysql/connector/network.py:795: PermissionError
+
+The above exception was the direct cause of the following exception:
+
+self = <sqlalchemy.engine.base.Connection object at 0x109d1a6f0>
+engine = Engine(mysql+mysqlconnector://service_plobooks:***@localhost:3306/plobooks)
+connection = None, _has_events = None, _allow_revalidate = True
+_allow_autobegin = True
+
+    def __init__(
+        self,
+        engine: Engine,
+        connection: Optional[PoolProxiedConnection] = None,
+        _has_events: Optional[bool] = None,
+        _allow_revalidate: bool = True,
+        _allow_autobegin: bool = True,
+    ):
+        """Construct a new Connection."""
+        self.engine = engine
+        self.dialect = dialect = engine.dialect
+    
+        if connection is None:
+            try:
+>               self._dbapi_connection = engine.raw_connection()
+
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/engine/base.py:143: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/engine/base.py:3317: in raw_connection
+    return self.pool.connect()
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/pool/base.py:448: in connect
+    return _ConnectionFairy._checkout(self)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/pool/base.py:1272: in _checkout
+    fairy = _ConnectionRecord.checkout(pool)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/pool/base.py:712: in checkout
+    rec = pool._do_get()
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/pool/impl.py:177: in _do_get
+    with util.safe_reraise():
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/util/langhelpers.py:121: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/pool/impl.py:175: in _do_get
+    return self._create_connection()
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/pool/base.py:389: in _create_connection
+    return _ConnectionRecord(self)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/pool/base.py:674: in __init__
+    self.__connect()
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/pool/base.py:900: in __connect
+    with util.safe_reraise():
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/util/langhelpers.py:121: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/pool/base.py:896: in __connect
+    self.dbapi_connection = connection = pool._invoke_creator(self)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/engine/create.py:667: in connect
+    return dialect.connect(*cargs_tup, **cparams)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/engine/default.py:630: in connect
+    return self.loaded_dbapi.connect(*cargs, **cparams)  # type: ignore[no-any-return]  # NOQA: E501
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/mysql/connector/pooling.py:323: in connect
+    return MySQLConnection(*args, **kwargs)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/mysql/connector/connection.py:185: in __init__
+    self.connect(**kwargs)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/mysql/connector/abstracts.py:1604: in connect
+    self._open_connection()
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/mysql/connector/connection.py:411: in _open_connection
+    raise err
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/mysql/connector/connection.py:382: in _open_connection
+    self._socket.open_connection()
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <mysql.connector.network.MySQLTCPSocket object at 0x109fb52b0>
+
+    def open_connection(self) -> None:
+        """Open the TCP/IP connection to the MySQL server."""
+        # pylint: disable=no-member
+        # Get address information
+        addrinfo: Tuple[
+            socket.AddressFamily,
+            socket.SocketKind,
+            int,
+            str,
+            Union[tuple[str, int], tuple[str, int, int, int], tuple[int, bytes]],
+        ] = (None, None, None, None, None)
+        try:
+            addrinfos = socket.getaddrinfo(
+                self.server_host,
+                self.server_port,
+                0,
+                socket.SOCK_STREAM,
+                socket.SOL_TCP,
+            )
+            # If multiple results we favor IPv4, unless IPv6 was forced.
+            for info in addrinfos:
+                if self.force_ipv6 and info[0] == socket.AF_INET6:
+                    addrinfo = info
+                    break
+                if info[0] == socket.AF_INET:
+                    addrinfo = info
+                    break
+            if self.force_ipv6 and addrinfo[0] is None:
+                raise InterfaceError(f"No IPv6 address found for {self.server_host}")
+            if addrinfo[0] is None:
+                addrinfo = addrinfos[0]
+        except IOError as err:
+            raise InterfaceError(
+                errno=2003,
+                values=(self.server_host, self.server_port, _strioerror(err)),
+            ) from err
+    
+        (self._family, socktype, proto, _, sockaddr) = addrinfo
+    
+        # Instantiate the socket and connect
+        try:
+            self.sock = socket.socket(self._family, socktype, proto)
+            self.sock.settimeout(self._connection_timeout)
+            self.sock.connect(sockaddr)
+        except (socket.timeout, TimeoutError) as err:
+            raise ConnectionTimeoutError(
+                errno=2003,
+                values=(
+                    self.server_host,
+                    self.server_port,
+                    _strioerror(err),
+                ),
+            ) from err
+        except IOError as err:
+>           raise InterfaceError(
+                errno=2003,
+                values=(self.server_host, self.server_port, _strioerror(err)),
+            ) from err
+E           mysql.connector.errors.InterfaceError: 2003: Can't connect to MySQL server on 'localhost:3306' (Errno 1: Operation not permitted)
+
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/mysql/connector/network.py:806: InterfaceError
+
+The above exception was the direct cause of the following exception:
+
+    def test_book_crud_flow():
+        # Register + login (writes require auth)
+        import uuid
+        uniq_user = uuid.uuid4().hex[:10]
+        import secrets
+        test_password = secrets.token_urlsafe(12)
+        user = {
+            "nom": "Flow",
+            "prenom": "User",
+            "email": f"flow_{uniq_user}@example.com",
+            "mot_de_passe": test_password,
+            "role": "admin",
+        }
+>       r = client.post("/auth/register", json=user)
+
+test/fonctionnal/test_book_flow.py:28: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/starlette/testclient.py:538: in post
+    return super().post(
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/httpx/_client.py:1145: in post
+    return self.request(
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/starlette/testclient.py:437: in request
+    return super().request(
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/httpx/_client.py:827: in request
+    return self.send(request, auth=auth, follow_redirects=follow_redirects)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/httpx/_client.py:914: in send
+    response = self._send_handling_auth(
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/httpx/_client.py:942: in _send_handling_auth
+    response = self._send_handling_redirects(
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/httpx/_client.py:979: in _send_handling_redirects
+    response = self._send_single_request(request)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/httpx/_client.py:1015: in _send_single_request
+    response = transport.handle_request(request)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/starlette/testclient.py:340: in handle_request
+    raise exc
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/starlette/testclient.py:337: in handle_request
+    portal.call(self.app, scope, receive, send)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/anyio/from_thread.py:288: in call
+    return cast(T_Retval, self.start_task_soon(func, *args).result())
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/concurrent/futures/_base.py:456: in result
+    return self.__get_result()
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/concurrent/futures/_base.py:401: in __get_result
+    raise self._exception
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/anyio/from_thread.py:217: in _call_func
+    retval = await retval_or_awaitable
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/fastapi/applications.py:1159: in __call__
+    await super().__call__(scope, receive, send)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/starlette/applications.py:112: in __call__
+    await self.middleware_stack(scope, receive, send)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/starlette/middleware/errors.py:187: in __call__
+    raise exc
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/starlette/middleware/errors.py:165: in __call__
+    await self.app(scope, receive, _send)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/starlette/middleware/cors.py:85: in __call__
+    await self.app(scope, receive, send)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/starlette/middleware/exceptions.py:62: in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/starlette/_exception_handler.py:53: in wrapped_app
+    raise exc
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/starlette/_exception_handler.py:42: in wrapped_app
+    await app(scope, receive, sender)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/fastapi/middleware/asyncexitstack.py:18: in __call__
+    await self.app(scope, receive, send)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/starlette/routing.py:714: in __call__
+    await self.middleware_stack(scope, receive, send)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/starlette/routing.py:734: in app
+    await route.handle(scope, receive, send)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/starlette/routing.py:288: in handle
+    await self.app(scope, receive, send)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/fastapi/routing.py:134: in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/starlette/_exception_handler.py:53: in wrapped_app
+    raise exc
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/starlette/_exception_handler.py:42: in wrapped_app
+    await app(scope, receive, sender)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/fastapi/routing.py:120: in app
+    response = await f(request)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/fastapi/routing.py:674: in app
+    raw_response = await run_endpoint_function(
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/fastapi/routing.py:330: in run_endpoint_function
+    return await run_in_threadpool(dependant.call, **values)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/starlette/concurrency.py:37: in run_in_threadpool
+    return await anyio.to_thread.run_sync(func)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/anyio/to_thread.py:56: in run_sync
+    return await get_async_backend().run_sync_in_worker_thread(
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/anyio/_backends/_asyncio.py:2144: in run_sync_in_worker_thread
+    return await future
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/anyio/_backends/_asyncio.py:851: in run
+    result = context.run(func, *args)
+presentation/auth_router.py:20: in register
+    existing = crud_user.get_user_by_email(db, user_in.email)
+infrastructure/crud_user.py:52: in get_user_by_email
+    return db.query(models.Utilisateur).filter(models.Utilisateur.email == email).first()
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/orm/query.py:2766: in first
+    return self.limit(1)._iter().first()  # type: ignore
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/orm/query.py:2864: in _iter
+    result: Union[ScalarResult[_T], Result[_T]] = self.session.execute(
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/orm/session.py:2351: in execute
+    return self._execute_internal(
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/orm/session.py:2239: in _execute_internal
+    conn = self._connection_for_bind(bind)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/orm/session.py:2108: in _connection_for_bind
+    return trans._connection_for_bind(engine, execution_options)
+<string>:2: in _connection_for_bind
+    ???
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/orm/state_changes.py:137: in _go
+    ret_value = fn(self, *arg, **kw)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/orm/session.py:1187: in _connection_for_bind
+    conn = bind.connect()
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/engine/base.py:3293: in connect
+    return self._connection_cls(self)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/engine/base.py:145: in __init__
+    Connection._handle_dbapi_exception_noconnection(
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/engine/base.py:2448: in _handle_dbapi_exception_noconnection
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/engine/base.py:143: in __init__
+    self._dbapi_connection = engine.raw_connection()
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/engine/base.py:3317: in raw_connection
+    return self.pool.connect()
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/pool/base.py:448: in connect
+    return _ConnectionFairy._checkout(self)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/pool/base.py:1272: in _checkout
+    fairy = _ConnectionRecord.checkout(pool)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/pool/base.py:712: in checkout
+    rec = pool._do_get()
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/pool/impl.py:177: in _do_get
+    with util.safe_reraise():
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/util/langhelpers.py:121: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/pool/impl.py:175: in _do_get
+    return self._create_connection()
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/pool/base.py:389: in _create_connection
+    return _ConnectionRecord(self)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/pool/base.py:674: in __init__
+    self.__connect()
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/pool/base.py:900: in __connect
+    with util.safe_reraise():
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/util/langhelpers.py:121: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/pool/base.py:896: in __connect
+    self.dbapi_connection = connection = pool._invoke_creator(self)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/engine/create.py:667: in connect
+    return dialect.connect(*cargs_tup, **cparams)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/engine/default.py:630: in connect
+    return self.loaded_dbapi.connect(*cargs, **cparams)  # type: ignore[no-any-return]  # NOQA: E501
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/mysql/connector/pooling.py:323: in connect
+    return MySQLConnection(*args, **kwargs)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/mysql/connector/connection.py:185: in __init__
+    self.connect(**kwargs)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/mysql/connector/abstracts.py:1604: in connect
+    self._open_connection()
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/mysql/connector/connection.py:411: in _open_connection
+    raise err
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/mysql/connector/connection.py:382: in _open_connection
+    self._socket.open_connection()
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <mysql.connector.network.MySQLTCPSocket object at 0x109fb52b0>
+
+    def open_connection(self) -> None:
+        """Open the TCP/IP connection to the MySQL server."""
+        # pylint: disable=no-member
+        # Get address information
+        addrinfo: Tuple[
+            socket.AddressFamily,
+            socket.SocketKind,
+            int,
+            str,
+            Union[tuple[str, int], tuple[str, int, int, int], tuple[int, bytes]],
+        ] = (None, None, None, None, None)
+        try:
+            addrinfos = socket.getaddrinfo(
+                self.server_host,
+                self.server_port,
+                0,
+                socket.SOCK_STREAM,
+                socket.SOL_TCP,
+            )
+            # If multiple results we favor IPv4, unless IPv6 was forced.
+            for info in addrinfos:
+                if self.force_ipv6 and info[0] == socket.AF_INET6:
+                    addrinfo = info
+                    break
+                if info[0] == socket.AF_INET:
+                    addrinfo = info
+                    break
+            if self.force_ipv6 and addrinfo[0] is None:
+                raise InterfaceError(f"No IPv6 address found for {self.server_host}")
+            if addrinfo[0] is None:
+                addrinfo = addrinfos[0]
+        except IOError as err:
+            raise InterfaceError(
+                errno=2003,
+                values=(self.server_host, self.server_port, _strioerror(err)),
+            ) from err
+    
+        (self._family, socktype, proto, _, sockaddr) = addrinfo
+    
+        # Instantiate the socket and connect
+        try:
+            self.sock = socket.socket(self._family, socktype, proto)
+            self.sock.settimeout(self._connection_timeout)
+            self.sock.connect(sockaddr)
+        except (socket.timeout, TimeoutError) as err:
+            raise ConnectionTimeoutError(
+                errno=2003,
+                values=(
+                    self.server_host,
+                    self.server_port,
+                    _strioerror(err),
+                ),
+            ) from err
+        except IOError as err:
+>           raise InterfaceError(
+                errno=2003,
+                values=(self.server_host, self.server_port, _strioerror(err)),
+            ) from err
+E           sqlalchemy.exc.InterfaceError: (mysql.connector.errors.InterfaceError) 2003: Can't connect to MySQL server on 'localhost:3306' (Errno 1: Operation not permitted)
+E           (Background on this error at: https://sqlalche.me/e/20/rvf5)
+
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/mysql/connector/network.py:806: InterfaceError
+______________________________ test_article_crud _______________________________
+
+self = <mysql.connector.network.MySQLTCPSocket object at 0x10a03be30>
+
+    def open_connection(self) -> None:
+        """Open the TCP/IP connection to the MySQL server."""
+        # pylint: disable=no-member
+        # Get address information
+        addrinfo: Tuple[
+            socket.AddressFamily,
+            socket.SocketKind,
+            int,
+            str,
+            Union[tuple[str, int], tuple[str, int, int, int], tuple[int, bytes]],
+        ] = (None, None, None, None, None)
+        try:
+            addrinfos = socket.getaddrinfo(
+                self.server_host,
+                self.server_port,
+                0,
+                socket.SOCK_STREAM,
+                socket.SOL_TCP,
+            )
+            # If multiple results we favor IPv4, unless IPv6 was forced.
+            for info in addrinfos:
+                if self.force_ipv6 and info[0] == socket.AF_INET6:
+                    addrinfo = info
+                    break
+                if info[0] == socket.AF_INET:
+                    addrinfo = info
+                    break
+            if self.force_ipv6 and addrinfo[0] is None:
+                raise InterfaceError(f"No IPv6 address found for {self.server_host}")
+            if addrinfo[0] is None:
+                addrinfo = addrinfos[0]
+        except IOError as err:
+            raise InterfaceError(
+                errno=2003,
+                values=(self.server_host, self.server_port, _strioerror(err)),
+            ) from err
+    
+        (self._family, socktype, proto, _, sockaddr) = addrinfo
+    
+        # Instantiate the socket and connect
+        try:
+            self.sock = socket.socket(self._family, socktype, proto)
+            self.sock.settimeout(self._connection_timeout)
+>           self.sock.connect(sockaddr)
+E           PermissionError: [Errno 1] Operation not permitted
+
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/mysql/connector/network.py:795: PermissionError
+
+The above exception was the direct cause of the following exception:
+
+self = <sqlalchemy.engine.base.Connection object at 0x10a03a330>
+engine = Engine(mysql+mysqlconnector://service_plobooks:***@localhost:3306/plobooks)
+connection = None, _has_events = None, _allow_revalidate = True
+_allow_autobegin = True
+
+    def __init__(
+        self,
+        engine: Engine,
+        connection: Optional[PoolProxiedConnection] = None,
+        _has_events: Optional[bool] = None,
+        _allow_revalidate: bool = True,
+        _allow_autobegin: bool = True,
+    ):
+        """Construct a new Connection."""
+        self.engine = engine
+        self.dialect = dialect = engine.dialect
+    
+        if connection is None:
+            try:
+>               self._dbapi_connection = engine.raw_connection()
+
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/engine/base.py:143: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/engine/base.py:3317: in raw_connection
+    return self.pool.connect()
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/pool/base.py:448: in connect
+    return _ConnectionFairy._checkout(self)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/pool/base.py:1272: in _checkout
+    fairy = _ConnectionRecord.checkout(pool)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/pool/base.py:712: in checkout
+    rec = pool._do_get()
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/pool/impl.py:177: in _do_get
+    with util.safe_reraise():
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/util/langhelpers.py:121: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/pool/impl.py:175: in _do_get
+    return self._create_connection()
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/pool/base.py:389: in _create_connection
+    return _ConnectionRecord(self)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/pool/base.py:674: in __init__
+    self.__connect()
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/pool/base.py:900: in __connect
+    with util.safe_reraise():
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/util/langhelpers.py:121: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/pool/base.py:896: in __connect
+    self.dbapi_connection = connection = pool._invoke_creator(self)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/engine/create.py:667: in connect
+    return dialect.connect(*cargs_tup, **cparams)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/engine/default.py:630: in connect
+    return self.loaded_dbapi.connect(*cargs, **cparams)  # type: ignore[no-any-return]  # NOQA: E501
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/mysql/connector/pooling.py:323: in connect
+    return MySQLConnection(*args, **kwargs)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/mysql/connector/connection.py:185: in __init__
+    self.connect(**kwargs)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/mysql/connector/abstracts.py:1604: in connect
+    self._open_connection()
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/mysql/connector/connection.py:411: in _open_connection
+    raise err
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/mysql/connector/connection.py:382: in _open_connection
+    self._socket.open_connection()
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <mysql.connector.network.MySQLTCPSocket object at 0x10a03be30>
+
+    def open_connection(self) -> None:
+        """Open the TCP/IP connection to the MySQL server."""
+        # pylint: disable=no-member
+        # Get address information
+        addrinfo: Tuple[
+            socket.AddressFamily,
+            socket.SocketKind,
+            int,
+            str,
+            Union[tuple[str, int], tuple[str, int, int, int], tuple[int, bytes]],
+        ] = (None, None, None, None, None)
+        try:
+            addrinfos = socket.getaddrinfo(
+                self.server_host,
+                self.server_port,
+                0,
+                socket.SOCK_STREAM,
+                socket.SOL_TCP,
+            )
+            # If multiple results we favor IPv4, unless IPv6 was forced.
+            for info in addrinfos:
+                if self.force_ipv6 and info[0] == socket.AF_INET6:
+                    addrinfo = info
+                    break
+                if info[0] == socket.AF_INET:
+                    addrinfo = info
+                    break
+            if self.force_ipv6 and addrinfo[0] is None:
+                raise InterfaceError(f"No IPv6 address found for {self.server_host}")
+            if addrinfo[0] is None:
+                addrinfo = addrinfos[0]
+        except IOError as err:
+            raise InterfaceError(
+                errno=2003,
+                values=(self.server_host, self.server_port, _strioerror(err)),
+            ) from err
+    
+        (self._family, socktype, proto, _, sockaddr) = addrinfo
+    
+        # Instantiate the socket and connect
+        try:
+            self.sock = socket.socket(self._family, socktype, proto)
+            self.sock.settimeout(self._connection_timeout)
+            self.sock.connect(sockaddr)
+        except (socket.timeout, TimeoutError) as err:
+            raise ConnectionTimeoutError(
+                errno=2003,
+                values=(
+                    self.server_host,
+                    self.server_port,
+                    _strioerror(err),
+                ),
+            ) from err
+        except IOError as err:
+>           raise InterfaceError(
+                errno=2003,
+                values=(self.server_host, self.server_port, _strioerror(err)),
+            ) from err
+E           mysql.connector.errors.InterfaceError: 2003: Can't connect to MySQL server on 'localhost:3306' (Errno 1: Operation not permitted)
+
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/mysql/connector/network.py:806: InterfaceError
+
+The above exception was the direct cause of the following exception:
+
+client = <starlette.testclient.TestClient object at 0x109fb73b0>
+register_and_login = <function register_and_login.<locals>._fn at 0x10a78b600>
+uniq = 'f61f4518b0'
+
+    def test_article_crud(client: TestClient, register_and_login, uniq: str):
+>       headers = register_and_login(f"article_{uniq}@example.com")
+
+test/integration/test_article_api.py:7: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+test/conftest.py:32: in _fn
+    r = client.post("/auth/register", json=user)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/starlette/testclient.py:538: in post
+    return super().post(
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/httpx/_client.py:1145: in post
+    return self.request(
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/starlette/testclient.py:437: in request
+    return super().request(
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/httpx/_client.py:827: in request
+    return self.send(request, auth=auth, follow_redirects=follow_redirects)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/httpx/_client.py:914: in send
+    response = self._send_handling_auth(
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/httpx/_client.py:942: in _send_handling_auth
+    response = self._send_handling_redirects(
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/httpx/_client.py:979: in _send_handling_redirects
+    response = self._send_single_request(request)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/httpx/_client.py:1015: in _send_single_request
+    response = transport.handle_request(request)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/starlette/testclient.py:340: in handle_request
+    raise exc
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/starlette/testclient.py:337: in handle_request
+    portal.call(self.app, scope, receive, send)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/anyio/from_thread.py:288: in call
+    return cast(T_Retval, self.start_task_soon(func, *args).result())
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/concurrent/futures/_base.py:456: in result
+    return self.__get_result()
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/concurrent/futures/_base.py:401: in __get_result
+    raise self._exception
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/anyio/from_thread.py:217: in _call_func
+    retval = await retval_or_awaitable
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/fastapi/applications.py:1159: in __call__
+    await super().__call__(scope, receive, send)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/starlette/applications.py:112: in __call__
+    await self.middleware_stack(scope, receive, send)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/starlette/middleware/errors.py:187: in __call__
+    raise exc
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/starlette/middleware/errors.py:165: in __call__
+    await self.app(scope, receive, _send)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/starlette/middleware/cors.py:85: in __call__
+    await self.app(scope, receive, send)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/starlette/middleware/exceptions.py:62: in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/starlette/_exception_handler.py:53: in wrapped_app
+    raise exc
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/starlette/_exception_handler.py:42: in wrapped_app
+    await app(scope, receive, sender)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/fastapi/middleware/asyncexitstack.py:18: in __call__
+    await self.app(scope, receive, send)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/starlette/routing.py:714: in __call__
+    await self.middleware_stack(scope, receive, send)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/starlette/routing.py:734: in app
+    await route.handle(scope, receive, send)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/starlette/routing.py:288: in handle
+    await self.app(scope, receive, send)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/fastapi/routing.py:134: in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/starlette/_exception_handler.py:53: in wrapped_app
+    raise exc
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/starlette/_exception_handler.py:42: in wrapped_app
+    await app(scope, receive, sender)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/fastapi/routing.py:120: in app
+    response = await f(request)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/fastapi/routing.py:674: in app
+    raw_response = await run_endpoint_function(
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/fastapi/routing.py:330: in run_endpoint_function
+    return await run_in_threadpool(dependant.call, **values)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/starlette/concurrency.py:37: in run_in_threadpool
+    return await anyio.to_thread.run_sync(func)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/anyio/to_thread.py:56: in run_sync
+    return await get_async_backend().run_sync_in_worker_thread(
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/anyio/_backends/_asyncio.py:2144: in run_sync_in_worker_thread
+    return await future
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/anyio/_backends/_asyncio.py:851: in run
+    result = context.run(func, *args)
+presentation/auth_router.py:20: in register
+    existing = crud_user.get_user_by_email(db, user_in.email)
+infrastructure/crud_user.py:52: in get_user_by_email
+    return db.query(models.Utilisateur).filter(models.Utilisateur.email == email).first()
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/orm/query.py:2766: in first
+    return self.limit(1)._iter().first()  # type: ignore
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/orm/query.py:2864: in _iter
+    result: Union[ScalarResult[_T], Result[_T]] = self.session.execute(
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/orm/session.py:2351: in execute
+    return self._execute_internal(
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/orm/session.py:2239: in _execute_internal
+    conn = self._connection_for_bind(bind)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/orm/session.py:2108: in _connection_for_bind
+    return trans._connection_for_bind(engine, execution_options)
+<string>:2: in _connection_for_bind
+    ???
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/orm/state_changes.py:137: in _go
+    ret_value = fn(self, *arg, **kw)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/orm/session.py:1187: in _connection_for_bind
+    conn = bind.connect()
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/engine/base.py:3293: in connect
+    return self._connection_cls(self)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/engine/base.py:145: in __init__
+    Connection._handle_dbapi_exception_noconnection(
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/engine/base.py:2448: in _handle_dbapi_exception_noconnection
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/engine/base.py:143: in __init__
+    self._dbapi_connection = engine.raw_connection()
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/engine/base.py:3317: in raw_connection
+    return self.pool.connect()
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/pool/base.py:448: in connect
+    return _ConnectionFairy._checkout(self)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/pool/base.py:1272: in _checkout
+    fairy = _ConnectionRecord.checkout(pool)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/pool/base.py:712: in checkout
+    rec = pool._do_get()
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/pool/impl.py:177: in _do_get
+    with util.safe_reraise():
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/util/langhelpers.py:121: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/pool/impl.py:175: in _do_get
+    return self._create_connection()
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/pool/base.py:389: in _create_connection
+    return _ConnectionRecord(self)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/pool/base.py:674: in __init__
+    self.__connect()
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/pool/base.py:900: in __connect
+    with util.safe_reraise():
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/util/langhelpers.py:121: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/pool/base.py:896: in __connect
+    self.dbapi_connection = connection = pool._invoke_creator(self)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/engine/create.py:667: in connect
+    return dialect.connect(*cargs_tup, **cparams)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/engine/default.py:630: in connect
+    return self.loaded_dbapi.connect(*cargs, **cparams)  # type: ignore[no-any-return]  # NOQA: E501
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/mysql/connector/pooling.py:323: in connect
+    return MySQLConnection(*args, **kwargs)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/mysql/connector/connection.py:185: in __init__
+    self.connect(**kwargs)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/mysql/connector/abstracts.py:1604: in connect
+    self._open_connection()
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/mysql/connector/connection.py:411: in _open_connection
+    raise err
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/mysql/connector/connection.py:382: in _open_connection
+    self._socket.open_connection()
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <mysql.connector.network.MySQLTCPSocket object at 0x10a03be30>
+
+    def open_connection(self) -> None:
+        """Open the TCP/IP connection to the MySQL server."""
+        # pylint: disable=no-member
+        # Get address information
+        addrinfo: Tuple[
+            socket.AddressFamily,
+            socket.SocketKind,
+            int,
+            str,
+            Union[tuple[str, int], tuple[str, int, int, int], tuple[int, bytes]],
+        ] = (None, None, None, None, None)
+        try:
+            addrinfos = socket.getaddrinfo(
+                self.server_host,
+                self.server_port,
+                0,
+                socket.SOCK_STREAM,
+                socket.SOL_TCP,
+            )
+            # If multiple results we favor IPv4, unless IPv6 was forced.
+            for info in addrinfos:
+                if self.force_ipv6 and info[0] == socket.AF_INET6:
+                    addrinfo = info
+                    break
+                if info[0] == socket.AF_INET:
+                    addrinfo = info
+                    break
+            if self.force_ipv6 and addrinfo[0] is None:
+                raise InterfaceError(f"No IPv6 address found for {self.server_host}")
+            if addrinfo[0] is None:
+                addrinfo = addrinfos[0]
+        except IOError as err:
+            raise InterfaceError(
+                errno=2003,
+                values=(self.server_host, self.server_port, _strioerror(err)),
+            ) from err
+    
+        (self._family, socktype, proto, _, sockaddr) = addrinfo
+    
+        # Instantiate the socket and connect
+        try:
+            self.sock = socket.socket(self._family, socktype, proto)
+            self.sock.settimeout(self._connection_timeout)
+            self.sock.connect(sockaddr)
+        except (socket.timeout, TimeoutError) as err:
+            raise ConnectionTimeoutError(
+                errno=2003,
+                values=(
+                    self.server_host,
+                    self.server_port,
+                    _strioerror(err),
+                ),
+            ) from err
+        except IOError as err:
+>           raise InterfaceError(
+                errno=2003,
+                values=(self.server_host, self.server_port, _strioerror(err)),
+            ) from err
+E           sqlalchemy.exc.InterfaceError: (mysql.connector.errors.InterfaceError) 2003: Can't connect to MySQL server on 'localhost:3306' (Errno 1: Operation not permitted)
+E           (Background on this error at: https://sqlalche.me/e/20/rvf5)
+
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/mysql/connector/network.py:806: InterfaceError
+___________________________ test_create_and_get_book ___________________________
+
+self = <mysql.connector.network.MySQLTCPSocket object at 0x10a234a10>
+
+    def open_connection(self) -> None:
+        """Open the TCP/IP connection to the MySQL server."""
+        # pylint: disable=no-member
+        # Get address information
+        addrinfo: Tuple[
+            socket.AddressFamily,
+            socket.SocketKind,
+            int,
+            str,
+            Union[tuple[str, int], tuple[str, int, int, int], tuple[int, bytes]],
+        ] = (None, None, None, None, None)
+        try:
+            addrinfos = socket.getaddrinfo(
+                self.server_host,
+                self.server_port,
+                0,
+                socket.SOCK_STREAM,
+                socket.SOL_TCP,
+            )
+            # If multiple results we favor IPv4, unless IPv6 was forced.
+            for info in addrinfos:
+                if self.force_ipv6 and info[0] == socket.AF_INET6:
+                    addrinfo = info
+                    break
+                if info[0] == socket.AF_INET:
+                    addrinfo = info
+                    break
+            if self.force_ipv6 and addrinfo[0] is None:
+                raise InterfaceError(f"No IPv6 address found for {self.server_host}")
+            if addrinfo[0] is None:
+                addrinfo = addrinfos[0]
+        except IOError as err:
+            raise InterfaceError(
+                errno=2003,
+                values=(self.server_host, self.server_port, _strioerror(err)),
+            ) from err
+    
+        (self._family, socktype, proto, _, sockaddr) = addrinfo
+    
+        # Instantiate the socket and connect
+        try:
+            self.sock = socket.socket(self._family, socktype, proto)
+            self.sock.settimeout(self._connection_timeout)
+>           self.sock.connect(sockaddr)
+E           PermissionError: [Errno 1] Operation not permitted
+
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/mysql/connector/network.py:795: PermissionError
+
+The above exception was the direct cause of the following exception:
+
+self = <sqlalchemy.engine.base.Connection object at 0x10a233fe0>
+engine = Engine(mysql+mysqlconnector://service_plobooks:***@localhost:3306/plobooks)
+connection = None, _has_events = None, _allow_revalidate = True
+_allow_autobegin = True
+
+    def __init__(
+        self,
+        engine: Engine,
+        connection: Optional[PoolProxiedConnection] = None,
+        _has_events: Optional[bool] = None,
+        _allow_revalidate: bool = True,
+        _allow_autobegin: bool = True,
+    ):
+        """Construct a new Connection."""
+        self.engine = engine
+        self.dialect = dialect = engine.dialect
+    
+        if connection is None:
+            try:
+>               self._dbapi_connection = engine.raw_connection()
+
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/engine/base.py:143: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/engine/base.py:3317: in raw_connection
+    return self.pool.connect()
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/pool/base.py:448: in connect
+    return _ConnectionFairy._checkout(self)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/pool/base.py:1272: in _checkout
+    fairy = _ConnectionRecord.checkout(pool)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/pool/base.py:712: in checkout
+    rec = pool._do_get()
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/pool/impl.py:177: in _do_get
+    with util.safe_reraise():
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/util/langhelpers.py:121: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/pool/impl.py:175: in _do_get
+    return self._create_connection()
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/pool/base.py:389: in _create_connection
+    return _ConnectionRecord(self)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/pool/base.py:674: in __init__
+    self.__connect()
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/pool/base.py:900: in __connect
+    with util.safe_reraise():
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/util/langhelpers.py:121: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/pool/base.py:896: in __connect
+    self.dbapi_connection = connection = pool._invoke_creator(self)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/engine/create.py:667: in connect
+    return dialect.connect(*cargs_tup, **cparams)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/engine/default.py:630: in connect
+    return self.loaded_dbapi.connect(*cargs, **cparams)  # type: ignore[no-any-return]  # NOQA: E501
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/mysql/connector/pooling.py:323: in connect
+    return MySQLConnection(*args, **kwargs)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/mysql/connector/connection.py:185: in __init__
+    self.connect(**kwargs)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/mysql/connector/abstracts.py:1604: in connect
+    self._open_connection()
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/mysql/connector/connection.py:411: in _open_connection
+    raise err
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/mysql/connector/connection.py:382: in _open_connection
+    self._socket.open_connection()
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <mysql.connector.network.MySQLTCPSocket object at 0x10a234a10>
+
+    def open_connection(self) -> None:
+        """Open the TCP/IP connection to the MySQL server."""
+        # pylint: disable=no-member
+        # Get address information
+        addrinfo: Tuple[
+            socket.AddressFamily,
+            socket.SocketKind,
+            int,
+            str,
+            Union[tuple[str, int], tuple[str, int, int, int], tuple[int, bytes]],
+        ] = (None, None, None, None, None)
+        try:
+            addrinfos = socket.getaddrinfo(
+                self.server_host,
+                self.server_port,
+                0,
+                socket.SOCK_STREAM,
+                socket.SOL_TCP,
+            )
+            # If multiple results we favor IPv4, unless IPv6 was forced.
+            for info in addrinfos:
+                if self.force_ipv6 and info[0] == socket.AF_INET6:
+                    addrinfo = info
+                    break
+                if info[0] == socket.AF_INET:
+                    addrinfo = info
+                    break
+            if self.force_ipv6 and addrinfo[0] is None:
+                raise InterfaceError(f"No IPv6 address found for {self.server_host}")
+            if addrinfo[0] is None:
+                addrinfo = addrinfos[0]
+        except IOError as err:
+            raise InterfaceError(
+                errno=2003,
+                values=(self.server_host, self.server_port, _strioerror(err)),
+            ) from err
+    
+        (self._family, socktype, proto, _, sockaddr) = addrinfo
+    
+        # Instantiate the socket and connect
+        try:
+            self.sock = socket.socket(self._family, socktype, proto)
+            self.sock.settimeout(self._connection_timeout)
+            self.sock.connect(sockaddr)
+        except (socket.timeout, TimeoutError) as err:
+            raise ConnectionTimeoutError(
+                errno=2003,
+                values=(
+                    self.server_host,
+                    self.server_port,
+                    _strioerror(err),
+                ),
+            ) from err
+        except IOError as err:
+>           raise InterfaceError(
+                errno=2003,
+                values=(self.server_host, self.server_port, _strioerror(err)),
+            ) from err
+E           mysql.connector.errors.InterfaceError: 2003: Can't connect to MySQL server on 'localhost:3306' (Errno 1: Operation not permitted)
+
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/mysql/connector/network.py:806: InterfaceError
+
+The above exception was the direct cause of the following exception:
+
+    def test_create_and_get_book():
+        # Register user and login
+        import uuid
+        uniq = uuid.uuid4().hex[:10]
+        user = {
+            "nom": "Int",
+            "prenom": "User",
+            "email": f"integration_{uniq}@example.com",
+            "mot_de_passe": "password123",
+            "role": "admin"
+        }
+>       r = client.post("/auth/register", json=user)
+
+test/integration/test_book_api.py:28: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/starlette/testclient.py:538: in post
+    return super().post(
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/httpx/_client.py:1145: in post
+    return self.request(
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/starlette/testclient.py:437: in request
+    return super().request(
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/httpx/_client.py:827: in request
+    return self.send(request, auth=auth, follow_redirects=follow_redirects)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/httpx/_client.py:914: in send
+    response = self._send_handling_auth(
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/httpx/_client.py:942: in _send_handling_auth
+    response = self._send_handling_redirects(
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/httpx/_client.py:979: in _send_handling_redirects
+    response = self._send_single_request(request)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/httpx/_client.py:1015: in _send_single_request
+    response = transport.handle_request(request)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/starlette/testclient.py:340: in handle_request
+    raise exc
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/starlette/testclient.py:337: in handle_request
+    portal.call(self.app, scope, receive, send)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/anyio/from_thread.py:288: in call
+    return cast(T_Retval, self.start_task_soon(func, *args).result())
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/concurrent/futures/_base.py:456: in result
+    return self.__get_result()
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/concurrent/futures/_base.py:401: in __get_result
+    raise self._exception
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/anyio/from_thread.py:217: in _call_func
+    retval = await retval_or_awaitable
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/fastapi/applications.py:1159: in __call__
+    await super().__call__(scope, receive, send)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/starlette/applications.py:112: in __call__
+    await self.middleware_stack(scope, receive, send)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/starlette/middleware/errors.py:187: in __call__
+    raise exc
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/starlette/middleware/errors.py:165: in __call__
+    await self.app(scope, receive, _send)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/starlette/middleware/cors.py:85: in __call__
+    await self.app(scope, receive, send)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/starlette/middleware/exceptions.py:62: in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/starlette/_exception_handler.py:53: in wrapped_app
+    raise exc
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/starlette/_exception_handler.py:42: in wrapped_app
+    await app(scope, receive, sender)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/fastapi/middleware/asyncexitstack.py:18: in __call__
+    await self.app(scope, receive, send)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/starlette/routing.py:714: in __call__
+    await self.middleware_stack(scope, receive, send)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/starlette/routing.py:734: in app
+    await route.handle(scope, receive, send)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/starlette/routing.py:288: in handle
+    await self.app(scope, receive, send)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/fastapi/routing.py:134: in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/starlette/_exception_handler.py:53: in wrapped_app
+    raise exc
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/starlette/_exception_handler.py:42: in wrapped_app
+    await app(scope, receive, sender)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/fastapi/routing.py:120: in app
+    response = await f(request)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/fastapi/routing.py:674: in app
+    raw_response = await run_endpoint_function(
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/fastapi/routing.py:330: in run_endpoint_function
+    return await run_in_threadpool(dependant.call, **values)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/starlette/concurrency.py:37: in run_in_threadpool
+    return await anyio.to_thread.run_sync(func)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/anyio/to_thread.py:56: in run_sync
+    return await get_async_backend().run_sync_in_worker_thread(
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/anyio/_backends/_asyncio.py:2144: in run_sync_in_worker_thread
+    return await future
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/anyio/_backends/_asyncio.py:851: in run
+    result = context.run(func, *args)
+presentation/auth_router.py:20: in register
+    existing = crud_user.get_user_by_email(db, user_in.email)
+infrastructure/crud_user.py:52: in get_user_by_email
+    return db.query(models.Utilisateur).filter(models.Utilisateur.email == email).first()
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/orm/query.py:2766: in first
+    return self.limit(1)._iter().first()  # type: ignore
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/orm/query.py:2864: in _iter
+    result: Union[ScalarResult[_T], Result[_T]] = self.session.execute(
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/orm/session.py:2351: in execute
+    return self._execute_internal(
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/orm/session.py:2239: in _execute_internal
+    conn = self._connection_for_bind(bind)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/orm/session.py:2108: in _connection_for_bind
+    return trans._connection_for_bind(engine, execution_options)
+<string>:2: in _connection_for_bind
+    ???
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/orm/state_changes.py:137: in _go
+    ret_value = fn(self, *arg, **kw)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/orm/session.py:1187: in _connection_for_bind
+    conn = bind.connect()
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/engine/base.py:3293: in connect
+    return self._connection_cls(self)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/engine/base.py:145: in __init__
+    Connection._handle_dbapi_exception_noconnection(
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/engine/base.py:2448: in _handle_dbapi_exception_noconnection
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/engine/base.py:143: in __init__
+    self._dbapi_connection = engine.raw_connection()
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/engine/base.py:3317: in raw_connection
+    return self.pool.connect()
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/pool/base.py:448: in connect
+    return _ConnectionFairy._checkout(self)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/pool/base.py:1272: in _checkout
+    fairy = _ConnectionRecord.checkout(pool)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/pool/base.py:712: in checkout
+    rec = pool._do_get()
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/pool/impl.py:177: in _do_get
+    with util.safe_reraise():
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/util/langhelpers.py:121: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/pool/impl.py:175: in _do_get
+    return self._create_connection()
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/pool/base.py:389: in _create_connection
+    return _ConnectionRecord(self)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/pool/base.py:674: in __init__
+    self.__connect()
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/pool/base.py:900: in __connect
+    with util.safe_reraise():
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/util/langhelpers.py:121: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/pool/base.py:896: in __connect
+    self.dbapi_connection = connection = pool._invoke_creator(self)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/engine/create.py:667: in connect
+    return dialect.connect(*cargs_tup, **cparams)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/engine/default.py:630: in connect
+    return self.loaded_dbapi.connect(*cargs, **cparams)  # type: ignore[no-any-return]  # NOQA: E501
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/mysql/connector/pooling.py:323: in connect
+    return MySQLConnection(*args, **kwargs)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/mysql/connector/connection.py:185: in __init__
+    self.connect(**kwargs)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/mysql/connector/abstracts.py:1604: in connect
+    self._open_connection()
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/mysql/connector/connection.py:411: in _open_connection
+    raise err
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/mysql/connector/connection.py:382: in _open_connection
+    self._socket.open_connection()
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <mysql.connector.network.MySQLTCPSocket object at 0x10a234a10>
+
+    def open_connection(self) -> None:
+        """Open the TCP/IP connection to the MySQL server."""
+        # pylint: disable=no-member
+        # Get address information
+        addrinfo: Tuple[
+            socket.AddressFamily,
+            socket.SocketKind,
+            int,
+            str,
+            Union[tuple[str, int], tuple[str, int, int, int], tuple[int, bytes]],
+        ] = (None, None, None, None, None)
+        try:
+            addrinfos = socket.getaddrinfo(
+                self.server_host,
+                self.server_port,
+                0,
+                socket.SOCK_STREAM,
+                socket.SOL_TCP,
+            )
+            # If multiple results we favor IPv4, unless IPv6 was forced.
+            for info in addrinfos:
+                if self.force_ipv6 and info[0] == socket.AF_INET6:
+                    addrinfo = info
+                    break
+                if info[0] == socket.AF_INET:
+                    addrinfo = info
+                    break
+            if self.force_ipv6 and addrinfo[0] is None:
+                raise InterfaceError(f"No IPv6 address found for {self.server_host}")
+            if addrinfo[0] is None:
+                addrinfo = addrinfos[0]
+        except IOError as err:
+            raise InterfaceError(
+                errno=2003,
+                values=(self.server_host, self.server_port, _strioerror(err)),
+            ) from err
+    
+        (self._family, socktype, proto, _, sockaddr) = addrinfo
+    
+        # Instantiate the socket and connect
+        try:
+            self.sock = socket.socket(self._family, socktype, proto)
+            self.sock.settimeout(self._connection_timeout)
+            self.sock.connect(sockaddr)
+        except (socket.timeout, TimeoutError) as err:
+            raise ConnectionTimeoutError(
+                errno=2003,
+                values=(
+                    self.server_host,
+                    self.server_port,
+                    _strioerror(err),
+                ),
+            ) from err
+        except IOError as err:
+>           raise InterfaceError(
+                errno=2003,
+                values=(self.server_host, self.server_port, _strioerror(err)),
+            ) from err
+E           sqlalchemy.exc.InterfaceError: (mysql.connector.errors.InterfaceError) 2003: Can't connect to MySQL server on 'localhost:3306' (Errno 1: Operation not permitted)
+E           (Background on this error at: https://sqlalche.me/e/20/rvf5)
+
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/mysql/connector/network.py:806: InterfaceError
+______________________________ test_catalog_crud _______________________________
+
+self = <mysql.connector.network.MySQLTCPSocket object at 0x109fb5820>
+
+    def open_connection(self) -> None:
+        """Open the TCP/IP connection to the MySQL server."""
+        # pylint: disable=no-member
+        # Get address information
+        addrinfo: Tuple[
+            socket.AddressFamily,
+            socket.SocketKind,
+            int,
+            str,
+            Union[tuple[str, int], tuple[str, int, int, int], tuple[int, bytes]],
+        ] = (None, None, None, None, None)
+        try:
+            addrinfos = socket.getaddrinfo(
+                self.server_host,
+                self.server_port,
+                0,
+                socket.SOCK_STREAM,
+                socket.SOL_TCP,
+            )
+            # If multiple results we favor IPv4, unless IPv6 was forced.
+            for info in addrinfos:
+                if self.force_ipv6 and info[0] == socket.AF_INET6:
+                    addrinfo = info
+                    break
+                if info[0] == socket.AF_INET:
+                    addrinfo = info
+                    break
+            if self.force_ipv6 and addrinfo[0] is None:
+                raise InterfaceError(f"No IPv6 address found for {self.server_host}")
+            if addrinfo[0] is None:
+                addrinfo = addrinfos[0]
+        except IOError as err:
+            raise InterfaceError(
+                errno=2003,
+                values=(self.server_host, self.server_port, _strioerror(err)),
+            ) from err
+    
+        (self._family, socktype, proto, _, sockaddr) = addrinfo
+    
+        # Instantiate the socket and connect
+        try:
+            self.sock = socket.socket(self._family, socktype, proto)
+            self.sock.settimeout(self._connection_timeout)
+>           self.sock.connect(sockaddr)
+E           PermissionError: [Errno 1] Operation not permitted
+
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/mysql/connector/network.py:795: PermissionError
+
+The above exception was the direct cause of the following exception:
+
+self = <sqlalchemy.engine.base.Connection object at 0x109fb6600>
+engine = Engine(mysql+mysqlconnector://service_plobooks:***@localhost:3306/plobooks)
+connection = None, _has_events = None, _allow_revalidate = True
+_allow_autobegin = True
+
+    def __init__(
+        self,
+        engine: Engine,
+        connection: Optional[PoolProxiedConnection] = None,
+        _has_events: Optional[bool] = None,
+        _allow_revalidate: bool = True,
+        _allow_autobegin: bool = True,
+    ):
+        """Construct a new Connection."""
+        self.engine = engine
+        self.dialect = dialect = engine.dialect
+    
+        if connection is None:
+            try:
+>               self._dbapi_connection = engine.raw_connection()
+
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/engine/base.py:143: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/engine/base.py:3317: in raw_connection
+    return self.pool.connect()
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/pool/base.py:448: in connect
+    return _ConnectionFairy._checkout(self)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/pool/base.py:1272: in _checkout
+    fairy = _ConnectionRecord.checkout(pool)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/pool/base.py:712: in checkout
+    rec = pool._do_get()
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/pool/impl.py:177: in _do_get
+    with util.safe_reraise():
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/util/langhelpers.py:121: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/pool/impl.py:175: in _do_get
+    return self._create_connection()
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/pool/base.py:389: in _create_connection
+    return _ConnectionRecord(self)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/pool/base.py:674: in __init__
+    self.__connect()
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/pool/base.py:900: in __connect
+    with util.safe_reraise():
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/util/langhelpers.py:121: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/pool/base.py:896: in __connect
+    self.dbapi_connection = connection = pool._invoke_creator(self)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/engine/create.py:667: in connect
+    return dialect.connect(*cargs_tup, **cparams)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/engine/default.py:630: in connect
+    return self.loaded_dbapi.connect(*cargs, **cparams)  # type: ignore[no-any-return]  # NOQA: E501
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/mysql/connector/pooling.py:323: in connect
+    return MySQLConnection(*args, **kwargs)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/mysql/connector/connection.py:185: in __init__
+    self.connect(**kwargs)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/mysql/connector/abstracts.py:1604: in connect
+    self._open_connection()
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/mysql/connector/connection.py:411: in _open_connection
+    raise err
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/mysql/connector/connection.py:382: in _open_connection
+    self._socket.open_connection()
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <mysql.connector.network.MySQLTCPSocket object at 0x109fb5820>
+
+    def open_connection(self) -> None:
+        """Open the TCP/IP connection to the MySQL server."""
+        # pylint: disable=no-member
+        # Get address information
+        addrinfo: Tuple[
+            socket.AddressFamily,
+            socket.SocketKind,
+            int,
+            str,
+            Union[tuple[str, int], tuple[str, int, int, int], tuple[int, bytes]],
+        ] = (None, None, None, None, None)
+        try:
+            addrinfos = socket.getaddrinfo(
+                self.server_host,
+                self.server_port,
+                0,
+                socket.SOCK_STREAM,
+                socket.SOL_TCP,
+            )
+            # If multiple results we favor IPv4, unless IPv6 was forced.
+            for info in addrinfos:
+                if self.force_ipv6 and info[0] == socket.AF_INET6:
+                    addrinfo = info
+                    break
+                if info[0] == socket.AF_INET:
+                    addrinfo = info
+                    break
+            if self.force_ipv6 and addrinfo[0] is None:
+                raise InterfaceError(f"No IPv6 address found for {self.server_host}")
+            if addrinfo[0] is None:
+                addrinfo = addrinfos[0]
+        except IOError as err:
+            raise InterfaceError(
+                errno=2003,
+                values=(self.server_host, self.server_port, _strioerror(err)),
+            ) from err
+    
+        (self._family, socktype, proto, _, sockaddr) = addrinfo
+    
+        # Instantiate the socket and connect
+        try:
+            self.sock = socket.socket(self._family, socktype, proto)
+            self.sock.settimeout(self._connection_timeout)
+            self.sock.connect(sockaddr)
+        except (socket.timeout, TimeoutError) as err:
+            raise ConnectionTimeoutError(
+                errno=2003,
+                values=(
+                    self.server_host,
+                    self.server_port,
+                    _strioerror(err),
+                ),
+            ) from err
+        except IOError as err:
+>           raise InterfaceError(
+                errno=2003,
+                values=(self.server_host, self.server_port, _strioerror(err)),
+            ) from err
+E           mysql.connector.errors.InterfaceError: 2003: Can't connect to MySQL server on 'localhost:3306' (Errno 1: Operation not permitted)
+
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/mysql/connector/network.py:806: InterfaceError
+
+The above exception was the direct cause of the following exception:
+
+client = <starlette.testclient.TestClient object at 0x109fb73b0>
+register_and_login = <function register_and_login.<locals>._fn at 0x109d45d00>
+uniq = '53e39f849d'
+
+    def test_catalog_crud(client: TestClient, register_and_login, uniq: str):
+>       headers = register_and_login(f"catalog_{uniq}@example.com")
+
+test/integration/test_catalog_api.py:7: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+test/conftest.py:32: in _fn
+    r = client.post("/auth/register", json=user)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/starlette/testclient.py:538: in post
+    return super().post(
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/httpx/_client.py:1145: in post
+    return self.request(
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/starlette/testclient.py:437: in request
+    return super().request(
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/httpx/_client.py:827: in request
+    return self.send(request, auth=auth, follow_redirects=follow_redirects)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/httpx/_client.py:914: in send
+    response = self._send_handling_auth(
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/httpx/_client.py:942: in _send_handling_auth
+    response = self._send_handling_redirects(
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/httpx/_client.py:979: in _send_handling_redirects
+    response = self._send_single_request(request)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/httpx/_client.py:1015: in _send_single_request
+    response = transport.handle_request(request)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/starlette/testclient.py:340: in handle_request
+    raise exc
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/starlette/testclient.py:337: in handle_request
+    portal.call(self.app, scope, receive, send)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/anyio/from_thread.py:288: in call
+    return cast(T_Retval, self.start_task_soon(func, *args).result())
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/concurrent/futures/_base.py:456: in result
+    return self.__get_result()
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/concurrent/futures/_base.py:401: in __get_result
+    raise self._exception
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/anyio/from_thread.py:217: in _call_func
+    retval = await retval_or_awaitable
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/fastapi/applications.py:1159: in __call__
+    await super().__call__(scope, receive, send)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/starlette/applications.py:112: in __call__
+    await self.middleware_stack(scope, receive, send)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/starlette/middleware/errors.py:187: in __call__
+    raise exc
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/starlette/middleware/errors.py:165: in __call__
+    await self.app(scope, receive, _send)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/starlette/middleware/cors.py:85: in __call__
+    await self.app(scope, receive, send)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/starlette/middleware/exceptions.py:62: in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/starlette/_exception_handler.py:53: in wrapped_app
+    raise exc
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/starlette/_exception_handler.py:42: in wrapped_app
+    await app(scope, receive, sender)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/fastapi/middleware/asyncexitstack.py:18: in __call__
+    await self.app(scope, receive, send)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/starlette/routing.py:714: in __call__
+    await self.middleware_stack(scope, receive, send)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/starlette/routing.py:734: in app
+    await route.handle(scope, receive, send)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/starlette/routing.py:288: in handle
+    await self.app(scope, receive, send)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/fastapi/routing.py:134: in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/starlette/_exception_handler.py:53: in wrapped_app
+    raise exc
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/starlette/_exception_handler.py:42: in wrapped_app
+    await app(scope, receive, sender)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/fastapi/routing.py:120: in app
+    response = await f(request)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/fastapi/routing.py:674: in app
+    raw_response = await run_endpoint_function(
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/fastapi/routing.py:330: in run_endpoint_function
+    return await run_in_threadpool(dependant.call, **values)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/starlette/concurrency.py:37: in run_in_threadpool
+    return await anyio.to_thread.run_sync(func)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/anyio/to_thread.py:56: in run_sync
+    return await get_async_backend().run_sync_in_worker_thread(
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/anyio/_backends/_asyncio.py:2144: in run_sync_in_worker_thread
+    return await future
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/anyio/_backends/_asyncio.py:851: in run
+    result = context.run(func, *args)
+presentation/auth_router.py:20: in register
+    existing = crud_user.get_user_by_email(db, user_in.email)
+infrastructure/crud_user.py:52: in get_user_by_email
+    return db.query(models.Utilisateur).filter(models.Utilisateur.email == email).first()
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/orm/query.py:2766: in first
+    return self.limit(1)._iter().first()  # type: ignore
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/orm/query.py:2864: in _iter
+    result: Union[ScalarResult[_T], Result[_T]] = self.session.execute(
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/orm/session.py:2351: in execute
+    return self._execute_internal(
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/orm/session.py:2239: in _execute_internal
+    conn = self._connection_for_bind(bind)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/orm/session.py:2108: in _connection_for_bind
+    return trans._connection_for_bind(engine, execution_options)
+<string>:2: in _connection_for_bind
+    ???
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/orm/state_changes.py:137: in _go
+    ret_value = fn(self, *arg, **kw)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/orm/session.py:1187: in _connection_for_bind
+    conn = bind.connect()
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/engine/base.py:3293: in connect
+    return self._connection_cls(self)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/engine/base.py:145: in __init__
+    Connection._handle_dbapi_exception_noconnection(
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/engine/base.py:2448: in _handle_dbapi_exception_noconnection
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/engine/base.py:143: in __init__
+    self._dbapi_connection = engine.raw_connection()
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/engine/base.py:3317: in raw_connection
+    return self.pool.connect()
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/pool/base.py:448: in connect
+    return _ConnectionFairy._checkout(self)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/pool/base.py:1272: in _checkout
+    fairy = _ConnectionRecord.checkout(pool)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/pool/base.py:712: in checkout
+    rec = pool._do_get()
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/pool/impl.py:177: in _do_get
+    with util.safe_reraise():
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/util/langhelpers.py:121: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/pool/impl.py:175: in _do_get
+    return self._create_connection()
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/pool/base.py:389: in _create_connection
+    return _ConnectionRecord(self)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/pool/base.py:674: in __init__
+    self.__connect()
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/pool/base.py:900: in __connect
+    with util.safe_reraise():
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/util/langhelpers.py:121: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/pool/base.py:896: in __connect
+    self.dbapi_connection = connection = pool._invoke_creator(self)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/engine/create.py:667: in connect
+    return dialect.connect(*cargs_tup, **cparams)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/engine/default.py:630: in connect
+    return self.loaded_dbapi.connect(*cargs, **cparams)  # type: ignore[no-any-return]  # NOQA: E501
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/mysql/connector/pooling.py:323: in connect
+    return MySQLConnection(*args, **kwargs)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/mysql/connector/connection.py:185: in __init__
+    self.connect(**kwargs)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/mysql/connector/abstracts.py:1604: in connect
+    self._open_connection()
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/mysql/connector/connection.py:411: in _open_connection
+    raise err
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/mysql/connector/connection.py:382: in _open_connection
+    self._socket.open_connection()
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <mysql.connector.network.MySQLTCPSocket object at 0x109fb5820>
+
+    def open_connection(self) -> None:
+        """Open the TCP/IP connection to the MySQL server."""
+        # pylint: disable=no-member
+        # Get address information
+        addrinfo: Tuple[
+            socket.AddressFamily,
+            socket.SocketKind,
+            int,
+            str,
+            Union[tuple[str, int], tuple[str, int, int, int], tuple[int, bytes]],
+        ] = (None, None, None, None, None)
+        try:
+            addrinfos = socket.getaddrinfo(
+                self.server_host,
+                self.server_port,
+                0,
+                socket.SOCK_STREAM,
+                socket.SOL_TCP,
+            )
+            # If multiple results we favor IPv4, unless IPv6 was forced.
+            for info in addrinfos:
+                if self.force_ipv6 and info[0] == socket.AF_INET6:
+                    addrinfo = info
+                    break
+                if info[0] == socket.AF_INET:
+                    addrinfo = info
+                    break
+            if self.force_ipv6 and addrinfo[0] is None:
+                raise InterfaceError(f"No IPv6 address found for {self.server_host}")
+            if addrinfo[0] is None:
+                addrinfo = addrinfos[0]
+        except IOError as err:
+            raise InterfaceError(
+                errno=2003,
+                values=(self.server_host, self.server_port, _strioerror(err)),
+            ) from err
+    
+        (self._family, socktype, proto, _, sockaddr) = addrinfo
+    
+        # Instantiate the socket and connect
+        try:
+            self.sock = socket.socket(self._family, socktype, proto)
+            self.sock.settimeout(self._connection_timeout)
+            self.sock.connect(sockaddr)
+        except (socket.timeout, TimeoutError) as err:
+            raise ConnectionTimeoutError(
+                errno=2003,
+                values=(
+                    self.server_host,
+                    self.server_port,
+                    _strioerror(err),
+                ),
+            ) from err
+        except IOError as err:
+>           raise InterfaceError(
+                errno=2003,
+                values=(self.server_host, self.server_port, _strioerror(err)),
+            ) from err
+E           sqlalchemy.exc.InterfaceError: (mysql.connector.errors.InterfaceError) 2003: Can't connect to MySQL server on 'localhost:3306' (Errno 1: Operation not permitted)
+E           (Background on this error at: https://sqlalche.me/e/20/rvf5)
+
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/mysql/connector/network.py:806: InterfaceError
+_________________ test_orders_lignes_paiements_scoped_to_user __________________
+
+self = <mysql.connector.network.MySQLTCPSocket object at 0x10a53cda0>
+
+    def open_connection(self) -> None:
+        """Open the TCP/IP connection to the MySQL server."""
+        # pylint: disable=no-member
+        # Get address information
+        addrinfo: Tuple[
+            socket.AddressFamily,
+            socket.SocketKind,
+            int,
+            str,
+            Union[tuple[str, int], tuple[str, int, int, int], tuple[int, bytes]],
+        ] = (None, None, None, None, None)
+        try:
+            addrinfos = socket.getaddrinfo(
+                self.server_host,
+                self.server_port,
+                0,
+                socket.SOCK_STREAM,
+                socket.SOL_TCP,
+            )
+            # If multiple results we favor IPv4, unless IPv6 was forced.
+            for info in addrinfos:
+                if self.force_ipv6 and info[0] == socket.AF_INET6:
+                    addrinfo = info
+                    break
+                if info[0] == socket.AF_INET:
+                    addrinfo = info
+                    break
+            if self.force_ipv6 and addrinfo[0] is None:
+                raise InterfaceError(f"No IPv6 address found for {self.server_host}")
+            if addrinfo[0] is None:
+                addrinfo = addrinfos[0]
+        except IOError as err:
+            raise InterfaceError(
+                errno=2003,
+                values=(self.server_host, self.server_port, _strioerror(err)),
+            ) from err
+    
+        (self._family, socktype, proto, _, sockaddr) = addrinfo
+    
+        # Instantiate the socket and connect
+        try:
+            self.sock = socket.socket(self._family, socktype, proto)
+            self.sock.settimeout(self._connection_timeout)
+>           self.sock.connect(sockaddr)
+E           PermissionError: [Errno 1] Operation not permitted
+
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/mysql/connector/network.py:795: PermissionError
+
+The above exception was the direct cause of the following exception:
+
+self = <sqlalchemy.engine.base.Connection object at 0x10a53dc10>
+engine = Engine(mysql+mysqlconnector://service_plobooks:***@localhost:3306/plobooks)
+connection = None, _has_events = None, _allow_revalidate = True
+_allow_autobegin = True
+
+    def __init__(
+        self,
+        engine: Engine,
+        connection: Optional[PoolProxiedConnection] = None,
+        _has_events: Optional[bool] = None,
+        _allow_revalidate: bool = True,
+        _allow_autobegin: bool = True,
+    ):
+        """Construct a new Connection."""
+        self.engine = engine
+        self.dialect = dialect = engine.dialect
+    
+        if connection is None:
+            try:
+>               self._dbapi_connection = engine.raw_connection()
+
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/engine/base.py:143: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/engine/base.py:3317: in raw_connection
+    return self.pool.connect()
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/pool/base.py:448: in connect
+    return _ConnectionFairy._checkout(self)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/pool/base.py:1272: in _checkout
+    fairy = _ConnectionRecord.checkout(pool)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/pool/base.py:712: in checkout
+    rec = pool._do_get()
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/pool/impl.py:177: in _do_get
+    with util.safe_reraise():
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/util/langhelpers.py:121: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/pool/impl.py:175: in _do_get
+    return self._create_connection()
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/pool/base.py:389: in _create_connection
+    return _ConnectionRecord(self)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/pool/base.py:674: in __init__
+    self.__connect()
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/pool/base.py:900: in __connect
+    with util.safe_reraise():
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/util/langhelpers.py:121: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/pool/base.py:896: in __connect
+    self.dbapi_connection = connection = pool._invoke_creator(self)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/engine/create.py:667: in connect
+    return dialect.connect(*cargs_tup, **cparams)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/engine/default.py:630: in connect
+    return self.loaded_dbapi.connect(*cargs, **cparams)  # type: ignore[no-any-return]  # NOQA: E501
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/mysql/connector/pooling.py:323: in connect
+    return MySQLConnection(*args, **kwargs)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/mysql/connector/connection.py:185: in __init__
+    self.connect(**kwargs)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/mysql/connector/abstracts.py:1604: in connect
+    self._open_connection()
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/mysql/connector/connection.py:411: in _open_connection
+    raise err
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/mysql/connector/connection.py:382: in _open_connection
+    self._socket.open_connection()
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <mysql.connector.network.MySQLTCPSocket object at 0x10a53cda0>
+
+    def open_connection(self) -> None:
+        """Open the TCP/IP connection to the MySQL server."""
+        # pylint: disable=no-member
+        # Get address information
+        addrinfo: Tuple[
+            socket.AddressFamily,
+            socket.SocketKind,
+            int,
+            str,
+            Union[tuple[str, int], tuple[str, int, int, int], tuple[int, bytes]],
+        ] = (None, None, None, None, None)
+        try:
+            addrinfos = socket.getaddrinfo(
+                self.server_host,
+                self.server_port,
+                0,
+                socket.SOCK_STREAM,
+                socket.SOL_TCP,
+            )
+            # If multiple results we favor IPv4, unless IPv6 was forced.
+            for info in addrinfos:
+                if self.force_ipv6 and info[0] == socket.AF_INET6:
+                    addrinfo = info
+                    break
+                if info[0] == socket.AF_INET:
+                    addrinfo = info
+                    break
+            if self.force_ipv6 and addrinfo[0] is None:
+                raise InterfaceError(f"No IPv6 address found for {self.server_host}")
+            if addrinfo[0] is None:
+                addrinfo = addrinfos[0]
+        except IOError as err:
+            raise InterfaceError(
+                errno=2003,
+                values=(self.server_host, self.server_port, _strioerror(err)),
+            ) from err
+    
+        (self._family, socktype, proto, _, sockaddr) = addrinfo
+    
+        # Instantiate the socket and connect
+        try:
+            self.sock = socket.socket(self._family, socktype, proto)
+            self.sock.settimeout(self._connection_timeout)
+            self.sock.connect(sockaddr)
+        except (socket.timeout, TimeoutError) as err:
+            raise ConnectionTimeoutError(
+                errno=2003,
+                values=(
+                    self.server_host,
+                    self.server_port,
+                    _strioerror(err),
+                ),
+            ) from err
+        except IOError as err:
+>           raise InterfaceError(
+                errno=2003,
+                values=(self.server_host, self.server_port, _strioerror(err)),
+            ) from err
+E           mysql.connector.errors.InterfaceError: 2003: Can't connect to MySQL server on 'localhost:3306' (Errno 1: Operation not permitted)
+
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/mysql/connector/network.py:806: InterfaceError
+
+The above exception was the direct cause of the following exception:
+
+client = <starlette.testclient.TestClient object at 0x109fb73b0>
+register_and_login = <function register_and_login.<locals>._fn at 0x10aa599e0>
+uniq = '2673cbbbb6'
+
+    def test_orders_lignes_paiements_scoped_to_user(client: TestClient, register_and_login, uniq: str):
+>       headers = register_and_login(f"orders_{uniq}@example.com")
+
+test/integration/test_order_api.py:7: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+test/conftest.py:32: in _fn
+    r = client.post("/auth/register", json=user)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/starlette/testclient.py:538: in post
+    return super().post(
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/httpx/_client.py:1145: in post
+    return self.request(
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/starlette/testclient.py:437: in request
+    return super().request(
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/httpx/_client.py:827: in request
+    return self.send(request, auth=auth, follow_redirects=follow_redirects)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/httpx/_client.py:914: in send
+    response = self._send_handling_auth(
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/httpx/_client.py:942: in _send_handling_auth
+    response = self._send_handling_redirects(
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/httpx/_client.py:979: in _send_handling_redirects
+    response = self._send_single_request(request)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/httpx/_client.py:1015: in _send_single_request
+    response = transport.handle_request(request)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/starlette/testclient.py:340: in handle_request
+    raise exc
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/starlette/testclient.py:337: in handle_request
+    portal.call(self.app, scope, receive, send)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/anyio/from_thread.py:288: in call
+    return cast(T_Retval, self.start_task_soon(func, *args).result())
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/concurrent/futures/_base.py:456: in result
+    return self.__get_result()
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/concurrent/futures/_base.py:401: in __get_result
+    raise self._exception
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/anyio/from_thread.py:217: in _call_func
+    retval = await retval_or_awaitable
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/fastapi/applications.py:1159: in __call__
+    await super().__call__(scope, receive, send)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/starlette/applications.py:112: in __call__
+    await self.middleware_stack(scope, receive, send)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/starlette/middleware/errors.py:187: in __call__
+    raise exc
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/starlette/middleware/errors.py:165: in __call__
+    await self.app(scope, receive, _send)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/starlette/middleware/cors.py:85: in __call__
+    await self.app(scope, receive, send)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/starlette/middleware/exceptions.py:62: in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/starlette/_exception_handler.py:53: in wrapped_app
+    raise exc
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/starlette/_exception_handler.py:42: in wrapped_app
+    await app(scope, receive, sender)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/fastapi/middleware/asyncexitstack.py:18: in __call__
+    await self.app(scope, receive, send)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/starlette/routing.py:714: in __call__
+    await self.middleware_stack(scope, receive, send)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/starlette/routing.py:734: in app
+    await route.handle(scope, receive, send)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/starlette/routing.py:288: in handle
+    await self.app(scope, receive, send)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/fastapi/routing.py:134: in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/starlette/_exception_handler.py:53: in wrapped_app
+    raise exc
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/starlette/_exception_handler.py:42: in wrapped_app
+    await app(scope, receive, sender)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/fastapi/routing.py:120: in app
+    response = await f(request)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/fastapi/routing.py:674: in app
+    raw_response = await run_endpoint_function(
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/fastapi/routing.py:330: in run_endpoint_function
+    return await run_in_threadpool(dependant.call, **values)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/starlette/concurrency.py:37: in run_in_threadpool
+    return await anyio.to_thread.run_sync(func)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/anyio/to_thread.py:56: in run_sync
+    return await get_async_backend().run_sync_in_worker_thread(
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/anyio/_backends/_asyncio.py:2144: in run_sync_in_worker_thread
+    return await future
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/anyio/_backends/_asyncio.py:851: in run
+    result = context.run(func, *args)
+presentation/auth_router.py:20: in register
+    existing = crud_user.get_user_by_email(db, user_in.email)
+infrastructure/crud_user.py:52: in get_user_by_email
+    return db.query(models.Utilisateur).filter(models.Utilisateur.email == email).first()
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/orm/query.py:2766: in first
+    return self.limit(1)._iter().first()  # type: ignore
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/orm/query.py:2864: in _iter
+    result: Union[ScalarResult[_T], Result[_T]] = self.session.execute(
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/orm/session.py:2351: in execute
+    return self._execute_internal(
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/orm/session.py:2239: in _execute_internal
+    conn = self._connection_for_bind(bind)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/orm/session.py:2108: in _connection_for_bind
+    return trans._connection_for_bind(engine, execution_options)
+<string>:2: in _connection_for_bind
+    ???
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/orm/state_changes.py:137: in _go
+    ret_value = fn(self, *arg, **kw)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/orm/session.py:1187: in _connection_for_bind
+    conn = bind.connect()
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/engine/base.py:3293: in connect
+    return self._connection_cls(self)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/engine/base.py:145: in __init__
+    Connection._handle_dbapi_exception_noconnection(
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/engine/base.py:2448: in _handle_dbapi_exception_noconnection
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/engine/base.py:143: in __init__
+    self._dbapi_connection = engine.raw_connection()
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/engine/base.py:3317: in raw_connection
+    return self.pool.connect()
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/pool/base.py:448: in connect
+    return _ConnectionFairy._checkout(self)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/pool/base.py:1272: in _checkout
+    fairy = _ConnectionRecord.checkout(pool)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/pool/base.py:712: in checkout
+    rec = pool._do_get()
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/pool/impl.py:177: in _do_get
+    with util.safe_reraise():
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/util/langhelpers.py:121: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/pool/impl.py:175: in _do_get
+    return self._create_connection()
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/pool/base.py:389: in _create_connection
+    return _ConnectionRecord(self)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/pool/base.py:674: in __init__
+    self.__connect()
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/pool/base.py:900: in __connect
+    with util.safe_reraise():
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/util/langhelpers.py:121: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/pool/base.py:896: in __connect
+    self.dbapi_connection = connection = pool._invoke_creator(self)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/engine/create.py:667: in connect
+    return dialect.connect(*cargs_tup, **cparams)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/engine/default.py:630: in connect
+    return self.loaded_dbapi.connect(*cargs, **cparams)  # type: ignore[no-any-return]  # NOQA: E501
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/mysql/connector/pooling.py:323: in connect
+    return MySQLConnection(*args, **kwargs)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/mysql/connector/connection.py:185: in __init__
+    self.connect(**kwargs)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/mysql/connector/abstracts.py:1604: in connect
+    self._open_connection()
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/mysql/connector/connection.py:411: in _open_connection
+    raise err
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/mysql/connector/connection.py:382: in _open_connection
+    self._socket.open_connection()
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <mysql.connector.network.MySQLTCPSocket object at 0x10a53cda0>
+
+    def open_connection(self) -> None:
+        """Open the TCP/IP connection to the MySQL server."""
+        # pylint: disable=no-member
+        # Get address information
+        addrinfo: Tuple[
+            socket.AddressFamily,
+            socket.SocketKind,
+            int,
+            str,
+            Union[tuple[str, int], tuple[str, int, int, int], tuple[int, bytes]],
+        ] = (None, None, None, None, None)
+        try:
+            addrinfos = socket.getaddrinfo(
+                self.server_host,
+                self.server_port,
+                0,
+                socket.SOCK_STREAM,
+                socket.SOL_TCP,
+            )
+            # If multiple results we favor IPv4, unless IPv6 was forced.
+            for info in addrinfos:
+                if self.force_ipv6 and info[0] == socket.AF_INET6:
+                    addrinfo = info
+                    break
+                if info[0] == socket.AF_INET:
+                    addrinfo = info
+                    break
+            if self.force_ipv6 and addrinfo[0] is None:
+                raise InterfaceError(f"No IPv6 address found for {self.server_host}")
+            if addrinfo[0] is None:
+                addrinfo = addrinfos[0]
+        except IOError as err:
+            raise InterfaceError(
+                errno=2003,
+                values=(self.server_host, self.server_port, _strioerror(err)),
+            ) from err
+    
+        (self._family, socktype, proto, _, sockaddr) = addrinfo
+    
+        # Instantiate the socket and connect
+        try:
+            self.sock = socket.socket(self._family, socktype, proto)
+            self.sock.settimeout(self._connection_timeout)
+            self.sock.connect(sockaddr)
+        except (socket.timeout, TimeoutError) as err:
+            raise ConnectionTimeoutError(
+                errno=2003,
+                values=(
+                    self.server_host,
+                    self.server_port,
+                    _strioerror(err),
+                ),
+            ) from err
+        except IOError as err:
+>           raise InterfaceError(
+                errno=2003,
+                values=(self.server_host, self.server_port, _strioerror(err)),
+            ) from err
+E           sqlalchemy.exc.InterfaceError: (mysql.connector.errors.InterfaceError) 2003: Can't connect to MySQL server on 'localhost:3306' (Errno 1: Operation not permitted)
+E           (Background on this error at: https://sqlalche.me/e/20/rvf5)
+
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/mysql/connector/network.py:806: InterfaceError
+_____________________________ test_scan_isbn_crud ______________________________
+
+self = <mysql.connector.network.MySQLTCPSocket object at 0x10a5abc80>
+
+    def open_connection(self) -> None:
+        """Open the TCP/IP connection to the MySQL server."""
+        # pylint: disable=no-member
+        # Get address information
+        addrinfo: Tuple[
+            socket.AddressFamily,
+            socket.SocketKind,
+            int,
+            str,
+            Union[tuple[str, int], tuple[str, int, int, int], tuple[int, bytes]],
+        ] = (None, None, None, None, None)
+        try:
+            addrinfos = socket.getaddrinfo(
+                self.server_host,
+                self.server_port,
+                0,
+                socket.SOCK_STREAM,
+                socket.SOL_TCP,
+            )
+            # If multiple results we favor IPv4, unless IPv6 was forced.
+            for info in addrinfos:
+                if self.force_ipv6 and info[0] == socket.AF_INET6:
+                    addrinfo = info
+                    break
+                if info[0] == socket.AF_INET:
+                    addrinfo = info
+                    break
+            if self.force_ipv6 and addrinfo[0] is None:
+                raise InterfaceError(f"No IPv6 address found for {self.server_host}")
+            if addrinfo[0] is None:
+                addrinfo = addrinfos[0]
+        except IOError as err:
+            raise InterfaceError(
+                errno=2003,
+                values=(self.server_host, self.server_port, _strioerror(err)),
+            ) from err
+    
+        (self._family, socktype, proto, _, sockaddr) = addrinfo
+    
+        # Instantiate the socket and connect
+        try:
+            self.sock = socket.socket(self._family, socktype, proto)
+            self.sock.settimeout(self._connection_timeout)
+>           self.sock.connect(sockaddr)
+E           PermissionError: [Errno 1] Operation not permitted
+
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/mysql/connector/network.py:795: PermissionError
+
+The above exception was the direct cause of the following exception:
+
+self = <sqlalchemy.engine.base.Connection object at 0x10a5a8260>
+engine = Engine(mysql+mysqlconnector://service_plobooks:***@localhost:3306/plobooks)
+connection = None, _has_events = None, _allow_revalidate = True
+_allow_autobegin = True
+
+    def __init__(
+        self,
+        engine: Engine,
+        connection: Optional[PoolProxiedConnection] = None,
+        _has_events: Optional[bool] = None,
+        _allow_revalidate: bool = True,
+        _allow_autobegin: bool = True,
+    ):
+        """Construct a new Connection."""
+        self.engine = engine
+        self.dialect = dialect = engine.dialect
+    
+        if connection is None:
+            try:
+>               self._dbapi_connection = engine.raw_connection()
+
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/engine/base.py:143: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/engine/base.py:3317: in raw_connection
+    return self.pool.connect()
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/pool/base.py:448: in connect
+    return _ConnectionFairy._checkout(self)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/pool/base.py:1272: in _checkout
+    fairy = _ConnectionRecord.checkout(pool)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/pool/base.py:712: in checkout
+    rec = pool._do_get()
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/pool/impl.py:177: in _do_get
+    with util.safe_reraise():
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/util/langhelpers.py:121: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/pool/impl.py:175: in _do_get
+    return self._create_connection()
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/pool/base.py:389: in _create_connection
+    return _ConnectionRecord(self)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/pool/base.py:674: in __init__
+    self.__connect()
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/pool/base.py:900: in __connect
+    with util.safe_reraise():
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/util/langhelpers.py:121: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/pool/base.py:896: in __connect
+    self.dbapi_connection = connection = pool._invoke_creator(self)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/engine/create.py:667: in connect
+    return dialect.connect(*cargs_tup, **cparams)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/engine/default.py:630: in connect
+    return self.loaded_dbapi.connect(*cargs, **cparams)  # type: ignore[no-any-return]  # NOQA: E501
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/mysql/connector/pooling.py:323: in connect
+    return MySQLConnection(*args, **kwargs)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/mysql/connector/connection.py:185: in __init__
+    self.connect(**kwargs)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/mysql/connector/abstracts.py:1604: in connect
+    self._open_connection()
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/mysql/connector/connection.py:411: in _open_connection
+    raise err
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/mysql/connector/connection.py:382: in _open_connection
+    self._socket.open_connection()
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <mysql.connector.network.MySQLTCPSocket object at 0x10a5abc80>
+
+    def open_connection(self) -> None:
+        """Open the TCP/IP connection to the MySQL server."""
+        # pylint: disable=no-member
+        # Get address information
+        addrinfo: Tuple[
+            socket.AddressFamily,
+            socket.SocketKind,
+            int,
+            str,
+            Union[tuple[str, int], tuple[str, int, int, int], tuple[int, bytes]],
+        ] = (None, None, None, None, None)
+        try:
+            addrinfos = socket.getaddrinfo(
+                self.server_host,
+                self.server_port,
+                0,
+                socket.SOCK_STREAM,
+                socket.SOL_TCP,
+            )
+            # If multiple results we favor IPv4, unless IPv6 was forced.
+            for info in addrinfos:
+                if self.force_ipv6 and info[0] == socket.AF_INET6:
+                    addrinfo = info
+                    break
+                if info[0] == socket.AF_INET:
+                    addrinfo = info
+                    break
+            if self.force_ipv6 and addrinfo[0] is None:
+                raise InterfaceError(f"No IPv6 address found for {self.server_host}")
+            if addrinfo[0] is None:
+                addrinfo = addrinfos[0]
+        except IOError as err:
+            raise InterfaceError(
+                errno=2003,
+                values=(self.server_host, self.server_port, _strioerror(err)),
+            ) from err
+    
+        (self._family, socktype, proto, _, sockaddr) = addrinfo
+    
+        # Instantiate the socket and connect
+        try:
+            self.sock = socket.socket(self._family, socktype, proto)
+            self.sock.settimeout(self._connection_timeout)
+            self.sock.connect(sockaddr)
+        except (socket.timeout, TimeoutError) as err:
+            raise ConnectionTimeoutError(
+                errno=2003,
+                values=(
+                    self.server_host,
+                    self.server_port,
+                    _strioerror(err),
+                ),
+            ) from err
+        except IOError as err:
+>           raise InterfaceError(
+                errno=2003,
+                values=(self.server_host, self.server_port, _strioerror(err)),
+            ) from err
+E           mysql.connector.errors.InterfaceError: 2003: Can't connect to MySQL server on 'localhost:3306' (Errno 1: Operation not permitted)
+
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/mysql/connector/network.py:806: InterfaceError
+
+The above exception was the direct cause of the following exception:
+
+client = <starlette.testclient.TestClient object at 0x109fb73b0>
+register_and_login = <function register_and_login.<locals>._fn at 0x10ab06340>
+uniq = '579b12efa1'
+
+    def test_scan_isbn_crud(client: TestClient, register_and_login, uniq: str):
+>       user_headers = register_and_login(f"scan_{uniq}@example.com")
+
+test/integration/test_scan_api.py:7: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+test/conftest.py:32: in _fn
+    r = client.post("/auth/register", json=user)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/starlette/testclient.py:538: in post
+    return super().post(
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/httpx/_client.py:1145: in post
+    return self.request(
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/starlette/testclient.py:437: in request
+    return super().request(
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/httpx/_client.py:827: in request
+    return self.send(request, auth=auth, follow_redirects=follow_redirects)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/httpx/_client.py:914: in send
+    response = self._send_handling_auth(
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/httpx/_client.py:942: in _send_handling_auth
+    response = self._send_handling_redirects(
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/httpx/_client.py:979: in _send_handling_redirects
+    response = self._send_single_request(request)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/httpx/_client.py:1015: in _send_single_request
+    response = transport.handle_request(request)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/starlette/testclient.py:340: in handle_request
+    raise exc
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/starlette/testclient.py:337: in handle_request
+    portal.call(self.app, scope, receive, send)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/anyio/from_thread.py:288: in call
+    return cast(T_Retval, self.start_task_soon(func, *args).result())
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/concurrent/futures/_base.py:456: in result
+    return self.__get_result()
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/concurrent/futures/_base.py:401: in __get_result
+    raise self._exception
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/anyio/from_thread.py:217: in _call_func
+    retval = await retval_or_awaitable
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/fastapi/applications.py:1159: in __call__
+    await super().__call__(scope, receive, send)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/starlette/applications.py:112: in __call__
+    await self.middleware_stack(scope, receive, send)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/starlette/middleware/errors.py:187: in __call__
+    raise exc
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/starlette/middleware/errors.py:165: in __call__
+    await self.app(scope, receive, _send)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/starlette/middleware/cors.py:85: in __call__
+    await self.app(scope, receive, send)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/starlette/middleware/exceptions.py:62: in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/starlette/_exception_handler.py:53: in wrapped_app
+    raise exc
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/starlette/_exception_handler.py:42: in wrapped_app
+    await app(scope, receive, sender)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/fastapi/middleware/asyncexitstack.py:18: in __call__
+    await self.app(scope, receive, send)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/starlette/routing.py:714: in __call__
+    await self.middleware_stack(scope, receive, send)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/starlette/routing.py:734: in app
+    await route.handle(scope, receive, send)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/starlette/routing.py:288: in handle
+    await self.app(scope, receive, send)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/fastapi/routing.py:134: in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/starlette/_exception_handler.py:53: in wrapped_app
+    raise exc
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/starlette/_exception_handler.py:42: in wrapped_app
+    await app(scope, receive, sender)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/fastapi/routing.py:120: in app
+    response = await f(request)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/fastapi/routing.py:674: in app
+    raw_response = await run_endpoint_function(
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/fastapi/routing.py:330: in run_endpoint_function
+    return await run_in_threadpool(dependant.call, **values)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/starlette/concurrency.py:37: in run_in_threadpool
+    return await anyio.to_thread.run_sync(func)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/anyio/to_thread.py:56: in run_sync
+    return await get_async_backend().run_sync_in_worker_thread(
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/anyio/_backends/_asyncio.py:2144: in run_sync_in_worker_thread
+    return await future
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/anyio/_backends/_asyncio.py:851: in run
+    result = context.run(func, *args)
+presentation/auth_router.py:20: in register
+    existing = crud_user.get_user_by_email(db, user_in.email)
+infrastructure/crud_user.py:52: in get_user_by_email
+    return db.query(models.Utilisateur).filter(models.Utilisateur.email == email).first()
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/orm/query.py:2766: in first
+    return self.limit(1)._iter().first()  # type: ignore
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/orm/query.py:2864: in _iter
+    result: Union[ScalarResult[_T], Result[_T]] = self.session.execute(
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/orm/session.py:2351: in execute
+    return self._execute_internal(
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/orm/session.py:2239: in _execute_internal
+    conn = self._connection_for_bind(bind)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/orm/session.py:2108: in _connection_for_bind
+    return trans._connection_for_bind(engine, execution_options)
+<string>:2: in _connection_for_bind
+    ???
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/orm/state_changes.py:137: in _go
+    ret_value = fn(self, *arg, **kw)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/orm/session.py:1187: in _connection_for_bind
+    conn = bind.connect()
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/engine/base.py:3293: in connect
+    return self._connection_cls(self)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/engine/base.py:145: in __init__
+    Connection._handle_dbapi_exception_noconnection(
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/engine/base.py:2448: in _handle_dbapi_exception_noconnection
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/engine/base.py:143: in __init__
+    self._dbapi_connection = engine.raw_connection()
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/engine/base.py:3317: in raw_connection
+    return self.pool.connect()
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/pool/base.py:448: in connect
+    return _ConnectionFairy._checkout(self)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/pool/base.py:1272: in _checkout
+    fairy = _ConnectionRecord.checkout(pool)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/pool/base.py:712: in checkout
+    rec = pool._do_get()
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/pool/impl.py:177: in _do_get
+    with util.safe_reraise():
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/util/langhelpers.py:121: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/pool/impl.py:175: in _do_get
+    return self._create_connection()
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/pool/base.py:389: in _create_connection
+    return _ConnectionRecord(self)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/pool/base.py:674: in __init__
+    self.__connect()
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/pool/base.py:900: in __connect
+    with util.safe_reraise():
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/util/langhelpers.py:121: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/pool/base.py:896: in __connect
+    self.dbapi_connection = connection = pool._invoke_creator(self)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/engine/create.py:667: in connect
+    return dialect.connect(*cargs_tup, **cparams)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/engine/default.py:630: in connect
+    return self.loaded_dbapi.connect(*cargs, **cparams)  # type: ignore[no-any-return]  # NOQA: E501
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/mysql/connector/pooling.py:323: in connect
+    return MySQLConnection(*args, **kwargs)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/mysql/connector/connection.py:185: in __init__
+    self.connect(**kwargs)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/mysql/connector/abstracts.py:1604: in connect
+    self._open_connection()
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/mysql/connector/connection.py:411: in _open_connection
+    raise err
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/mysql/connector/connection.py:382: in _open_connection
+    self._socket.open_connection()
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <mysql.connector.network.MySQLTCPSocket object at 0x10a5abc80>
+
+    def open_connection(self) -> None:
+        """Open the TCP/IP connection to the MySQL server."""
+        # pylint: disable=no-member
+        # Get address information
+        addrinfo: Tuple[
+            socket.AddressFamily,
+            socket.SocketKind,
+            int,
+            str,
+            Union[tuple[str, int], tuple[str, int, int, int], tuple[int, bytes]],
+        ] = (None, None, None, None, None)
+        try:
+            addrinfos = socket.getaddrinfo(
+                self.server_host,
+                self.server_port,
+                0,
+                socket.SOCK_STREAM,
+                socket.SOL_TCP,
+            )
+            # If multiple results we favor IPv4, unless IPv6 was forced.
+            for info in addrinfos:
+                if self.force_ipv6 and info[0] == socket.AF_INET6:
+                    addrinfo = info
+                    break
+                if info[0] == socket.AF_INET:
+                    addrinfo = info
+                    break
+            if self.force_ipv6 and addrinfo[0] is None:
+                raise InterfaceError(f"No IPv6 address found for {self.server_host}")
+            if addrinfo[0] is None:
+                addrinfo = addrinfos[0]
+        except IOError as err:
+            raise InterfaceError(
+                errno=2003,
+                values=(self.server_host, self.server_port, _strioerror(err)),
+            ) from err
+    
+        (self._family, socktype, proto, _, sockaddr) = addrinfo
+    
+        # Instantiate the socket and connect
+        try:
+            self.sock = socket.socket(self._family, socktype, proto)
+            self.sock.settimeout(self._connection_timeout)
+            self.sock.connect(sockaddr)
+        except (socket.timeout, TimeoutError) as err:
+            raise ConnectionTimeoutError(
+                errno=2003,
+                values=(
+                    self.server_host,
+                    self.server_port,
+                    _strioerror(err),
+                ),
+            ) from err
+        except IOError as err:
+>           raise InterfaceError(
+                errno=2003,
+                values=(self.server_host, self.server_port, _strioerror(err)),
+            ) from err
+E           sqlalchemy.exc.InterfaceError: (mysql.connector.errors.InterfaceError) 2003: Can't connect to MySQL server on 'localhost:3306' (Errno 1: Operation not permitted)
+E           (Background on this error at: https://sqlalche.me/e/20/rvf5)
+
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/mysql/connector/network.py:806: InterfaceError
+_________________________ test_stock_and_sources_crud __________________________
+
+self = <mysql.connector.network.MySQLTCPSocket object at 0x10a528620>
+
+    def open_connection(self) -> None:
+        """Open the TCP/IP connection to the MySQL server."""
+        # pylint: disable=no-member
+        # Get address information
+        addrinfo: Tuple[
+            socket.AddressFamily,
+            socket.SocketKind,
+            int,
+            str,
+            Union[tuple[str, int], tuple[str, int, int, int], tuple[int, bytes]],
+        ] = (None, None, None, None, None)
+        try:
+            addrinfos = socket.getaddrinfo(
+                self.server_host,
+                self.server_port,
+                0,
+                socket.SOCK_STREAM,
+                socket.SOL_TCP,
+            )
+            # If multiple results we favor IPv4, unless IPv6 was forced.
+            for info in addrinfos:
+                if self.force_ipv6 and info[0] == socket.AF_INET6:
+                    addrinfo = info
+                    break
+                if info[0] == socket.AF_INET:
+                    addrinfo = info
+                    break
+            if self.force_ipv6 and addrinfo[0] is None:
+                raise InterfaceError(f"No IPv6 address found for {self.server_host}")
+            if addrinfo[0] is None:
+                addrinfo = addrinfos[0]
+        except IOError as err:
+            raise InterfaceError(
+                errno=2003,
+                values=(self.server_host, self.server_port, _strioerror(err)),
+            ) from err
+    
+        (self._family, socktype, proto, _, sockaddr) = addrinfo
+    
+        # Instantiate the socket and connect
+        try:
+            self.sock = socket.socket(self._family, socktype, proto)
+            self.sock.settimeout(self._connection_timeout)
+>           self.sock.connect(sockaddr)
+E           PermissionError: [Errno 1] Operation not permitted
+
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/mysql/connector/network.py:795: PermissionError
+
+The above exception was the direct cause of the following exception:
+
+self = <sqlalchemy.engine.base.Connection object at 0x10a528440>
+engine = Engine(mysql+mysqlconnector://service_plobooks:***@localhost:3306/plobooks)
+connection = None, _has_events = None, _allow_revalidate = True
+_allow_autobegin = True
+
+    def __init__(
+        self,
+        engine: Engine,
+        connection: Optional[PoolProxiedConnection] = None,
+        _has_events: Optional[bool] = None,
+        _allow_revalidate: bool = True,
+        _allow_autobegin: bool = True,
+    ):
+        """Construct a new Connection."""
+        self.engine = engine
+        self.dialect = dialect = engine.dialect
+    
+        if connection is None:
+            try:
+>               self._dbapi_connection = engine.raw_connection()
+
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/engine/base.py:143: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/engine/base.py:3317: in raw_connection
+    return self.pool.connect()
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/pool/base.py:448: in connect
+    return _ConnectionFairy._checkout(self)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/pool/base.py:1272: in _checkout
+    fairy = _ConnectionRecord.checkout(pool)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/pool/base.py:712: in checkout
+    rec = pool._do_get()
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/pool/impl.py:177: in _do_get
+    with util.safe_reraise():
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/util/langhelpers.py:121: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/pool/impl.py:175: in _do_get
+    return self._create_connection()
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/pool/base.py:389: in _create_connection
+    return _ConnectionRecord(self)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/pool/base.py:674: in __init__
+    self.__connect()
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/pool/base.py:900: in __connect
+    with util.safe_reraise():
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/util/langhelpers.py:121: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/pool/base.py:896: in __connect
+    self.dbapi_connection = connection = pool._invoke_creator(self)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/engine/create.py:667: in connect
+    return dialect.connect(*cargs_tup, **cparams)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/engine/default.py:630: in connect
+    return self.loaded_dbapi.connect(*cargs, **cparams)  # type: ignore[no-any-return]  # NOQA: E501
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/mysql/connector/pooling.py:323: in connect
+    return MySQLConnection(*args, **kwargs)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/mysql/connector/connection.py:185: in __init__
+    self.connect(**kwargs)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/mysql/connector/abstracts.py:1604: in connect
+    self._open_connection()
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/mysql/connector/connection.py:411: in _open_connection
+    raise err
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/mysql/connector/connection.py:382: in _open_connection
+    self._socket.open_connection()
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <mysql.connector.network.MySQLTCPSocket object at 0x10a528620>
+
+    def open_connection(self) -> None:
+        """Open the TCP/IP connection to the MySQL server."""
+        # pylint: disable=no-member
+        # Get address information
+        addrinfo: Tuple[
+            socket.AddressFamily,
+            socket.SocketKind,
+            int,
+            str,
+            Union[tuple[str, int], tuple[str, int, int, int], tuple[int, bytes]],
+        ] = (None, None, None, None, None)
+        try:
+            addrinfos = socket.getaddrinfo(
+                self.server_host,
+                self.server_port,
+                0,
+                socket.SOCK_STREAM,
+                socket.SOL_TCP,
+            )
+            # If multiple results we favor IPv4, unless IPv6 was forced.
+            for info in addrinfos:
+                if self.force_ipv6 and info[0] == socket.AF_INET6:
+                    addrinfo = info
+                    break
+                if info[0] == socket.AF_INET:
+                    addrinfo = info
+                    break
+            if self.force_ipv6 and addrinfo[0] is None:
+                raise InterfaceError(f"No IPv6 address found for {self.server_host}")
+            if addrinfo[0] is None:
+                addrinfo = addrinfos[0]
+        except IOError as err:
+            raise InterfaceError(
+                errno=2003,
+                values=(self.server_host, self.server_port, _strioerror(err)),
+            ) from err
+    
+        (self._family, socktype, proto, _, sockaddr) = addrinfo
+    
+        # Instantiate the socket and connect
+        try:
+            self.sock = socket.socket(self._family, socktype, proto)
+            self.sock.settimeout(self._connection_timeout)
+            self.sock.connect(sockaddr)
+        except (socket.timeout, TimeoutError) as err:
+            raise ConnectionTimeoutError(
+                errno=2003,
+                values=(
+                    self.server_host,
+                    self.server_port,
+                    _strioerror(err),
+                ),
+            ) from err
+        except IOError as err:
+>           raise InterfaceError(
+                errno=2003,
+                values=(self.server_host, self.server_port, _strioerror(err)),
+            ) from err
+E           mysql.connector.errors.InterfaceError: 2003: Can't connect to MySQL server on 'localhost:3306' (Errno 1: Operation not permitted)
+
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/mysql/connector/network.py:806: InterfaceError
+
+The above exception was the direct cause of the following exception:
+
+client = <starlette.testclient.TestClient object at 0x109fb73b0>
+register_and_login = <function register_and_login.<locals>._fn at 0x10c88fd80>
+uniq = 'b0e8ccdd18'
+
+    def test_stock_and_sources_crud(client: TestClient, register_and_login, uniq: str):
+>       headers = register_and_login(f"stock_{uniq}@example.com")
+
+test/integration/test_stock_api.py:7: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+test/conftest.py:32: in _fn
+    r = client.post("/auth/register", json=user)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/starlette/testclient.py:538: in post
+    return super().post(
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/httpx/_client.py:1145: in post
+    return self.request(
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/starlette/testclient.py:437: in request
+    return super().request(
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/httpx/_client.py:827: in request
+    return self.send(request, auth=auth, follow_redirects=follow_redirects)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/httpx/_client.py:914: in send
+    response = self._send_handling_auth(
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/httpx/_client.py:942: in _send_handling_auth
+    response = self._send_handling_redirects(
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/httpx/_client.py:979: in _send_handling_redirects
+    response = self._send_single_request(request)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/httpx/_client.py:1015: in _send_single_request
+    response = transport.handle_request(request)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/starlette/testclient.py:340: in handle_request
+    raise exc
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/starlette/testclient.py:337: in handle_request
+    portal.call(self.app, scope, receive, send)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/anyio/from_thread.py:288: in call
+    return cast(T_Retval, self.start_task_soon(func, *args).result())
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/concurrent/futures/_base.py:456: in result
+    return self.__get_result()
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/concurrent/futures/_base.py:401: in __get_result
+    raise self._exception
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/anyio/from_thread.py:217: in _call_func
+    retval = await retval_or_awaitable
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/fastapi/applications.py:1159: in __call__
+    await super().__call__(scope, receive, send)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/starlette/applications.py:112: in __call__
+    await self.middleware_stack(scope, receive, send)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/starlette/middleware/errors.py:187: in __call__
+    raise exc
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/starlette/middleware/errors.py:165: in __call__
+    await self.app(scope, receive, _send)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/starlette/middleware/cors.py:85: in __call__
+    await self.app(scope, receive, send)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/starlette/middleware/exceptions.py:62: in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/starlette/_exception_handler.py:53: in wrapped_app
+    raise exc
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/starlette/_exception_handler.py:42: in wrapped_app
+    await app(scope, receive, sender)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/fastapi/middleware/asyncexitstack.py:18: in __call__
+    await self.app(scope, receive, send)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/starlette/routing.py:714: in __call__
+    await self.middleware_stack(scope, receive, send)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/starlette/routing.py:734: in app
+    await route.handle(scope, receive, send)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/starlette/routing.py:288: in handle
+    await self.app(scope, receive, send)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/fastapi/routing.py:134: in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/starlette/_exception_handler.py:53: in wrapped_app
+    raise exc
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/starlette/_exception_handler.py:42: in wrapped_app
+    await app(scope, receive, sender)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/fastapi/routing.py:120: in app
+    response = await f(request)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/fastapi/routing.py:674: in app
+    raw_response = await run_endpoint_function(
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/fastapi/routing.py:330: in run_endpoint_function
+    return await run_in_threadpool(dependant.call, **values)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/starlette/concurrency.py:37: in run_in_threadpool
+    return await anyio.to_thread.run_sync(func)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/anyio/to_thread.py:56: in run_sync
+    return await get_async_backend().run_sync_in_worker_thread(
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/anyio/_backends/_asyncio.py:2144: in run_sync_in_worker_thread
+    return await future
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/anyio/_backends/_asyncio.py:851: in run
+    result = context.run(func, *args)
+presentation/auth_router.py:20: in register
+    existing = crud_user.get_user_by_email(db, user_in.email)
+infrastructure/crud_user.py:52: in get_user_by_email
+    return db.query(models.Utilisateur).filter(models.Utilisateur.email == email).first()
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/orm/query.py:2766: in first
+    return self.limit(1)._iter().first()  # type: ignore
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/orm/query.py:2864: in _iter
+    result: Union[ScalarResult[_T], Result[_T]] = self.session.execute(
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/orm/session.py:2351: in execute
+    return self._execute_internal(
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/orm/session.py:2239: in _execute_internal
+    conn = self._connection_for_bind(bind)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/orm/session.py:2108: in _connection_for_bind
+    return trans._connection_for_bind(engine, execution_options)
+<string>:2: in _connection_for_bind
+    ???
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/orm/state_changes.py:137: in _go
+    ret_value = fn(self, *arg, **kw)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/orm/session.py:1187: in _connection_for_bind
+    conn = bind.connect()
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/engine/base.py:3293: in connect
+    return self._connection_cls(self)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/engine/base.py:145: in __init__
+    Connection._handle_dbapi_exception_noconnection(
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/engine/base.py:2448: in _handle_dbapi_exception_noconnection
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/engine/base.py:143: in __init__
+    self._dbapi_connection = engine.raw_connection()
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/engine/base.py:3317: in raw_connection
+    return self.pool.connect()
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/pool/base.py:448: in connect
+    return _ConnectionFairy._checkout(self)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/pool/base.py:1272: in _checkout
+    fairy = _ConnectionRecord.checkout(pool)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/pool/base.py:712: in checkout
+    rec = pool._do_get()
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/pool/impl.py:177: in _do_get
+    with util.safe_reraise():
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/util/langhelpers.py:121: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/pool/impl.py:175: in _do_get
+    return self._create_connection()
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/pool/base.py:389: in _create_connection
+    return _ConnectionRecord(self)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/pool/base.py:674: in __init__
+    self.__connect()
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/pool/base.py:900: in __connect
+    with util.safe_reraise():
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/util/langhelpers.py:121: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/pool/base.py:896: in __connect
+    self.dbapi_connection = connection = pool._invoke_creator(self)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/engine/create.py:667: in connect
+    return dialect.connect(*cargs_tup, **cparams)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/engine/default.py:630: in connect
+    return self.loaded_dbapi.connect(*cargs, **cparams)  # type: ignore[no-any-return]  # NOQA: E501
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/mysql/connector/pooling.py:323: in connect
+    return MySQLConnection(*args, **kwargs)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/mysql/connector/connection.py:185: in __init__
+    self.connect(**kwargs)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/mysql/connector/abstracts.py:1604: in connect
+    self._open_connection()
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/mysql/connector/connection.py:411: in _open_connection
+    raise err
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/mysql/connector/connection.py:382: in _open_connection
+    self._socket.open_connection()
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <mysql.connector.network.MySQLTCPSocket object at 0x10a528620>
+
+    def open_connection(self) -> None:
+        """Open the TCP/IP connection to the MySQL server."""
+        # pylint: disable=no-member
+        # Get address information
+        addrinfo: Tuple[
+            socket.AddressFamily,
+            socket.SocketKind,
+            int,
+            str,
+            Union[tuple[str, int], tuple[str, int, int, int], tuple[int, bytes]],
+        ] = (None, None, None, None, None)
+        try:
+            addrinfos = socket.getaddrinfo(
+                self.server_host,
+                self.server_port,
+                0,
+                socket.SOCK_STREAM,
+                socket.SOL_TCP,
+            )
+            # If multiple results we favor IPv4, unless IPv6 was forced.
+            for info in addrinfos:
+                if self.force_ipv6 and info[0] == socket.AF_INET6:
+                    addrinfo = info
+                    break
+                if info[0] == socket.AF_INET:
+                    addrinfo = info
+                    break
+            if self.force_ipv6 and addrinfo[0] is None:
+                raise InterfaceError(f"No IPv6 address found for {self.server_host}")
+            if addrinfo[0] is None:
+                addrinfo = addrinfos[0]
+        except IOError as err:
+            raise InterfaceError(
+                errno=2003,
+                values=(self.server_host, self.server_port, _strioerror(err)),
+            ) from err
+    
+        (self._family, socktype, proto, _, sockaddr) = addrinfo
+    
+        # Instantiate the socket and connect
+        try:
+            self.sock = socket.socket(self._family, socktype, proto)
+            self.sock.settimeout(self._connection_timeout)
+            self.sock.connect(sockaddr)
+        except (socket.timeout, TimeoutError) as err:
+            raise ConnectionTimeoutError(
+                errno=2003,
+                values=(
+                    self.server_host,
+                    self.server_port,
+                    _strioerror(err),
+                ),
+            ) from err
+        except IOError as err:
+>           raise InterfaceError(
+                errno=2003,
+                values=(self.server_host, self.server_port, _strioerror(err)),
+            ) from err
+E           sqlalchemy.exc.InterfaceError: (mysql.connector.errors.InterfaceError) 2003: Can't connect to MySQL server on 'localhost:3306' (Errno 1: Operation not permitted)
+E           (Background on this error at: https://sqlalche.me/e/20/rvf5)
+
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/mysql/connector/network.py:806: InterfaceError
+____________________________ test_users_admin_only _____________________________
+
+self = <mysql.connector.network.MySQLTCPSocket object at 0x10a53ce00>
+
+    def open_connection(self) -> None:
+        """Open the TCP/IP connection to the MySQL server."""
+        # pylint: disable=no-member
+        # Get address information
+        addrinfo: Tuple[
+            socket.AddressFamily,
+            socket.SocketKind,
+            int,
+            str,
+            Union[tuple[str, int], tuple[str, int, int, int], tuple[int, bytes]],
+        ] = (None, None, None, None, None)
+        try:
+            addrinfos = socket.getaddrinfo(
+                self.server_host,
+                self.server_port,
+                0,
+                socket.SOCK_STREAM,
+                socket.SOL_TCP,
+            )
+            # If multiple results we favor IPv4, unless IPv6 was forced.
+            for info in addrinfos:
+                if self.force_ipv6 and info[0] == socket.AF_INET6:
+                    addrinfo = info
+                    break
+                if info[0] == socket.AF_INET:
+                    addrinfo = info
+                    break
+            if self.force_ipv6 and addrinfo[0] is None:
+                raise InterfaceError(f"No IPv6 address found for {self.server_host}")
+            if addrinfo[0] is None:
+                addrinfo = addrinfos[0]
+        except IOError as err:
+            raise InterfaceError(
+                errno=2003,
+                values=(self.server_host, self.server_port, _strioerror(err)),
+            ) from err
+    
+        (self._family, socktype, proto, _, sockaddr) = addrinfo
+    
+        # Instantiate the socket and connect
+        try:
+            self.sock = socket.socket(self._family, socktype, proto)
+            self.sock.settimeout(self._connection_timeout)
+>           self.sock.connect(sockaddr)
+E           PermissionError: [Errno 1] Operation not permitted
+
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/mysql/connector/network.py:795: PermissionError
+
+The above exception was the direct cause of the following exception:
+
+self = <sqlalchemy.engine.base.Connection object at 0x10a5a9190>
+engine = Engine(mysql+mysqlconnector://service_plobooks:***@localhost:3306/plobooks)
+connection = None, _has_events = None, _allow_revalidate = True
+_allow_autobegin = True
+
+    def __init__(
+        self,
+        engine: Engine,
+        connection: Optional[PoolProxiedConnection] = None,
+        _has_events: Optional[bool] = None,
+        _allow_revalidate: bool = True,
+        _allow_autobegin: bool = True,
+    ):
+        """Construct a new Connection."""
+        self.engine = engine
+        self.dialect = dialect = engine.dialect
+    
+        if connection is None:
+            try:
+>               self._dbapi_connection = engine.raw_connection()
+
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/engine/base.py:143: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/engine/base.py:3317: in raw_connection
+    return self.pool.connect()
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/pool/base.py:448: in connect
+    return _ConnectionFairy._checkout(self)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/pool/base.py:1272: in _checkout
+    fairy = _ConnectionRecord.checkout(pool)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/pool/base.py:712: in checkout
+    rec = pool._do_get()
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/pool/impl.py:177: in _do_get
+    with util.safe_reraise():
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/util/langhelpers.py:121: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/pool/impl.py:175: in _do_get
+    return self._create_connection()
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/pool/base.py:389: in _create_connection
+    return _ConnectionRecord(self)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/pool/base.py:674: in __init__
+    self.__connect()
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/pool/base.py:900: in __connect
+    with util.safe_reraise():
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/util/langhelpers.py:121: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/pool/base.py:896: in __connect
+    self.dbapi_connection = connection = pool._invoke_creator(self)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/engine/create.py:667: in connect
+    return dialect.connect(*cargs_tup, **cparams)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/engine/default.py:630: in connect
+    return self.loaded_dbapi.connect(*cargs, **cparams)  # type: ignore[no-any-return]  # NOQA: E501
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/mysql/connector/pooling.py:323: in connect
+    return MySQLConnection(*args, **kwargs)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/mysql/connector/connection.py:185: in __init__
+    self.connect(**kwargs)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/mysql/connector/abstracts.py:1604: in connect
+    self._open_connection()
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/mysql/connector/connection.py:411: in _open_connection
+    raise err
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/mysql/connector/connection.py:382: in _open_connection
+    self._socket.open_connection()
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <mysql.connector.network.MySQLTCPSocket object at 0x10a53ce00>
+
+    def open_connection(self) -> None:
+        """Open the TCP/IP connection to the MySQL server."""
+        # pylint: disable=no-member
+        # Get address information
+        addrinfo: Tuple[
+            socket.AddressFamily,
+            socket.SocketKind,
+            int,
+            str,
+            Union[tuple[str, int], tuple[str, int, int, int], tuple[int, bytes]],
+        ] = (None, None, None, None, None)
+        try:
+            addrinfos = socket.getaddrinfo(
+                self.server_host,
+                self.server_port,
+                0,
+                socket.SOCK_STREAM,
+                socket.SOL_TCP,
+            )
+            # If multiple results we favor IPv4, unless IPv6 was forced.
+            for info in addrinfos:
+                if self.force_ipv6 and info[0] == socket.AF_INET6:
+                    addrinfo = info
+                    break
+                if info[0] == socket.AF_INET:
+                    addrinfo = info
+                    break
+            if self.force_ipv6 and addrinfo[0] is None:
+                raise InterfaceError(f"No IPv6 address found for {self.server_host}")
+            if addrinfo[0] is None:
+                addrinfo = addrinfos[0]
+        except IOError as err:
+            raise InterfaceError(
+                errno=2003,
+                values=(self.server_host, self.server_port, _strioerror(err)),
+            ) from err
+    
+        (self._family, socktype, proto, _, sockaddr) = addrinfo
+    
+        # Instantiate the socket and connect
+        try:
+            self.sock = socket.socket(self._family, socktype, proto)
+            self.sock.settimeout(self._connection_timeout)
+            self.sock.connect(sockaddr)
+        except (socket.timeout, TimeoutError) as err:
+            raise ConnectionTimeoutError(
+                errno=2003,
+                values=(
+                    self.server_host,
+                    self.server_port,
+                    _strioerror(err),
+                ),
+            ) from err
+        except IOError as err:
+>           raise InterfaceError(
+                errno=2003,
+                values=(self.server_host, self.server_port, _strioerror(err)),
+            ) from err
+E           mysql.connector.errors.InterfaceError: 2003: Can't connect to MySQL server on 'localhost:3306' (Errno 1: Operation not permitted)
+
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/mysql/connector/network.py:806: InterfaceError
+
+The above exception was the direct cause of the following exception:
+
+client = <starlette.testclient.TestClient object at 0x109fb73b0>
+register_and_login = <function register_and_login.<locals>._fn at 0x106db19e0>
+uniq = '5a54b6bf61'
+
+    def test_users_admin_only(client: TestClient, register_and_login, uniq: str):
+>       user_headers = register_and_login(f"normal_{uniq}@example.com", role="user")
+
+test/integration/test_user_admin_api.py:7: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+test/conftest.py:32: in _fn
+    r = client.post("/auth/register", json=user)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/starlette/testclient.py:538: in post
+    return super().post(
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/httpx/_client.py:1145: in post
+    return self.request(
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/starlette/testclient.py:437: in request
+    return super().request(
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/httpx/_client.py:827: in request
+    return self.send(request, auth=auth, follow_redirects=follow_redirects)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/httpx/_client.py:914: in send
+    response = self._send_handling_auth(
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/httpx/_client.py:942: in _send_handling_auth
+    response = self._send_handling_redirects(
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/httpx/_client.py:979: in _send_handling_redirects
+    response = self._send_single_request(request)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/httpx/_client.py:1015: in _send_single_request
+    response = transport.handle_request(request)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/starlette/testclient.py:340: in handle_request
+    raise exc
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/starlette/testclient.py:337: in handle_request
+    portal.call(self.app, scope, receive, send)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/anyio/from_thread.py:288: in call
+    return cast(T_Retval, self.start_task_soon(func, *args).result())
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/concurrent/futures/_base.py:456: in result
+    return self.__get_result()
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/concurrent/futures/_base.py:401: in __get_result
+    raise self._exception
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/anyio/from_thread.py:217: in _call_func
+    retval = await retval_or_awaitable
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/fastapi/applications.py:1159: in __call__
+    await super().__call__(scope, receive, send)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/starlette/applications.py:112: in __call__
+    await self.middleware_stack(scope, receive, send)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/starlette/middleware/errors.py:187: in __call__
+    raise exc
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/starlette/middleware/errors.py:165: in __call__
+    await self.app(scope, receive, _send)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/starlette/middleware/cors.py:85: in __call__
+    await self.app(scope, receive, send)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/starlette/middleware/exceptions.py:62: in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/starlette/_exception_handler.py:53: in wrapped_app
+    raise exc
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/starlette/_exception_handler.py:42: in wrapped_app
+    await app(scope, receive, sender)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/fastapi/middleware/asyncexitstack.py:18: in __call__
+    await self.app(scope, receive, send)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/starlette/routing.py:714: in __call__
+    await self.middleware_stack(scope, receive, send)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/starlette/routing.py:734: in app
+    await route.handle(scope, receive, send)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/starlette/routing.py:288: in handle
+    await self.app(scope, receive, send)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/fastapi/routing.py:134: in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/starlette/_exception_handler.py:53: in wrapped_app
+    raise exc
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/starlette/_exception_handler.py:42: in wrapped_app
+    await app(scope, receive, sender)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/fastapi/routing.py:120: in app
+    response = await f(request)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/fastapi/routing.py:674: in app
+    raw_response = await run_endpoint_function(
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/fastapi/routing.py:330: in run_endpoint_function
+    return await run_in_threadpool(dependant.call, **values)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/starlette/concurrency.py:37: in run_in_threadpool
+    return await anyio.to_thread.run_sync(func)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/anyio/to_thread.py:56: in run_sync
+    return await get_async_backend().run_sync_in_worker_thread(
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/anyio/_backends/_asyncio.py:2144: in run_sync_in_worker_thread
+    return await future
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/anyio/_backends/_asyncio.py:851: in run
+    result = context.run(func, *args)
+presentation/auth_router.py:20: in register
+    existing = crud_user.get_user_by_email(db, user_in.email)
+infrastructure/crud_user.py:52: in get_user_by_email
+    return db.query(models.Utilisateur).filter(models.Utilisateur.email == email).first()
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/orm/query.py:2766: in first
+    return self.limit(1)._iter().first()  # type: ignore
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/orm/query.py:2864: in _iter
+    result: Union[ScalarResult[_T], Result[_T]] = self.session.execute(
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/orm/session.py:2351: in execute
+    return self._execute_internal(
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/orm/session.py:2239: in _execute_internal
+    conn = self._connection_for_bind(bind)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/orm/session.py:2108: in _connection_for_bind
+    return trans._connection_for_bind(engine, execution_options)
+<string>:2: in _connection_for_bind
+    ???
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/orm/state_changes.py:137: in _go
+    ret_value = fn(self, *arg, **kw)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/orm/session.py:1187: in _connection_for_bind
+    conn = bind.connect()
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/engine/base.py:3293: in connect
+    return self._connection_cls(self)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/engine/base.py:145: in __init__
+    Connection._handle_dbapi_exception_noconnection(
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/engine/base.py:2448: in _handle_dbapi_exception_noconnection
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/engine/base.py:143: in __init__
+    self._dbapi_connection = engine.raw_connection()
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/engine/base.py:3317: in raw_connection
+    return self.pool.connect()
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/pool/base.py:448: in connect
+    return _ConnectionFairy._checkout(self)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/pool/base.py:1272: in _checkout
+    fairy = _ConnectionRecord.checkout(pool)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/pool/base.py:712: in checkout
+    rec = pool._do_get()
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/pool/impl.py:177: in _do_get
+    with util.safe_reraise():
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/util/langhelpers.py:121: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/pool/impl.py:175: in _do_get
+    return self._create_connection()
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/pool/base.py:389: in _create_connection
+    return _ConnectionRecord(self)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/pool/base.py:674: in __init__
+    self.__connect()
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/pool/base.py:900: in __connect
+    with util.safe_reraise():
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/util/langhelpers.py:121: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/pool/base.py:896: in __connect
+    self.dbapi_connection = connection = pool._invoke_creator(self)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/engine/create.py:667: in connect
+    return dialect.connect(*cargs_tup, **cparams)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/sqlalchemy/engine/default.py:630: in connect
+    return self.loaded_dbapi.connect(*cargs, **cparams)  # type: ignore[no-any-return]  # NOQA: E501
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/mysql/connector/pooling.py:323: in connect
+    return MySQLConnection(*args, **kwargs)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/mysql/connector/connection.py:185: in __init__
+    self.connect(**kwargs)
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/mysql/connector/abstracts.py:1604: in connect
+    self._open_connection()
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/mysql/connector/connection.py:411: in _open_connection
+    raise err
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/mysql/connector/connection.py:382: in _open_connection
+    self._socket.open_connection()
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <mysql.connector.network.MySQLTCPSocket object at 0x10a53ce00>
+
+    def open_connection(self) -> None:
+        """Open the TCP/IP connection to the MySQL server."""
+        # pylint: disable=no-member
+        # Get address information
+        addrinfo: Tuple[
+            socket.AddressFamily,
+            socket.SocketKind,
+            int,
+            str,
+            Union[tuple[str, int], tuple[str, int, int, int], tuple[int, bytes]],
+        ] = (None, None, None, None, None)
+        try:
+            addrinfos = socket.getaddrinfo(
+                self.server_host,
+                self.server_port,
+                0,
+                socket.SOCK_STREAM,
+                socket.SOL_TCP,
+            )
+            # If multiple results we favor IPv4, unless IPv6 was forced.
+            for info in addrinfos:
+                if self.force_ipv6 and info[0] == socket.AF_INET6:
+                    addrinfo = info
+                    break
+                if info[0] == socket.AF_INET:
+                    addrinfo = info
+                    break
+            if self.force_ipv6 and addrinfo[0] is None:
+                raise InterfaceError(f"No IPv6 address found for {self.server_host}")
+            if addrinfo[0] is None:
+                addrinfo = addrinfos[0]
+        except IOError as err:
+            raise InterfaceError(
+                errno=2003,
+                values=(self.server_host, self.server_port, _strioerror(err)),
+            ) from err
+    
+        (self._family, socktype, proto, _, sockaddr) = addrinfo
+    
+        # Instantiate the socket and connect
+        try:
+            self.sock = socket.socket(self._family, socktype, proto)
+            self.sock.settimeout(self._connection_timeout)
+            self.sock.connect(sockaddr)
+        except (socket.timeout, TimeoutError) as err:
+            raise ConnectionTimeoutError(
+                errno=2003,
+                values=(
+                    self.server_host,
+                    self.server_port,
+                    _strioerror(err),
+                ),
+            ) from err
+        except IOError as err:
+>           raise InterfaceError(
+                errno=2003,
+                values=(self.server_host, self.server_port, _strioerror(err)),
+            ) from err
+E           sqlalchemy.exc.InterfaceError: (mysql.connector.errors.InterfaceError) 2003: Can't connect to MySQL server on 'localhost:3306' (Errno 1: Operation not permitted)
+E           (Background on this error at: https://sqlalche.me/e/20/rvf5)
+
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/mysql/connector/network.py:806: InterfaceError
+=========================== short test summary info ============================
+FAILED test/fonctionnal/test_book_flow.py::test_book_crud_flow - sqlalchemy.e...
+FAILED test/integration/test_article_api.py::test_article_crud - sqlalchemy.e...
+FAILED test/integration/test_book_api.py::test_create_and_get_book - sqlalche...
+FAILED test/integration/test_catalog_api.py::test_catalog_crud - sqlalchemy.e...
+FAILED test/integration/test_order_api.py::test_orders_lignes_paiements_scoped_to_user
+FAILED test/integration/test_scan_api.py::test_scan_isbn_crud - sqlalchemy.ex...
+FAILED test/integration/test_stock_api.py::test_stock_and_sources_crud - sqla...
+FAILED test/integration/test_user_admin_api.py::test_users_admin_only - sqlal...
+========================= 8 failed, 5 passed in 19.74s =========================

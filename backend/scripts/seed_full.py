@@ -64,9 +64,12 @@ def seed_full():
         sample_isbn = '9780143127741'
         existing = db.query(models.Livre).filter(models.Livre.isbn == sample_isbn).first()
         if not existing:
+            etat_bon = db.query(models.EtatUsure).filter(models.EtatUsure.libelle == 'Bon état').first()
+            if not etat_bon:
+                raise ValueError("EtatUsure 'Bon état' not found; run seed_full.py first")
             article = models.Article(
                 id_type_objet=to_book.id_type_objet,
-                id_etat_usure=db.query(models.EtatUsure).filter(models.EtatUsure.libelle == 'Bon état').first().id_etat_usure,
+                id_etat_usure=etat_bon.id_etat_usure,
                 sku=sample_isbn,
                 titre='Sample Seed Book',
                 description='Example seeded book',
@@ -83,13 +86,17 @@ def seed_full():
             db.add(stock)
 
         # Create admin user if not present
-        admin_email = 'arey75005@gmail.com'
-        admin_password = 'admin1234!'
+        admin_email = os.getenv('ADMIN_EMAIL', 'admin@example.com')
+        admin_password = os.getenv('ADMIN_PASSWORD', 'admin1234!')
+        if not admin_password or admin_password == 'admin1234!':
+            import secrets
+            admin_password = secrets.token_urlsafe(12)
+            print(f"Generated admin password: {admin_password}")
         existing_user = db.query(models.Utilisateur).filter(models.Utilisateur.email == admin_email).first()
         if not existing_user:
             crud_user.create_user(db, {
-                "nom": "Arey",
-                "prenom": "Admin",
+                "nom": "Admin",
+                "prenom": "User",
                 "email": admin_email,
                 "mot_de_passe": admin_password,
                 "role": "admin",

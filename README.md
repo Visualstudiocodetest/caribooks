@@ -38,41 +38,199 @@ Le projet suit les principes **SOLID**, **Clean Architecture** et **KISS**, et e
 - Python (v3.11+)
 - Git
 
-### 1. Cloner le dépôt
-```bash
-git clone https://github.com/votre-utilisateur/caribooks.git
-cd caribooks
-```
+```mermaid
+graph LR
+   subgraph CLIENT
+      Browser["User Browser<br/>(Next.js client / SSR pages)"]
+   end
 
-### 2. Lancer le Backend (FastAPI)
-```bash
-cd backend
-python -m venv venv
-source venv/bin/activate  # Sur Windows : venv\Scripts\activate
-pip install -r requirements.txt
-# Copier le fichier d'environnement et configurer la BDD
-cp .env.example .env
-uvicorn main:app --reload
-```
-*L'API sera disponible sur : http://localhost:8000* (Documentation Swagger sur `/docs`)
+   subgraph CDN_VERCEL
+      Frontend["Next.js App<br/>(routes: /catalog, /cart, /account, /admin, /payment)"]
+   end
 
-### 3. Lancer le Frontend (Next.js)
-```bash
-cd ../frontend
-npm install
-# Configurer les variables d'environnement (API URL, etc.)
-cp .env.example .env.local
-npm run dev
+   subgraph BACKEND
+      API["FastAPI (Uvicorn)<br/>Routers: auth, users, orders, payrexx_webhook"]
+      Services["Services: payrexx_service, jwt_service, book_service"]
+      Scripts["Scripts: seed_db, migrations"]
+   end
+
+   subgraph DATA
+      MySQL[("MySQL DB<br/>Tables: utilisateur, commande, paiement, stock, article")]
+      Storage[("Static files / images / CDN")]
+   end
+
+   subgraph EXTERNAL
+      Payrexx["Payrexx API<br/>Payment checkout + webhook"]
+   end
+
+   Browser -->|HTTP| Frontend
+   Frontend -->|API calls (NEXT_PUBLIC_BACKEND_BASE_URL)| API
+   API -->|SQL| MySQL
+   API -->|uploads/downloads| Storage
+   API -->|HTTP (server->provider)| Payrexx
+   Payrexx -->|Webhook POST| API
+
+   subgraph DEV_FALLBACK
+      LocalRedirect["/orders/paiements/local/redirect/{ref}<br/>(simulator page)"]
+   end
+   Frontend -->|redirect to local simulator when PAYREXX_API_KEY unset| LocalRedirect
+   LocalRedirect -->|POST simulated payload| API
+
+   %% Environment hints
+   classDef env fill:#f9f,stroke:#333,stroke-width:1px;
+   EnvVars["Env: PAYREXX_API_KEY, PAYREXX_BASE_URL, PAYREXX_WEBHOOK_SECRET,<br/>BACKEND_BASE_URL, NEXT_PUBLIC_BACKEND_BASE_URL, SECRET_KEY"]:::env
+   EnvVars -.-> API
+   EnvVars -.-> Frontend
+
+   %% Admin & staff
+   AdminUI["Admin UI (/admin)<br/>order management"] 
+   AdminUI -->|API| API
+   API --> AdminUI
+
+   %% Notes
+   note right of API
+      - Webhook verifies HMAC using PAYREXX_WEBHOOK_SECRET (optional)
+      - Finalize commande moves reserved stock -> sold
+      - Click&Collect fees applied at order creation
+   end note
 ```
-*Le site web sera accessible sur : http://localhost:3000*
+## Migrations
+
+Un script de migration SQL a été ajouté pour mettre à jour la base de données en local:
+
+- `migrations/20260520_add_billing_and_commande_fields.sql` — ajoute les colonnes d'adresse facturation à `utilisateur` et les champs `shipping_method` / `frais_port_chf` à `commande`.
 
 ---
 
-## 👨‍💻 Principes de Développement
+## Architecture & Payment Flows
 
-Nous appliquons les meilleures pratiques de l'industrie :
-- **KISS (Keep It Simple, Stupid) :** Nous privilégions un code simple, lisible et facile à maintenir.
-- **SOLID :** Notre architecture backend (Clean Architecture) et frontend respecte strictement les principes SOLID pour garantir la scalabilité du projet.
-- **KKS Structuration :** Une hiérarchie claire et standardisée des dossiers, fichiers et logs.
+Below are two app-specific Mermaid diagrams: the checkout/payment sequence (covers dev fallback and production Payrexx webhook) and the overall technical architecture for this project.
 
-Pour plus de détails sur les conventions de code, veuillez consulter le fichier `AGENTS.md`.
+### Checkout & Payrexx Sequence
+```mermaid
+sequenceDiagram
+   participant U as User
+   participant FE as Frontend
+   participant BE as Backend
+   participant DB as MySQL
+   participant PR as Payrexx
+
+   U->>FE: Start checkout / submit cart
+   FE->>BE: POST /orders/commandes (create commande + shipping_method)
+   BE->>DB: INSERT commande; reserve stock (with_for_update)
+   DB-->>BE: OK (commande created)
+   BE-->>FE: 201 Created (commande id + totals)
+
+   FE->>BE: POST /orders/paiements/payrexx (paiement request)
+   BE->>DB: INSERT paiement (status=PENDING)
+   alt PAYREXX_API_KEY not set (dev)
+      BE-->>FE: redirect_url = /orders/paiements/local/redirect/{ref}
+   else Payrexx production
+      BE->>PR: Create Payment (Amount, Currency, Metadata.reference, return/cancel URLs)
+      PR-->>BE: { id, redirect_url }
+      BE->>DB: UPDATE paiement.reference_externe = id; statut = provider_status
+      BE-->>FE: { redirect_url }
+   end
+
+   FE-->>U: Redirect to redirect_url
+
+   alt Local simulation
+      U->>FE: Open /orders/paiements/local/redirect/{ref}
+      FE->>BE: POST /orders/paiements/webhook/payrexx (simulated payload)
+   else Real provider
+      PR->>BE: POST /orders/paiements/webhook/payrexx (provider callback)
+   end
+
+   BE->>BE: verify signature if configured
+   BE->>DB: Find paiement and update statut, date_paiement
+   alt statut in (PAID, CAPTURED, COMPLETED)
+      BE->>BE: _finalize_commande -> convert reserved -> sold
+      BE->>DB: commit
+   end
+
+   BE-->>FE: status update available via API
+   U->>FE: refresh / poll -> sees order status
+```
+
+Key implementation points:
+- Payrexx helper: [backend/services/payrexx_service.py](backend/services/payrexx_service.py)
+- Webhook & finalization: [backend/presentation/order_router.py](backend/presentation/order_router.py)
+- Local simulator page: [frontend/src/app/orders/paiements/local/redirect/[ref]/page.tsx](frontend/src/app/orders/paiements/local/redirect/%5Bref%5D/page.tsx)
+
+### Use case: Add Book with IBAN (owner payout)
+```mermaid
+sequenceDiagram
+   participant V as Volunteer
+   participant FE as Frontend
+   participant BE as Backend
+   participant DB as MySQL
+
+   V->>FE: Scan ISBN or enter details
+   FE->>BE: GET /books/isbn/{isbn} -> fetch OpenLibrary metadata
+   BE->>FE: 200 OK (metadata)
+   V->>FE: Fill extra info (condition, price, owner IBAN optional)
+   FE->>BE: POST /books (create book with owner_iban)
+   BE->>DB: INSERT article (status: available) with owner_iban
+   DB-->>BE: OK
+   BE-->>FE: 201 Created (book id)
+
+   Note over BE,DB: Admin can later issue payout to owner using stored IBAN
+```
+
+### Technical Architecture
+```mermaid
+graph LR
+   subgraph CLIENT
+      Browser[User Browser\n(Next.js client / SSR pages)]
+   end
+
+   subgraph CDN_VERCEL
+      Frontend[Next.js App\n(routes: /catalog, /cart, /account, /admin, /payment)]
+   end
+
+   subgraph BACKEND
+      API[FastAPI (Uvicorn)\nRouters: auth, users, orders, payrexx_webhook]
+      Services[Services: payrexx_service, jwt_service, book_service]
+      Scripts[Scripts: seed_db, migrations]
+   end
+
+   subgraph DATA
+      MySQL[(MySQL DB)\nTables: utilisateur, commande, paiement, stock, article]
+      Storage[(Static files / images / CDN)]
+   end
+
+   subgraph EXTERNAL
+      Payrexx[Payrexx API\nPayment checkout + webhook]
+   end
+
+   Browser -->|HTTP| Frontend
+   Frontend -->|API calls (NEXT_PUBLIC_BACKEND_BASE_URL)| API
+   API -->|SQL| MySQL
+   API -->|uploads/downloads| Storage
+   API -->|HTTP (server->provider)| Payrexx
+   Payrexx -->|Webhook POST| API
+
+   subgraph DEV_FALLBACK
+      LocalRedirect[/orders/paiements/local/redirect/{ref}\n(simulator page)]
+   end
+   Frontend -->|redirect to local simulator when PAYREXX_API_KEY unset| LocalRedirect
+   LocalRedirect -->|POST simulated payload| API
+
+   %% Environment hints
+   classDef env fill:#f9f,stroke:#333,stroke-width:1px;
+   EnvVars["Env: PAYREXX_API_KEY, PAYREXX_BASE_URL, PAYREXX_WEBHOOK_SECRET,\nBACKEND_BASE_URL, NEXT_PUBLIC_BACKEND_BASE_URL, SECRET_KEY"]:::env
+   EnvVars -.-> API
+   EnvVars -.-> Frontend
+
+   %% Admin & staff
+   AdminUI[Admin UI (/admin)\norder management] 
+   AdminUI -->|API| API
+   API --> AdminUI
+
+   %% Notes
+   note right of API
+      - Webhook verifies HMAC using PAYREXX_WEBHOOK_SECRET (optional)
+      - Finalize commande moves reserved stock -> sold
+      - Click&Collect fees applied at order creation
+   end note
+```

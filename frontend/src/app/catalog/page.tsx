@@ -1,13 +1,14 @@
 import { listBooks } from '@/services/books'
 import { CatalogClient } from './CatalogClient'
 import { apiFetch } from '@/services/api'
+import { Stock } from '@/types/api'
 
 export const dynamic = 'force-dynamic'
 
 export default async function CatalogPage() {
   const books = await listBooks().catch(() => [])
   // Fetch stock info server-side and filter out books with zero available quantity
-  let stocks: Array<{ id_article: number; quantite_disponible: number }> = []
+  let stocks: Stock[] = []
   try {
     stocks = await apiFetch('/stock/')
   } catch {

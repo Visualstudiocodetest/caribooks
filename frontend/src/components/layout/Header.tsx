@@ -16,7 +16,7 @@ export function Header() {
       <div className="container header-inner">
         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
           <Link href="/" className="brand" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <Image src="/logo-caritas.png" alt="Caribooks" width={140} height={36} />
+            <Image src="/Logo-caritas.svg" alt="Caribooks" width={140} height={36} />
           </Link>
           <nav className="main-nav">
             <Link className="muted" href="/catalog">
@@ -31,6 +31,11 @@ export function Header() {
                   Gérer les listes
                 </Link>
               </>
+            ) : null}
+            {isLoggedIn ? (
+              <Link className="muted" href="/account">
+                Mon compte
+              </Link>
             ) : null}
           </nav>
         </div>

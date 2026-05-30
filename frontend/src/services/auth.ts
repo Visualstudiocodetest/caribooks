@@ -9,6 +9,14 @@ export async function register(payload: UserCreate): Promise<UserRead> {
   return apiFetch<UserRead>('/auth/register', { method: 'POST', body: JSON.stringify(payload) })
 }
 
+export function getCurrentUser(): Promise<UserRead> {
+  return apiFetch<UserRead>('/users/me', { auth: true })
+}
+
+export function updateCurrentUser(payload: Partial<UserCreate & { mot_de_passe?: string }>): Promise<UserRead> {
+  return apiFetch<UserRead>('/users/me', { method: 'PUT', auth: true, body: JSON.stringify(payload) })
+}
+
 export function persistToken(token: string) {
   window.localStorage.setItem('caribooks_token', JSON.stringify(token))
 }

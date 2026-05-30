@@ -27,6 +27,12 @@ def register(user_in: UserCreate, db: Session = Depends(get_db)):
         prenom=db_user.prenom,
         email=db_user.email,
         role=db_user.role,
+        billing_address_line1=db_user.billing_address_line1,
+        billing_address_line2=db_user.billing_address_line2,
+        billing_postal_code=db_user.billing_postal_code,
+        billing_city=db_user.billing_city,
+        billing_country=db_user.billing_country,
+        billing_phone=db_user.billing_phone,
     )
 
 

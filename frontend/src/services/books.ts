@@ -1,5 +1,5 @@
 import { apiFetch } from './api'
-import type { BookRead } from '@/types/api'
+import type { BookRead, BookCreate } from '@/types/api'
 
 export function listBooks(): Promise<BookRead[]> {
   return apiFetch<BookRead[]>('/books/')
@@ -13,7 +13,7 @@ export function getBookByIsbn(isbn: string): Promise<BookRead> {
   return apiFetch<BookRead>(`/books/by-isbn/${encodeURIComponent(isbn)}`)
 }
 
-export function createBook(payload: Omit<BookRead, 'id_article'>): Promise<BookRead> {
+export function createBook(payload: BookCreate): Promise<BookRead> {
   return apiFetch<BookRead>('/books/', { method: 'POST', auth: true, body: JSON.stringify(payload) })
 }
 

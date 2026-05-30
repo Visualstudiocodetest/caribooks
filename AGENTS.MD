@@ -39,3 +39,12 @@ Bien que le KKS soit originellement utilisé dans l'industrie, nous appliquons s
 ## 3. Qualité et Sécurité
 - Assurez-vous que toutes les transactions sont restreintes à la devise CHF et livrables uniquement en Suisse.
 - Ne pas introduire de bibliothèques tierces superflues sans justification (KISS).
+
+## Paiements et livraison (nouveau)
+
+- **Payrexx**: L'intégration Payrexx est optionnelle et activée via `PAYREXX_API_KEY`. Le backend expose un endpoint pour créer des paiements et un webhook pour recevoir les notifications. Les développeurs doivent s'assurer que la variable `PAYREXX_API_KEY` est stockée en toute sécurité dans l'environnement et ne doit pas être commitée.
+- **Click & Collect**: Ajout d'une option `CLICK_COLLECT` avec frais fixes `1 CHF`. Les commandes conservent `shipping_method` et `frais_port_chf`.
+
+## Migrations
+
+- Une migration SQL a été ajoutée (`migrations/20260520_add_billing_and_commande_fields.sql`) pour étendre `utilisateur` (champs d'adresse de facturation) et `commande` (méthode de livraison et frais).

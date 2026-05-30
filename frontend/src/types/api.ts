@@ -18,6 +18,11 @@ export type BookRead = {
   categorie_libelles?: string[]
 }
 
+export type BookCreate = Omit<BookRead, 'id_article' | 'date_creation' | 'categorie_ids' | 'categorie_libelles' | 'etat_libelle'> & {
+  id_type_objet?: number
+  id_etat_usure?: number
+}
+
 export type LoginRequest = {
   username: string
   password: string
@@ -34,6 +39,12 @@ export type UserRead = {
   prenom: string
   email: string
   role: string
+  billing_address_line1?: string | null
+  billing_address_line2?: string | null
+  billing_postal_code?: string | null
+  billing_city?: string | null
+  billing_country?: string | null
+  billing_phone?: string | null
 }
 
 export type UserCreate = {
@@ -42,18 +53,29 @@ export type UserCreate = {
   email: string
   mot_de_passe: string
   role?: string
+  billing_address_line1?: string
+  billing_address_line2?: string
+  billing_postal_code?: string
+  billing_city?: string
+  billing_country?: string
+  billing_phone?: string
 }
+
+export type UserUpdate = Partial<UserCreate & { mot_de_passe?: string }>
 
 export type CommandeCreate = {
   numero_commande: string
   montant_total_chf: number
   statut: string
+  shipping_method?: 'POST' | 'CLICK_COLLECT'
+  frais_port_chf?: number
 }
 
 export type CommandeRead = CommandeCreate & {
   id_commande: number
   id_utilisateur: number
   date_commande: string
+  date_creation?: string  // alias for date_commande
 }
 
 export type LigneCommandeCreate = {
@@ -92,5 +114,14 @@ export type ScanISBNRead = {
   isbn_lu: string
   valide: boolean
   date_scan: string
+}
+
+export type Stock = {
+  id_stock: number
+  id_article: number
+  id_source_stock: number
+  quantite_disponible: number
+  quantite_reservee?: number
+  date_creation: string
 }
 

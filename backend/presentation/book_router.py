@@ -41,7 +41,7 @@ def get_book(id_article: int, db: Session = Depends(get_db)):
     return book
 
 @router.post("/", response_model=BookRead, status_code=status.HTTP_201_CREATED)
-def create_book(book_in: BookCreate, db: Session = Depends(get_db), _admin=Depends(require_admin), request: Request = None):
+def create_book(book_in: BookCreate, request: Request, db: Session = Depends(get_db), _admin=Depends(require_admin)):
     service = BookService(db)
     image_link = book_in.image_link
     # If an external URL is provided, try to download it and serve from our static folder
@@ -114,7 +114,7 @@ def create_book(book_in: BookCreate, db: Session = Depends(get_db), _admin=Depen
 
 
 @router.post("", response_model=BookRead, status_code=status.HTTP_201_CREATED, include_in_schema=False)
-def create_book_no_slash(book_in: BookCreate, db: Session = Depends(get_db), _admin=Depends(require_admin), request: Request = None):
+def create_book_no_slash(book_in: BookCreate, request: Request, db: Session = Depends(get_db), _admin=Depends(require_admin)):
     service = BookService(db)
     image_link = book_in.image_link
     try:

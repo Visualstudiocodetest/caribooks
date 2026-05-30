@@ -57,9 +57,42 @@ def create_user(db: Session, user_data: dict) -> models.Utilisateur:
         prenom=user_data["prenom"],
         email=user_data["email"],
         mot_de_passe_hash=get_password_hash(user_data["mot_de_passe"]),
-        role=user_data.get("role", "user")
+        role=user_data.get("role", "user"),
+        billing_address_line1=user_data.get("billing_address_line1"),
+        billing_address_line2=user_data.get("billing_address_line2"),
+        billing_postal_code=user_data.get("billing_postal_code"),
+        billing_city=user_data.get("billing_city"),
+        billing_country=user_data.get("billing_country"),
+        billing_phone=user_data.get("billing_phone"),
     )
     db.add(db_user)
     db.commit()
     db.refresh(db_user)
     return db_user
+
+
+def update_user(db: Session, id_utilisateur: int, data: dict) -> Optional[models.Utilisateur]:
+    user = db.query(models.Utilisateur).filter(models.Utilisateur.id_utilisateur == id_utilisateur).first()
+    if user is None:
+        return None
+    # fields allowed to be updated
+    allowed = [
+        "nom",
+        "prenom",
+        "email",
+        "role",
+        "billing_address_line1",
+        "billing_address_line2",
+        "billing_postal_code",
+        "billing_city",
+        "billing_country",
+        "billing_phone",
+    ]
+    for k in allowed:
+        if k in data:
+            setattr(user, k, data[k])
+    if "mot_de_passe" in data and data.get("mot_de_passe"):
+        user.mot_de_passe_hash = get_password_hash(data.get("mot_de_passe"))
+    db.commit()
+    db.refresh(user)
+    return user

@@ -150,6 +150,13 @@ class Utilisateur(Base):
     email = Column(String(255), nullable=False, unique=True)
     mot_de_passe_hash = Column(String(255), nullable=False)
     role = Column(String(50), nullable=False, default="user")
+    # Billing address fields
+    billing_address_line1 = Column(String(255), nullable=True)
+    billing_address_line2 = Column(String(255), nullable=True)
+    billing_postal_code = Column(String(30), nullable=True)
+    billing_city = Column(String(100), nullable=True)
+    billing_country = Column(String(100), nullable=True)
+    billing_phone = Column(String(50), nullable=True)
     date_creation = Column(TIMESTAMP, nullable=False, server_default=func.now())
 
     commandes = relationship("Commande", back_populates="utilisateur")
@@ -165,6 +172,9 @@ class Commande(Base):
     numero_commande = Column(String(50), nullable=False, unique=True)
     date_commande = Column(TIMESTAMP, nullable=False, server_default=func.now())
     montant_total_chf = Column(DECIMAL(10, 2), nullable=False)
+    # Shipping / pickup options
+    shipping_method = Column(String(50), nullable=False, server_default="POST")
+    frais_port_chf = Column(DECIMAL(10, 2), nullable=False, server_default="0.00")
     statut = Column(String(50), nullable=False)
 
     __table_args__ = (CheckConstraint("montant_total_chf >= 0", name="ck_commande_total_nonneg"),)

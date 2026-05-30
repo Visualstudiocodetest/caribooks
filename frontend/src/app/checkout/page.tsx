@@ -24,6 +24,7 @@ export default function CheckoutPage() {
   const { items, total, clear } = useCart()
   const [status, setStatus] = useState<'idle' | 'loading' | 'done' | 'error'>('idle')
   const [message, setMessage] = useState<string | null>(null)
+  const [shippingMethod, setShippingMethod] = useState<'POST' | 'CLICK_COLLECT'>('POST')
 
   const canCheckout = useMemo(() => isLoggedIn && items.length > 0, [isLoggedIn, items.length])
 
@@ -32,10 +33,14 @@ export default function CheckoutPage() {
     setMessage(null)
     try {
       const numero_commande = makeNumeroCommande()
+      const shippingFee = shippingMethod === 'CLICK_COLLECT' ? 1.0 : 9.0
+      const finalTotal = Math.round((total + shippingFee) * 100) / 100
       const commande = await createCommande({
         numero_commande,
-        montant_total_chf: total,
+        montant_total_chf: finalTotal,
         statut: 'CREATED',
+        shipping_method: shippingMethod,
+        frais_port_chf: shippingFee,
       })
       await Promise.all(
         items.map((it) =>
@@ -89,7 +94,17 @@ export default function CheckoutPage() {
               <div style={{ fontWeight: 900 }}>Total</div>
               <div className="muted">Devise CHF · Livraison Suisse</div>
             </div>
-            <Money amount={total} />
+            <div style={{ display: 'grid', gap: 8 }}>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                <label>
+                  <input type="radio" name="shipping" value="POST" checked={shippingMethod === 'POST'} onChange={() => setShippingMethod('POST')} /> Livraison (9 CHF)
+                </label>
+                <label>
+                  <input type="radio" name="shipping" value="CLICK_COLLECT" checked={shippingMethod === 'CLICK_COLLECT'} onChange={() => setShippingMethod('CLICK_COLLECT')} /> Retrait (1 CHF)
+                </label>
+              </div>
+              <Money amount={Math.round((total + (shippingMethod === 'CLICK_COLLECT' ? 1 : 9)) * 100) / 100} />
+            </div>
           </div>
 
           {message ? (

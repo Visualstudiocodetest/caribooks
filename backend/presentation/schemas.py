@@ -184,6 +184,8 @@ class CommandeBase(BaseModel):
     numero_commande: str
     montant_total_chf: float = Field(..., ge=0)
     statut: str
+    shipping_method: Optional[str] = "POST"
+    frais_port_chf: Optional[float] = 0.0
 
 
 class CommandeCreate(CommandeBase):
@@ -226,7 +228,7 @@ class PaiementBase(BaseModel):
     id_commande: int
     fournisseur_paiement: str = "PAYREXX"
     reference_externe: str
-    montant_chf: float = Field(..., ge=0)
+    montant_chf: float = Field(..., gt=0)  # Must be > 0, not >= 0
     devise: str = "CHF"
     statut: str
     date_paiement: Optional[datetime] = None

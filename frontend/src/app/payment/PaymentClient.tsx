@@ -8,7 +8,7 @@ import { useCart } from '@/components/cart/CartProvider'
 import { Money } from '@/components/ui/Money'
 import { ApiError } from '@/services/api'
 import type { CommandeRead, PaiementRead } from '@/types/api'
-import { createPaiement, getCommande, updatePaiement } from '@/services/orders'
+import { createPaiement, createPaiementPayrexx, getCommande, updatePaiement } from '@/services/orders'
 
 function makeReference() {
   return `local-${Date.now()}`
@@ -40,14 +40,20 @@ export function PaymentClient() {
       .then(async (cmd) => {
         if (!mounted) return
         setCommande(cmd)
-        const pay = await createPaiement({
+        const resp = await createPaiementPayrexx({
           id_commande: cmd.id_commande,
           reference_externe: makeReference(),
           montant_chf: cmd.montant_total_chf,
           statut: 'PENDING',
         })
         if (!mounted) return
-        setPaiement(pay)
+        if (resp && resp.redirect_url) {
+          // redirect to provider
+          window.location.href = resp.redirect_url
+          return
+        }
+        // fallback: set local paiement object
+        setPaiement(resp.paiement)
       })
       .catch((e: unknown) => {
         if (!mounted) return

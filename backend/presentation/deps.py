@@ -45,7 +45,7 @@ def get_current_user(
 
 
 def require_admin(current_user: models.Utilisateur = Depends(get_current_user)) -> models.Utilisateur:
-    if current_user.role != "admin":
+    if str(current_user.role) != "admin":  # type: ignore
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin privileges required")
     return current_user
 

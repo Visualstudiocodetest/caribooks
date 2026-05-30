@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
-import type { BookRead } from '@/types/api'
+import type { BookRead, Stock } from '@/types/api'
 import { listBooks, deleteBook } from '@/services/books'
 import { listStocks } from '@/services/stocks'
 import { ApiError } from '@/services/api'
@@ -24,7 +24,7 @@ export default function AdminBooksPage() {
       .finally(() => {
         // fetch stocks
         listStocks()
-          .then((s: any[]) => {
+          .then((s: Stock[]) => {
             if (!mounted) return
             const map: Record<number, number> = {}
             for (const st of s || []) {

@@ -16,11 +16,13 @@ def test_book_crud_flow():
     # Register + login (writes require auth)
     import uuid
     uniq_user = uuid.uuid4().hex[:10]
+    import secrets
+    test_password = secrets.token_urlsafe(12)
     user = {
         "nom": "Flow",
         "prenom": "User",
         "email": f"flow_{uniq_user}@example.com",
-        "mot_de_passe": "password123",
+        "mot_de_passe": test_password,
         "role": "admin",
     }
     r = client.post("/auth/register", json=user)
