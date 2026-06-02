@@ -31,9 +31,9 @@ jobs:
               sudo -u ubuntu rm -rf venv || true
               sudo -u ubuntu python3 -m venv venv
             fi
-            sudo -u ubuntu venv/bin/python -m pip install --upgrade pip
-            sudo -u ubuntu venv/bin/pip install --no-cache-dir -r requirements.txt
-            systemctl.restart fastapi || systemctl restart fastapi || true
+            /app/venv/bin/python -m pip install --upgrade pip
+            /app/venv/bin/pip install --no-cache-dir -r requirements.txt
+            sudo systemctl restart fastapi || true
             echo "Waiting for healthcheck..."
             attempts=0
             until [ $attempts -ge 10 ]; do
@@ -68,9 +68,9 @@ jobs:
               sudo -u ubuntu rm -rf venv || true
               sudo -u ubuntu python3 -m venv venv
             fi
-            sudo -u ubuntu venv/bin/python -m pip install --upgrade pip
-            sudo -u ubuntu venv/bin/pip install --no-cache-dir -r requirements.txt
-            systemctl.restart fastapi || systemctl restart fastapi || true
+            /app/venv/bin/python -m pip install --upgrade pip
+            /app/venv/bin/pip install --no-cache-dir -r requirements.txt
+            sudo systemctl restart fastapi || true
             echo "Waiting for healthcheck..."
             attempts=0
             until [ $attempts -ge 10 ]; do
