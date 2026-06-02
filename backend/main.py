@@ -32,7 +32,10 @@ async def root():
 
 app.get("/health")
 async def health():
-    return {"status": "ok"}
+    # This endpoint can be used by load balancers or monitoring tools to check if the application is running.
+    return {"status": "ok",
+            "code": 200, 
+            "message": "Health check passed"}
 
 app.include_router(book_router)
 app.include_router(auth_router)
