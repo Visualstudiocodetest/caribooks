@@ -9,7 +9,7 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     strategy:
-      max-parallel: 1
+      max-parallel: 0 # Deploy to VMs sequentially to avoid downtime
       matrix:
         include:
           - name: VM1
