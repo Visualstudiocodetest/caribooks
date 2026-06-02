@@ -30,6 +30,10 @@ app.add_middleware(
 async def root():
     return {"message": "Hello World"}
 
+app.get("/health")
+async def health():
+    return {"status": "ok"}
+
 app.include_router(book_router)
 app.include_router(auth_router)
 app.include_router(catalog_router)
