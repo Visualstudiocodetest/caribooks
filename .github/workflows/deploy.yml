@@ -23,16 +23,17 @@ jobs:
             cd /app || exit 1
             sudo -u ubuntu git pull origin main || true
             sudo apt-get update && sudo apt-get install -y python3 python3-venv python3-pip git || true
-            # Ensure venv is a valid virtualenv; recreate if broken or missing
-            if [ -x venv/bin/python ]; then
+            # Ensure venv is a valid virtualenv; recreate if missing or broken
+            if [ -x /app/venv/bin/python ] && [ ! -d /app/venv/bin/python ]; then
               echo "Using existing venv"
             else
               echo "Creating fresh venv"
-              sudo -u ubuntu rm -rf venv || true
-              sudo -u ubuntu python3 -m venv venv
+              sudo -u ubuntu rm -rf /app/venv || true
+              sudo -u ubuntu python3 -m venv /app/venv
+              sudo chown -R ubuntu:ubuntu /app/venv || true
             fi
-            /app/venv/bin/python -m pip install --upgrade pip
-            /app/venv/bin/pip install --no-cache-dir -r requirements.txt
+            sudo -u ubuntu /app/venv/bin/python -m pip install --upgrade pip
+            sudo -u ubuntu /app/venv/bin/pip install --no-cache-dir -r requirements.txt
             sudo systemctl restart fastapi || true
             echo "Waiting for healthcheck..."
             attempts=0
@@ -60,16 +61,17 @@ jobs:
             cd /app || exit 1
             sudo -u ubuntu git pull origin main || true
             sudo apt-get update && sudo apt-get install -y python3 python3-venv python3-pip git || true
-            # Ensure venv is a valid virtualenv; recreate if broken or missing
-            if [ -x venv/bin/python ]; then
+            # Ensure venv is a valid virtualenv; recreate if missing or broken
+            if [ -x /app/venv/bin/python ] && [ ! -d /app/venv/bin/python ]; then
               echo "Using existing venv"
             else
               echo "Creating fresh venv"
-              sudo -u ubuntu rm -rf venv || true
-              sudo -u ubuntu python3 -m venv venv
+              sudo -u ubuntu rm -rf /app/venv || true
+              sudo -u ubuntu python3 -m venv /app/venv
+              sudo chown -R ubuntu:ubuntu /app/venv || true
             fi
-            /app/venv/bin/python -m pip install --upgrade pip
-            /app/venv/bin/pip install --no-cache-dir -r requirements.txt
+            sudo -u ubuntu /app/venv/bin/python -m pip install --upgrade pip
+            sudo -u ubuntu /app/venv/bin/pip install --no-cache-dir -r requirements.txt
             sudo systemctl restart fastapi || true
             echo "Waiting for healthcheck..."
             attempts=0
