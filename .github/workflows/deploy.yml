@@ -32,16 +32,23 @@ jobs:
           script: |
             set -e
 
+            # Bootstrap: clone if /app doesn't exist or isn't a git repo
+            if [ ! -d /app/.git ]; then
+              echo "Initializing /app from git..."
+              sudo rm -rf /app
+              sudo git clone https://github.com/${{ github.repository }}.git /app
+              sudo chown -R ubuntu:ubuntu /app
+            fi
+
             cd /app
+            git fetch origin main
+            git reset --hard origin/main   # safer than pull — no merge conflicts
 
-            # Pull latest code (fail loudly on error)
-            git pull origin main
-
-            # Install system deps only if missing (fast no-op when already installed)
+            # Install deps only if missing
             dpkg -s python3-venv python3-pip git &>/dev/null || \
-              sudo apt-get install -y python3 python3-venv python3-pip git
+              sudo apt-get install -y -q python3 python3-venv python3-pip git
 
-            # Recreate venv if the python binary is missing or broken
+            # Recreate venv if broken
             if [ ! -x /app/venv/bin/python ]; then
               echo "Creating fresh venv..."
               sudo rm -rf /app/venv
@@ -53,8 +60,7 @@ jobs:
 
             sudo systemctl restart fastapi
 
-            # Healthcheck: retry up to 10 times with 2s delay
-            echo "Waiting for healthcheck on ${{ matrix.name }}..."
+            echo "Waiting for healthcheck..."
             for i in $(seq 1 10); do
               if curl -fsS http://127.0.0.1:8000/health; then
                 echo "${{ matrix.name }} healthy ✓"
@@ -64,7 +70,7 @@ jobs:
               sleep 2
             done
 
-            echo "❌ Healthcheck failed after 10 attempts"
+            echo "❌ Healthcheck failed"
             sudo journalctl -u fastapi -n 200
             exit 1
 
