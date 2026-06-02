@@ -1,7 +1,7 @@
 ============================= test session starts ==============================
 platform darwin -- Python 3.12.1, pytest-8.3.5, pluggy-1.6.0 -- /Library/Frameworks/Python.framework/Versions/3.12/bin/python3.12
 cachedir: .pytest_cache
-rootdir: /Users/alexandrerey/Documents/plobooks/backend
+rootdir: /Users/alexandrerey/Documents/caribooks/backend
 plugins: anyio-4.3.0, time-machine-2.14.0, mock-3.14.1
 collecting ... collected 13 items
 
@@ -75,7 +75,7 @@ E           PermissionError: [Errno 1] Operation not permitted
 The above exception was the direct cause of the following exception:
 
 self = <sqlalchemy.engine.base.Connection object at 0x109d1a6f0>
-engine = Engine(mysql+mysqlconnector://service_plobooks:***@localhost:3306/plobooks)
+engine = Engine(mysql+mysqlconnector://service_caribooks:***@localhost:3306/caribooks)
 connection = None, _has_events = None, _allow_revalidate = True
 _allow_autobegin = True
 
@@ -479,7 +479,7 @@ E           PermissionError: [Errno 1] Operation not permitted
 The above exception was the direct cause of the following exception:
 
 self = <sqlalchemy.engine.base.Connection object at 0x10a03a330>
-engine = Engine(mysql+mysqlconnector://service_plobooks:***@localhost:3306/plobooks)
+engine = Engine(mysql+mysqlconnector://service_caribooks:***@localhost:3306/caribooks)
 connection = None, _has_events = None, _allow_revalidate = True
 _allow_autobegin = True
 
@@ -877,7 +877,7 @@ E           PermissionError: [Errno 1] Operation not permitted
 The above exception was the direct cause of the following exception:
 
 self = <sqlalchemy.engine.base.Connection object at 0x10a233fe0>
-engine = Engine(mysql+mysqlconnector://service_plobooks:***@localhost:3306/plobooks)
+engine = Engine(mysql+mysqlconnector://service_caribooks:***@localhost:3306/caribooks)
 connection = None, _has_events = None, _allow_revalidate = True
 _allow_autobegin = True
 
@@ -1279,7 +1279,7 @@ E           PermissionError: [Errno 1] Operation not permitted
 The above exception was the direct cause of the following exception:
 
 self = <sqlalchemy.engine.base.Connection object at 0x109fb6600>
-engine = Engine(mysql+mysqlconnector://service_plobooks:***@localhost:3306/plobooks)
+engine = Engine(mysql+mysqlconnector://service_caribooks:***@localhost:3306/caribooks)
 connection = None, _has_events = None, _allow_revalidate = True
 _allow_autobegin = True
 
@@ -1677,7 +1677,7 @@ E           PermissionError: [Errno 1] Operation not permitted
 The above exception was the direct cause of the following exception:
 
 self = <sqlalchemy.engine.base.Connection object at 0x10a53dc10>
-engine = Engine(mysql+mysqlconnector://service_plobooks:***@localhost:3306/plobooks)
+engine = Engine(mysql+mysqlconnector://service_caribooks:***@localhost:3306/caribooks)
 connection = None, _has_events = None, _allow_revalidate = True
 _allow_autobegin = True
 
@@ -2075,7 +2075,7 @@ E           PermissionError: [Errno 1] Operation not permitted
 The above exception was the direct cause of the following exception:
 
 self = <sqlalchemy.engine.base.Connection object at 0x10a5a8260>
-engine = Engine(mysql+mysqlconnector://service_plobooks:***@localhost:3306/plobooks)
+engine = Engine(mysql+mysqlconnector://service_caribooks:***@localhost:3306/caribooks)
 connection = None, _has_events = None, _allow_revalidate = True
 _allow_autobegin = True
 
@@ -2473,7 +2473,7 @@ E           PermissionError: [Errno 1] Operation not permitted
 The above exception was the direct cause of the following exception:
 
 self = <sqlalchemy.engine.base.Connection object at 0x10a528440>
-engine = Engine(mysql+mysqlconnector://service_plobooks:***@localhost:3306/plobooks)
+engine = Engine(mysql+mysqlconnector://service_caribooks:***@localhost:3306/caribooks)
 connection = None, _has_events = None, _allow_revalidate = True
 _allow_autobegin = True
 
@@ -2871,7 +2871,7 @@ E           PermissionError: [Errno 1] Operation not permitted
 The above exception was the direct cause of the following exception:
 
 self = <sqlalchemy.engine.base.Connection object at 0x10a5a9190>
-engine = Engine(mysql+mysqlconnector://service_plobooks:***@localhost:3306/plobooks)
+engine = Engine(mysql+mysqlconnector://service_caribooks:***@localhost:3306/caribooks)
 connection = None, _has_events = None, _allow_revalidate = True
 _allow_autobegin = True
 

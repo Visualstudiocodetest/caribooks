@@ -1,7 +1,7 @@
 ============================= test session starts ==============================
-platform darwin -- Python 3.12.1, pytest-9.0.3, pluggy-1.6.0 -- /Users/alexandrerey/Documents/plobooks/backend/venv/bin/python3.12
+platform darwin -- Python 3.12.1, pytest-9.0.3, pluggy-1.6.0 -- /Users/alexandrerey/Documents/caribooks/backend/venv/bin/python3.12
 cachedir: .pytest_cache
-rootdir: /Users/alexandrerey/Documents/plobooks/backend
+rootdir: /Users/alexandrerey/Documents/caribooks/backend
 plugins: anyio-4.13.0
 collecting ... collected 1 item
 
@@ -80,7 +80,7 @@ WHERE utilisateur.email = %(email_1)s
 INFO     sqlalchemy.engine.Engine:base.py:1846 [generated in 0.00063s] {'email_1': 'pf_67a7e602dc@example.com', 'param_1': 1}
 WARNING  passlib.handlers.bcrypt:bcrypt.py:622 (trapped) error reading bcrypt version
 Traceback (most recent call last):
-  File "/Users/alexandrerey/Documents/plobooks/backend/venv/lib/python3.12/site-packages/passlib/handlers/bcrypt.py", line 620, in _load_backend_mixin
+  File "/Users/alexandrerey/Documents/caribooks/backend/venv/lib/python3.12/site-packages/passlib/handlers/bcrypt.py", line 620, in _load_backend_mixin
     version = _bcrypt.__about__.__version__
               ^^^^^^^^^^^^^^^^^
 AttributeError: module 'bcrypt' has no attribute '__about__'
@@ -124,7 +124,7 @@ INFO     sqlalchemy.engine.Engine:base.py:1846 [cached since 0.8419s ago] {'emai
 INFO     sqlalchemy.engine.Engine:base.py:2713 ROLLBACK
 =============================== warnings summary ===============================
 test/integration/test_order_api.py::test_postfinance_checkout_flow
-  /Users/alexandrerey/Documents/plobooks/backend/venv/lib/python3.12/site-packages/passlib/utils/__init__.py:854: DeprecationWarning: 'crypt' is deprecated and slated for removal in Python 3.13
+  /Users/alexandrerey/Documents/caribooks/backend/venv/lib/python3.12/site-packages/passlib/utils/__init__.py:854: DeprecationWarning: 'crypt' is deprecated and slated for removal in Python 3.13
     from crypt import crypt as _crypt
 
 -- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html

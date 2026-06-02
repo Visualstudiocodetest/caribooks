@@ -1,0 +1,76 @@
+name: Deploy FastAPI (SSH rolling deploy)
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Deploy to VM1
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VM1_PUBLIC_IP }}
+          username: ubuntu
+          key: ${{ secrets.SSH_PRIVATE_KEY_VM1 }}
+          script: |
+            set -e
+            cd /app || exit 1
+            sudo -u ubuntu git pull origin main || true
+            sudo apt-get update && sudo apt-get install -y python3.11 python3.11-venv python3-pip git || true
+            if [ ! -d venv ]; then python3.11 -m venv venv; fi
+            /app/venv/bin/python -m pip install --upgrade pip
+            /app/venv/bin/pip install --no-cache-dir -r requirements.txt
+            sudo systemctl restart fastapi
+            echo "Waiting for healthcheck..."
+            attempts=0
+            until [ $attempts -ge 10 ]; do
+              if curl -fsS http://127.0.0.1:8000/health; then
+                echo "VM1 healthy ✓"
+                break
+              fi
+              attempts=$((attempts+1))
+              sleep 2
+            done
+            if [ $attempts -ge 10 ]; then
+              sudo journalctl -u fastapi -n 200
+              exit 1
+            fi
+
+      - name: Deploy to VM2
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VM2_PUBLIC_IP }}
+          username: ubuntu
+          key: ${{ secrets.SSH_PRIVATE_KEY_VM2 }}
+          script: |
+            set -e
+            cd /app || exit 1
+            sudo -u ubuntu git pull origin main || true
+            sudo apt-get update && sudo apt-get install -y python3.11 python3.11-venv python3-pip git || true
+            if [ ! -d venv ]; then python3.11 -m venv venv; fi
+            /app/venv/bin/python -m pip install --upgrade pip
+            /app/venv/bin/pip install --no-cache-dir -r requirements.txt
+            sudo systemctl restart fastapi
+            echo "Waiting for healthcheck..."
+            attempts=0
+            until [ $attempts -ge 10 ]; do
+              if curl -fsS http://127.0.0.1:8000/health; then
+                echo "VM2 healthy ✓"
+                break
+              fi
+              attempts=$((attempts+1))
+              sleep 2
+            done
+            if [ $attempts -ge 10 ]; then
+              sudo journalctl -u fastapi -n 200
+              exit 1
+            fi
+
+      - name: Deployment finished
+        run: echo "✅ Rolling deploy complete"

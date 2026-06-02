@@ -35,15 +35,6 @@ export function createPaiement(payload: PaiementCreate): Promise<PaiementRead> {
     body: JSON.stringify(payload),
   })
 }
-
-export async function createPaiementPayrexx(payload: PaiementCreate): Promise<{ paiement: PaiementRead; redirect_url?: string | null } > {
-  return apiFetch<any>('/orders/paiements/payrexx', {
-    method: 'POST',
-    auth: true,
-    body: JSON.stringify(payload),
-  })
-}
-
 export async function createPaiementPostFinance(payload: PaiementCreate): Promise<{ paiement: PaiementRead; redirect_url?: string | null; error?: string | null } > {
   return apiFetch<any>('/orders/paiements/postfinance', {
     method: 'POST',

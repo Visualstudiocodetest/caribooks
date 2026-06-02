@@ -1,6 +1,6 @@
-# AGENTS.md - Directives pour l'IA et les Développeurs (Projet PLOBOOKS)
+# AGENTS.md - Directives pour l'IA et les Développeurs (Projet caribooks)
 
-Ce document définit les règles de développement, l'architecture et les principes de conception pour le projet **PLOBOOKS**. Toutes les suggestions de code et les refactorisations doivent respecter ces directives.
+Ce document définit les règles de développement, l'architecture et les principes de conception pour le projet **caribooks**. Toutes les suggestions de code et les refactorisations doivent respecter ces directives.
 
 ## 1. Principes Fondamentaux de Conception
 
@@ -42,7 +42,6 @@ Bien que le KKS soit originellement utilisé dans l'industrie, nous appliquons s
 
 ## Paiements et livraison (nouveau)
 
-- **Payrexx**: L'intégration Payrexx est optionnelle et activée via `PAYREXX_API_KEY`. Le backend expose un endpoint pour créer des paiements et un webhook pour recevoir les notifications. Les développeurs doivent s'assurer que la variable `PAYREXX_API_KEY` est stockée en toute sécurité dans l'environnement et ne doit pas être commitée.
 - **Click & Collect**: Ajout d'une option `CLICK_COLLECT` avec frais fixes `1 CHF`. Les commandes conservent `shipping_method` et `frais_port_chf`.
 
 ## Migrations

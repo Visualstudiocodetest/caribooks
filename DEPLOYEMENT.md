@@ -169,7 +169,17 @@ python3.11 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
 ```
+### 2.3 Environment Variables
 
+```bash
+# Create /app/.env
+cat <<EOF > /app/.env
+DATABASE_URL=mysql+pymysql://admin:<PASSWORD>@10.0.1.10:3306/ecommerce
+SECRET_KEY=<YOUR_SECRET_KEY>
+ENVIRONMENT=production
+EOF
+chmod 600 /app/.env
+```
 ### 2.3 Environment Variables
 
 ```bash
@@ -295,7 +305,7 @@ In **Project Settings → Environment Variables**, add:
 
 | Variable | Value |
 |----------|-------|
-| `NEXT_PUBLIC_API_URL` | `http://<LOAD_BALANCER_IP>` |
+| `NEXT_PUBLIC_BACKEND_BASE_URL` | `http://<LOAD_BALANCER_IP>` |
 
 ### 3.3 Automatic Deployments
 
@@ -311,68 +321,22 @@ Go to your repo **Settings → Secrets and variables → Actions** and add:
 
 | Secret | Value |
 |--------|-------|
-| `VM1_IP` | VM1 public IP |
-| `VM2_IP` | VM2 public IP |
+| `VM1_PUBLIC_IP` | VM1 public IP |
+| `VM2_PUBLIC_IP` | VM2 public IP |
 | `SSH_PRIVATE_KEY` | Your SSH private key (`cat ~/.ssh/id_rsa`) |
+| `SSH_USER` | SSH user (ubuntu) — optional |
 
 ### 4.2 Rolling Deploy Workflow
 
-```yaml
-# .github/workflows/deploy.yml
-name: Deploy FastAPI (Zero-Downtime Rolling)
+A GitHub Actions workflow is provided at `.github/workflows/deploy.yml`. It performs a rolling deploy by SSHing into each VM and running these steps on each host:
 
-on:
-  push:
-    branches: [main]
-  workflow_dispatch:
+- `git pull origin main`
+- ensure Python 3.11 and `venv` are installed
+- create/refresh `/app/venv` and install dependencies with `/app/venv/bin/pip install -r requirements.txt`
+- restart the `fastapi` systemd service (`sudo systemctl restart fastapi`)
+- wait for the `/health` endpoint to return HTTP 200 before proceeding to the next VM
 
-jobs:
-  deploy:
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      # ─── PHASE 1: Deploy to VM1 ───────────────────────────────────────
-      # LB detects VM1 unhealthy during restart → routes all traffic to VM2
-      - name: Deploy to VM1
-        uses: appleboy/ssh-action@v1
-        with:
-          host: ${{ secrets.VM1_IP }}
-          username: ubuntu
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          script: |
-            cd /app
-            sudo -u appuser git pull origin main
-            sudo -u appuser /app/venv/bin/pip install -r requirements.txt --quiet
-            sudo systemctl restart fastapi
-            echo "Waiting for VM1 health check..."
-            sleep 20
-            curl -f http://localhost:8000/health || exit 1
-            echo "VM1 healthy ✓"
-
-      # ─── PHASE 2: Deploy to VM2 ───────────────────────────────────────
-      # VM1 now healthy → LB routes to VM1 while VM2 updates
-      - name: Deploy to VM2
-        uses: appleboy/ssh-action@v1
-        with:
-          host: ${{ secrets.VM2_IP }}
-          username: ubuntu
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          script: |
-            cd /app
-            sudo -u appuser git pull origin main
-            sudo -u appuser /app/venv/bin/pip install -r requirements.txt --quiet
-            sudo systemctl restart fastapi
-            echo "Waiting for VM2 health check..."
-            sleep 20
-            curl -f http://localhost:8000/health || exit 1
-            echo "VM2 healthy ✓"
-
-      - name: Deployment complete
-        run: echo "✅ Zero-downtime rolling deploy complete. Both VMs updated."
-```
+Required GitHub Secrets: `VM1_PUBLIC_IP`, `VM2_PUBLIC_IP`, `SSH_PRIVATE_KEY` (and optionally `SSH_USER`). See the workflow file for the exact commands used.
 
 ---
 

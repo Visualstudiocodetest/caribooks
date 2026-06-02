@@ -1,6 +1,6 @@
-CREATE DATABASE plobooks;
+CREATE DATABASE caribooks;
 
-USE plobooks;
+USE caribooks;
 
 CREATE TABLE type_objet (
     id_type_objet BIGINT AUTO_INCREMENT PRIMARY KEY,
@@ -80,6 +80,12 @@ CREATE TABLE utilisateur (
     mot_de_passe_hash VARCHAR(255) NOT NULL,
     role VARCHAR(50) NOT NULL DEFAULT 'user',
     date_creation TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    ,billing_address_line1 VARCHAR(255) NULL
+    ,billing_address_line2 VARCHAR(255) NULL
+    ,billing_postal_code VARCHAR(30) NULL
+    ,billing_city VARCHAR(100) NULL
+    ,billing_country VARCHAR(100) NULL
+    ,billing_phone VARCHAR(50) NULL
 );
 
 CREATE TABLE commande (
@@ -89,6 +95,8 @@ CREATE TABLE commande (
     date_commande TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     montant_total_chf DECIMAL(10,2) NOT NULL CHECK (montant_total_chf >= 0),
     statut VARCHAR(50) NOT NULL,
+    shipping_method VARCHAR(50) NOT NULL DEFAULT 'POST',
+    frais_port_chf DECIMAL(10,2) NOT NULL DEFAULT 0.00,
     FOREIGN KEY (id_utilisateur) REFERENCES utilisateur(id_utilisateur) ON DELETE RESTRICT ON UPDATE CASCADE
 );
 
@@ -105,7 +113,7 @@ CREATE TABLE ligne_commande (
 CREATE TABLE paiement (
     id_paiement BIGINT AUTO_INCREMENT PRIMARY KEY,
     id_commande BIGINT NOT NULL,
-    fournisseur_paiement VARCHAR(50) NOT NULL DEFAULT 'PAYREXX',
+    fournisseur_paiement VARCHAR(50) NOT NULL DEFAULT 'POSTFINANCE',
     reference_externe VARCHAR(255) NOT NULL UNIQUE,
     montant_chf DECIMAL(10,2) NOT NULL CHECK (montant_chf >= 0),
     devise CHAR(3) NOT NULL DEFAULT 'CHF',

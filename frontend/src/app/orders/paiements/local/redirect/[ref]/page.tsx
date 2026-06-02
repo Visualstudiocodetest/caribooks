@@ -16,7 +16,7 @@ export default function LocalRedirectPage() {
     setErr(null)
     try {
       const payload = { Id: `local-${ref}`, Status: 'PAID', Metadata: { reference: ref } }
-      const r = await apiFetch('/orders/paiements/webhook/payrexx', {
+      const r = await apiFetch('/orders/paiements/webhook/local', {
         method: 'POST',
         body: JSON.stringify(payload),
       })
@@ -31,7 +31,7 @@ export default function LocalRedirectPage() {
 
   return (
     <div style={{ maxWidth: 800, margin: '0 auto' }}>
-      <h1>Simulation Payrexx (locale)</h1>
+      <h1>Simulation de paiement locale</h1>
       <div className="card cardPadding">
         <div style={{ fontWeight: 800 }}>Référence</div>
         <div className="muted">{ref}</div>

@@ -49,8 +49,8 @@ graph LR
    end
 
    subgraph BACKEND
-      API["FastAPI (Uvicorn)<br/>Routers: auth, users, orders, payrexx_webhook"]
-      Services["Services: payrexx_service, jwt_service, book_service"]
+      API["FastAPI (Uvicorn)<br/>Routers: auth, users, orders"]
+      Services["Services: jwt_service, book_service (payment helper optional)"]
       Scripts["Scripts: seed_db, migrations"]
    end
 
@@ -60,25 +60,25 @@ graph LR
    end
 
    subgraph EXTERNAL
-      Payrexx["Payrexx API<br/>Payment checkout + webhook"]
+      PaymentProvider["External payment provider<br/>Payment checkout + webhook"]
    end
 
    Browser -->|HTTP| Frontend
    Frontend -->|API calls (NEXT_PUBLIC_BACKEND_BASE_URL)| API
    API -->|SQL| MySQL
    API -->|uploads/downloads| Storage
-   API -->|HTTP (server->provider)| Payrexx
-   Payrexx -->|Webhook POST| API
+   API -->|HTTP (server->provider)| PaymentProvider
+   PaymentProvider -->|Webhook POST| API
 
    subgraph DEV_FALLBACK
       LocalRedirect["/orders/paiements/local/redirect/{ref}<br/>(simulator page)"]
    end
-   Frontend -->|redirect to local simulator when PAYREXX_API_KEY unset| LocalRedirect
+   Frontend -->|redirect to local simulator when external payment provider not configured| LocalRedirect
    LocalRedirect -->|POST simulated payload| API
 
    %% Environment hints
    classDef env fill:#f9f,stroke:#333,stroke-width:1px;
-   EnvVars["Env: PAYREXX_API_KEY, PAYREXX_BASE_URL, PAYREXX_WEBHOOK_SECRET,<br/>BACKEND_BASE_URL, NEXT_PUBLIC_BACKEND_BASE_URL, SECRET_KEY"]:::env
+   EnvVars["Env: BACKEND_BASE_URL, NEXT_PUBLIC_BACKEND_BASE_URL, SECRET_KEY"]:::env
    EnvVars -.-> API
    EnvVars -.-> Frontend
 
@@ -89,7 +89,7 @@ graph LR
 
    %% Notes
    note right of API
-      - Webhook verifies HMAC using PAYREXX_WEBHOOK_SECRET (optional)
+      - Webhook optionally verifies provider signature (optional)
       - Finalize commande moves reserved stock -> sold
       - Click&Collect fees applied at order creation
    end note
@@ -104,16 +104,16 @@ Un script de migration SQL a été ajouté pour mettre à jour la base de donné
 
 ## Architecture & Payment Flows
 
-Below are two app-specific Mermaid diagrams: the checkout/payment sequence (covers dev fallback and production Payrexx webhook) and the overall technical architecture for this project.
+Below are two app-specific Mermaid diagrams: the checkout/payment sequence (covers dev fallback and production payment-provider webhook) and the overall technical architecture for this project.
 
-### Checkout & Payrexx Sequence
+### Checkout & Payment Sequence
 ```mermaid
 sequenceDiagram
    participant U as User
    participant FE as Frontend
    participant BE as Backend
    participant DB as MySQL
-   participant PR as Payrexx
+   participant PR as PaymentProvider
 
    U->>FE: Start checkout / submit cart
    FE->>BE: POST /orders/commandes (create commande + shipping_method)
@@ -121,11 +121,11 @@ sequenceDiagram
    DB-->>BE: OK (commande created)
    BE-->>FE: 201 Created (commande id + totals)
 
-   FE->>BE: POST /orders/paiements/payrexx (paiement request)
+   FE->>BE: POST /orders/paiements/provider (paiement request)
    BE->>DB: INSERT paiement (status=PENDING)
-   alt PAYREXX_API_KEY not set (dev)
+   alt external provider not configured (dev)
       BE-->>FE: redirect_url = /orders/paiements/local/redirect/{ref}
-   else Payrexx production
+   else external provider production
       BE->>PR: Create Payment (Amount, Currency, Metadata.reference, return/cancel URLs)
       PR-->>BE: { id, redirect_url }
       BE->>DB: UPDATE paiement.reference_externe = id; statut = provider_status
@@ -136,9 +136,9 @@ sequenceDiagram
 
    alt Local simulation
       U->>FE: Open /orders/paiements/local/redirect/{ref}
-      FE->>BE: POST /orders/paiements/webhook/payrexx (simulated payload)
+      FE->>BE: POST /orders/paiements/webhook/local (simulated payload)
    else Real provider
-      PR->>BE: POST /orders/paiements/webhook/payrexx (provider callback)
+      PR->>BE: POST /orders/paiements/webhook/provider (provider callback)
    end
 
    BE->>BE: verify signature if configured
@@ -153,7 +153,7 @@ sequenceDiagram
 ```
 
 Key implementation points:
-- Payrexx helper: [backend/services/payrexx_service.py](backend/services/payrexx_service.py)
+- Payment helper (optional): [backend/services/payment_service.py](backend/services/payment_service.py)
 - Webhook & finalization: [backend/presentation/order_router.py](backend/presentation/order_router.py)
 - Local simulator page: [frontend/src/app/orders/paiements/local/redirect/[ref]/page.tsx](frontend/src/app/orders/paiements/local/redirect/%5Bref%5D/page.tsx)
 
@@ -189,8 +189,8 @@ graph LR
    end
 
    subgraph BACKEND
-      API[FastAPI (Uvicorn)\nRouters: auth, users, orders, payrexx_webhook]
-      Services[Services: payrexx_service, jwt_service, book_service]
+      API[FastAPI (Uvicorn)\nRouters: auth, users, orders]
+      Services[Services: jwt_service, book_service (payment helper optional)]
       Scripts[Scripts: seed_db, migrations]
    end
 
@@ -200,25 +200,25 @@ graph LR
    end
 
    subgraph EXTERNAL
-      Payrexx[Payrexx API\nPayment checkout + webhook]
+      PaymentProvider[External payment provider\nPayment checkout + webhook]
    end
 
    Browser -->|HTTP| Frontend
    Frontend -->|API calls (NEXT_PUBLIC_BACKEND_BASE_URL)| API
    API -->|SQL| MySQL
    API -->|uploads/downloads| Storage
-   API -->|HTTP (server->provider)| Payrexx
-   Payrexx -->|Webhook POST| API
+   API -->|HTTP (server->provider)| PaymentProvider
+   PaymentProvider -->|Webhook POST| API
 
    subgraph DEV_FALLBACK
       LocalRedirect[/orders/paiements/local/redirect/{ref}\n(simulator page)]
    end
-   Frontend -->|redirect to local simulator when PAYREXX_API_KEY unset| LocalRedirect
+   Frontend -->|redirect to local simulator when external payment provider not configured| LocalRedirect
    LocalRedirect -->|POST simulated payload| API
 
    %% Environment hints
    classDef env fill:#f9f,stroke:#333,stroke-width:1px;
-   EnvVars["Env: PAYREXX_API_KEY, PAYREXX_BASE_URL, PAYREXX_WEBHOOK_SECRET,\nBACKEND_BASE_URL, NEXT_PUBLIC_BACKEND_BASE_URL, SECRET_KEY"]:::env
+   EnvVars["Env: BACKEND_BASE_URL, NEXT_PUBLIC_BACKEND_BASE_URL, SECRET_KEY"]:::env
    EnvVars -.-> API
    EnvVars -.-> Frontend
 
@@ -229,7 +229,7 @@ graph LR
 
    %% Notes
    note right of API
-      - Webhook verifies HMAC using PAYREXX_WEBHOOK_SECRET (optional)
+      - Webhook optionally verifies provider signature (optional)
       - Finalize commande moves reserved stock -> sold
       - Click&Collect fees applied at order creation
    end note
