@@ -23,10 +23,17 @@ jobs:
             cd /app || exit 1
             sudo -u ubuntu git pull origin main || true
             sudo apt-get update && sudo apt-get install -y python3 python3-venv python3-pip git || true
-            if [ ! -d venv ]; then sudo python3 -m venv venv; fi
-             /app/venv/bin/python -m pip install --upgrade pip
-             /app/venv/bin/pip install --no-cache-dir -r requirements.txt
-             systemctl restart fastapi
+            # Ensure venv is a valid virtualenv; recreate if broken or missing
+            if [ -x venv/bin/python ]; then
+              echo "Using existing venv"
+            else
+              echo "Creating fresh venv"
+              sudo -u ubuntu rm -rf venv || true
+              sudo -u ubuntu python3 -m venv venv
+            fi
+            sudo -u ubuntu venv/bin/python -m pip install --upgrade pip
+            sudo -u ubuntu venv/bin/pip install --no-cache-dir -r requirements.txt
+            systemctl.restart fastapi || systemctl restart fastapi || true
             echo "Waiting for healthcheck..."
             attempts=0
             until [ $attempts -ge 10 ]; do
@@ -53,10 +60,17 @@ jobs:
             cd /app || exit 1
             sudo -u ubuntu git pull origin main || true
             sudo apt-get update && sudo apt-get install -y python3 python3-venv python3-pip git || true
-            if [ ! -d venv ]; then sudo python3 -m venv venv; fi
-             /app/venv/bin/python -m pip install --upgrade pip
-             /app/venv/bin/pip install --no-cache-dir -r requirements.txt
-             systemctl restart fastapi
+            # Ensure venv is a valid virtualenv; recreate if broken or missing
+            if [ -x venv/bin/python ]; then
+              echo "Using existing venv"
+            else
+              echo "Creating fresh venv"
+              sudo -u ubuntu rm -rf venv || true
+              sudo -u ubuntu python3 -m venv venv
+            fi
+            sudo -u ubuntu venv/bin/python -m pip install --upgrade pip
+            sudo -u ubuntu venv/bin/pip install --no-cache-dir -r requirements.txt
+            systemctl.restart fastapi || systemctl restart fastapi || true
             echo "Waiting for healthcheck..."
             attempts=0
             until [ $attempts -ge 10 ]; do
