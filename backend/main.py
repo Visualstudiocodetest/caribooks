@@ -30,7 +30,7 @@ app.add_middleware(
 async def root():
     return {"message": "Hello World"}
 
-app.get("/health")
+@app.get("/health")
 async def health():
     # This endpoint can be used by load balancers or monitoring tools to check if the application is running.
     return {"status": "ok",
