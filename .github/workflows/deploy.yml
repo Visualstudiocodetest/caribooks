@@ -9,7 +9,7 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     strategy:
-      max-parallel: 1   # rolling: deploy to VMs sequentially
+      max-parallel: 1
       matrix:
         include:
           - name: VM1
@@ -32,6 +32,7 @@ jobs:
           script: |
             set -e
 
+            # Bootstrap: clone if /app doesn't exist or isn't a git repo
             if [ ! -d /app/.git ]; then
               echo "Initializing /app from git..."
               sudo rm -rf /app
@@ -43,9 +44,11 @@ jobs:
             git fetch origin main
             git reset --hard origin/main
 
+            # Install system deps only if missing
             dpkg -s python3-venv python3-pip git &>/dev/null || \
               sudo apt-get install -y -q python3 python3-venv python3-pip git
 
+            # Recreate venv if broken or missing
             if [ ! -x /app/venv/bin/python ]; then
               echo "Creating fresh venv..."
               sudo rm -rf /app/venv
@@ -53,11 +56,37 @@ jobs:
             fi
 
             /app/venv/bin/python -m pip install --upgrade pip --quiet
-            /app/venv/bin/pip install --no-cache-dir -r /app/backend/requirements.txt --quiet  # ← fixed path
+            /app/venv/bin/pip install --no-cache-dir -r /app/backend/requirements.txt --quiet
+
+            # Create systemd service if it doesn't exist yet
+            if [ ! -f /etc/systemd/system/fastapi.service ]; then
+              echo "Creating fastapi.service..."
+              sudo tee /etc/systemd/system/fastapi.service > /dev/null <<'EOF'
+            [Unit]
+            Description=FastAPI Application
+            After=network.target
+
+            [Service]
+            Type=simple
+            User=ubuntu
+            WorkingDirectory=/app/backend
+            ExecStart=/app/venv/bin/uvicorn main:app --host 0.0.0.0 --port 8000
+            Restart=always
+            RestartSec=5
+            StandardOutput=journal
+            StandardError=journal
+
+            [Install]
+            WantedBy=multi-user.target
+            EOF
+              sudo systemctl daemon-reload
+              sudo systemctl enable fastapi
+            fi
 
             sudo systemctl restart fastapi
 
-            echo "Waiting for healthcheck..."
+            # Healthcheck: retry up to 10 times with 2s delay
+            echo "Waiting for healthcheck on ${{ matrix.name }}..."
             for i in $(seq 1 10); do
               if curl -fsS http://127.0.0.1:8000/health; then
                 echo "${{ matrix.name }} healthy ✓"
@@ -67,7 +96,7 @@ jobs:
               sleep 2
             done
 
-            echo "❌ Healthcheck failed"
+            echo "❌ Healthcheck failed after 10 attempts"
             sudo journalctl -u fastapi -n 200
             exit 1
 

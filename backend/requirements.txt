@@ -8,3 +8,4 @@ passlib[bcrypt]
 httpx
 email-validator
 Pillow
+uvicorn
