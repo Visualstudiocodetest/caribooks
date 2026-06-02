@@ -8,85 +8,66 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    strategy:
+      max-parallel: 1   # rolling: deploy to VMs sequentially
+      matrix:
+        include:
+          - name: VM1
+            host_secret: VM1_PUBLIC_IP
+            key_secret: SSH_PRIVATE_KEY_VM1
+          - name: VM2
+            host_secret: VM2_PUBLIC_IP
+            key_secret: SSH_PRIVATE_KEY_VM2
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Deploy to VM1
+      - name: Deploy to ${{ matrix.name }}
         uses: appleboy/ssh-action@v1
         with:
-          host: ${{ secrets.VM1_PUBLIC_IP }}
+          host: ${{ secrets[matrix.host_secret] }}
           username: ubuntu
-          key: ${{ secrets.SSH_PRIVATE_KEY_VM1 }}
+          key: ${{ secrets[matrix.key_secret] }}
           script: |
             set -e
-            cd /app || exit 1
-            sudo -u ubuntu git pull origin main || true
-            sudo apt-get update && sudo apt-get install -y python3 python3-venv python3-pip git || true
-            # Ensure venv is a valid virtualenv; recreate if missing or broken
-            if [ -x /app/venv/bin/python ] && [ ! -d /app/venv/bin/python ]; then
-              echo "Using existing venv"
-            else
-              echo "Creating fresh venv"
-              sudo rm -rf /app/venv || true
-              sudo -u ubuntu python3 -m venv /app/venv
-              sudo chown -R ubuntu:ubuntu /app/venv || true
-            fi
-            sudo -u ubuntu /app/venv/bin/python -m pip install --upgrade pip
-            sudo -u ubuntu /app/venv/bin/pip install --no-cache-dir -r requirements.txt
-            sudo systemctl restart fastapi || true
-            echo "Waiting for healthcheck..."
-            attempts=0
-            until [ $attempts -ge 10 ]; do
-              if curl -fsS http://127.0.0.1:8000/health; then
-                echo "VM1 healthy ✓"
-                break
-              fi
-              attempts=$((attempts+1))
-              sleep 2
-            done
-            if [ $attempts -ge 10 ]; then
-              sudo journalctl -u fastapi -n 200
-              exit 1
+
+            cd /app
+
+            # Pull latest code (fail loudly on error)
+            git pull origin main
+
+            # Install system deps only if missing (fast no-op when already installed)
+            dpkg -s python3-venv python3-pip git &>/dev/null || \
+              sudo apt-get install -y python3 python3-venv python3-pip git
+
+            # Recreate venv if the python binary is missing or broken
+            if [ ! -x /app/venv/bin/python ]; then
+              echo "Creating fresh venv..."
+              sudo rm -rf /app/venv
+              python3 -m venv /app/venv
             fi
 
-      - name: Deploy to VM2
-        uses: appleboy/ssh-action@v1
-        with:
-          host: ${{ secrets.VM2_PUBLIC_IP }}
-          username: ubuntu
-          key: ${{ secrets.SSH_PRIVATE_KEY_VM2 }}
-          script: |
-            set -e
-            cd /app || exit 1
-            sudo -u ubuntu git pull origin main || true
-            sudo apt-get update && sudo apt-get install -y python3 python3-venv python3-pip git || true
-            # Ensure venv is a valid virtualenv; recreate if missing or broken
-            if [ -x /app/venv/bin/python ] && [ ! -d /app/venv/bin/python ]; then
-              echo "Using existing venv"
-            else
-              echo "Creating fresh venv"
-              sudo rm -rf /app/venv || true
-              sudo -u ubuntu python3 -m venv /app/venv
-              sudo chown -R ubuntu:ubuntu /app/venv || true
-            fi
-            sudo -u ubuntu /app/venv/bin/python -m pip install --upgrade pip
-            sudo -u ubuntu /app/venv/bin/pip install --no-cache-dir -r requirements.txt
-            sudo systemctl restart fastapi || true
-            echo "Waiting for healthcheck..."
-            attempts=0
-            until [ $attempts -ge 10 ]; do
+            /app/venv/bin/python -m pip install --upgrade pip --quiet
+            /app/venv/bin/pip install --no-cache-dir -r requirements.txt --quiet
+
+            sudo systemctl restart fastapi
+
+            # Healthcheck: retry up to 10 times with 2s delay
+            echo "Waiting for healthcheck on ${{ matrix.name }}..."
+            for i in $(seq 1 10); do
               if curl -fsS http://127.0.0.1:8000/health; then
-                echo "VM2 healthy ✓"
-                break
+                echo "${{ matrix.name }} healthy ✓"
+                exit 0
               fi
-              attempts=$((attempts+1))
+              echo "Attempt $i/10 failed, retrying in 2s..."
               sleep 2
             done
-            if [ $attempts -ge 10 ]; then
-              sudo journalctl -u fastapi -n 200
-              exit 1
-            fi
+
+            echo "❌ Healthcheck failed after 10 attempts"
+            sudo journalctl -u fastapi -n 200
+            exit 1
 
       - name: Deployment finished
-        run: echo "✅ Rolling deploy complete"
+        if: success()
+        run: echo "✅ Rolling deploy complete — both VMs healthy"
