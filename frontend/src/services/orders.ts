@@ -43,6 +43,17 @@ export async function createPaiementPayrexx(payload: PaiementCreate): Promise<{ 
     body: JSON.stringify(payload),
   })
 }
+
+export async function createPaiementPostFinance(payload: PaiementCreate): Promise<{ paiement: PaiementRead; redirect_url?: string | null; error?: string | null } > {
+  return apiFetch<any>('/orders/paiements/postfinance', {
+    method: 'POST',
+    auth: true,
+    body: JSON.stringify(payload),
+  })
+}
+export function pollPaiementPostFinance(id_paiement: number): Promise<any> {
+  return apiFetch<any>(`/orders/paiements/${id_paiement}/poll-postfinance`, { auth: true })
+}
 export function getMyCommandes(): Promise<CommandeRead[]> {
   return apiFetch<CommandeRead[]>('/orders/commandes', { auth: true })
 }

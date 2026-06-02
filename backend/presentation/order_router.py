@@ -19,7 +19,12 @@ from  presentation.schemas import (
     PaiementRead,
     PaiementUpdate,
 )
-from services.payrexx_service import create_payrexx_payment, parse_webhook
+from services.postfinance_service import (
+    create_postfinance_checkout,
+    parse_postfinance_webhook,
+    verify_postfinance_webhook_signature,
+    get_postfinance_checkout_status,
+)
 from fastapi import Request
 import os
 import hmac
@@ -246,9 +251,12 @@ def create_ligne(payload: LigneCommandeCreate, db: Session = Depends(get_db), cu
         db.commit()
         db.refresh(obj)
         return obj
+    except HTTPException:
+        db.rollback()
+        raise
     except Exception as e:
         db.rollback()
-        raise HTTPException(status_code=500, detail="Could not create ligne") from e
+        raise HTTPException(status_code=500, detail=f"Could not create ligne: {e}") from e
 
 
 @router.put("/lignes/{id_ligne_commande}", response_model=LigneCommandeRead)
@@ -336,56 +344,110 @@ def create_paiement(payload: PaiementCreate, db: Session = Depends(get_db), curr
     return created
 
 
-@router.post("/paiements/payrexx", status_code=status.HTTP_201_CREATED)
-def create_paiement_payrexx(payload: PaiementCreate, db: Session = Depends(get_db), current_user=Depends(get_current_user)):
-    # Create local paiement record and request a Payrexx payment session
+@router.post("/paiements/postfinance", status_code=status.HTTP_201_CREATED)
+def create_paiement_postfinance(payload: PaiementCreate, request: Request, db: Session = Depends(get_db), current_user=Depends(get_current_user)):
+    # Create local paiement record and request a PostFinance checkout session
     if _get_commande_owned(db, payload.id_commande, int(current_user.id_utilisateur)) is None:
         raise HTTPException(status_code=404, detail="Commande not found")
 
+    user = db.query(models.Utilisateur).filter(models.Utilisateur.id_utilisateur == current_user.id_utilisateur).first()
+    frontend_base_url = os.getenv("FRONTEND_BASE_URL", str(request.base_url).rstrip("/"))
+    cancel_url = f"{frontend_base_url}/cart"
+
     # create local record with pending status
     obj = models.Paiement(**payload.model_dump())
-    obj.fournisseur_paiement = payload.fournisseur_paiement or "PAYREXX"
-    obj.statut = payload.statut or "PENDING"
+    obj.fournisseur_paiement = payload.fournisseur_paiement or "POSTFINANCE"  # type: ignore[assignment]
+    obj.statut = payload.statut or "PENDING"  # type: ignore[assignment]
     created = paiement_crud.create(db, obj)
 
-    # call Payrexx service
-    return_url = payload.model_dump().get("return_url") or ""
-    cancel_url = payload.model_dump().get("cancel_url") or ""
+    # build return URL including local paiement id so frontend can poll status
+    return_url = f"{frontend_base_url}/payment?commandeId={payload.id_commande}&paiementId={created.id_paiement}"
+
+    # call PostFinance service
     description = f"Commande {int(created.id_commande)}"  # type: ignore
-    pr_resp = create_payrexx_payment(float(created.montant_chf), str(created.id_paiement), return_url, cancel_url, description)  # type: ignore
+    customer_email = str(getattr(user, "email", "")) if user is not None else None
+    pf_resp = create_postfinance_checkout(
+        float(created.montant_chf),  # type: ignore[arg-type]
+        str(created.id_paiement),
+        return_url,
+        cancel_url,
+        description,
+        customer_email,
+    )  # type: ignore
 
     # update reference_externe with provider id if available
-    ref = pr_resp.get("id")
+    ref = pf_resp.get("id")
     if ref:
-        created.reference_externe = str(ref)  # type: ignore
-    if pr_resp.get("status"):
-        created.statut = pr_resp.get("status")  # type: ignore
+        created.reference_externe = str(ref)  # type: ignore[assignment]
+    if pf_resp.get("status"):
+        created.statut = str(pf_resp.get("status"))  # type: ignore[assignment]
     db.commit()
     db.refresh(created)
 
-    return {"paiement": created, "redirect_url": pr_resp.get("redirect_url"), "raw": pr_resp.get("raw")}
+    return {
+        "paiement": created,
+        "redirect_url": pf_resp.get("redirect_url"),
+        "raw": pf_resp.get("raw"),
+        "error": pf_resp.get("error"),
+    }
 
 
-@router.post("/paiements/webhook/payrexx")
-async def payrexx_webhook(request: Request, db: Session = Depends(get_db)):
-    # Mandatory signature verification for production
-    secret = os.getenv("PAYREXX_WEBHOOK_SECRET")
-    raw_body = await request.body()
-    # Require signature verification in production (when secret is set)
-    if not secret:
-        raise HTTPException(status_code=403, detail="PAYREXX_WEBHOOK_SECRET not configured; webhook verification disabled")
-    # try common header names
-    sig_header = request.headers.get("X-Payrexx-Signature") or request.headers.get("X-Signature") or request.headers.get("Signature")
+@router.get("/paiements/{id_paiement}/poll-postfinance")
+def poll_paiement_postfinance(id_paiement: int, db: Session = Depends(get_db), current_user=Depends(get_current_user)):
+    """Poll PostFinance for the status of a payment (alternative to webhooks).
+
+    This endpoint queries PostFinance using the stored `reference_externe` (link id)
+    or falls back to searching by the local payment id. It updates the local payment
+    status and finalizes the order if the payment is captured/paid.
+    """
+    obj = (
+        db.query(models.Paiement)
+        .join(models.Commande, models.Paiement.id_commande == models.Commande.id_commande)
+        .filter(models.Paiement.id_paiement == id_paiement, models.Commande.id_utilisateur == current_user.id_utilisateur)
+        .first()
+    )
+    if obj is None:
+        raise HTTPException(status_code=404, detail="Paiement not found")
+
+    provider_id = getattr(obj, "reference_externe", None)
+    # Try to query provider by stored link id, else by local payment id
+    pf_resp = get_postfinance_checkout_status(provider_id, str(obj.id_paiement))
+
+    # If provider returned a status, update local record
+    if pf_resp.get("status"):
+        new_status = str(pf_resp.get("status"))
+        obj.statut = new_status  # type: ignore
+        if new_status and new_status.upper() in ("CAPTURED", "PAID", "COMPLETED", "AUTHORIZED", "FULFILL"):
+            obj.date_paiement = datetime.utcnow()  # type: ignore
+        db.commit()
+        db.refresh(obj)
+
+        try:
+            if new_status and new_status.upper() in ("CAPTURED", "PAID", "COMPLETED", "AUTHORIZED", "FULFILL"):
+                _finalize_commande(db, int(obj.id_commande))  # type: ignore
+                db.commit()
+        except Exception:
+            db.rollback()
+
+    return {"paiement": obj, "raw": pf_resp}
+
+
+@router.post("/paiements/webhook/postfinance")
+async def postfinance_webhook(request: Request, db: Session = Depends(get_db)):
+    # PostFinance webhook signature verification
+    sig_header = request.headers.get("x-signature") or request.headers.get("X-Signature")
+
     if not sig_header:
         raise HTTPException(status_code=403, detail="Missing webhook signature")
-    computed = hmac.new(secret.encode("utf-8"), raw_body, hashlib.sha256).hexdigest()
-    if not hmac.compare_digest(computed, sig_header):
+
+    raw_body = await request.body()
+    if not verify_postfinance_webhook_signature(raw_body, sig_header):
         raise HTTPException(status_code=403, detail="Invalid webhook signature")
 
-    # parse JSON payload after signature check
     payload = await request.json()
-    parsed = parse_webhook(payload)
-    # try match by reference (metadata) or id
+
+    parsed = parse_postfinance_webhook(payload)
+    # try match by reference (merchantOrderId) or id
     ref = parsed.get("reference")
     pay_id = parsed.get("id")
     obj = None
@@ -404,7 +466,7 @@ async def payrexx_webhook(request: Request, db: Session = Depends(get_db)):
     db.refresh(obj)
 
     try:
-        if new_status and str(new_status).upper() in ("CAPTURED", "PAID", "COMPLETED"):
+        if new_status and str(new_status).upper() in ("CAPTURED", "PAID", "COMPLETED", "AUTHORIZED", "FULFILL"):
             _finalize_commande(db, int(obj.id_commande))  # type: ignore
             db.commit()
     except Exception:
@@ -429,7 +491,7 @@ def update_paiement(
     if obj is None:
         raise HTTPException(status_code=404, detail="Paiement not found")
     data = payload.model_dump(exclude_unset=True)
-    prev_stat = obj.statut
+    prev_stat = str(obj.statut) if getattr(obj, "statut", None) else None
     for k, v in data.items():
         if hasattr(obj, k):
             setattr(obj, k, v)
@@ -440,11 +502,11 @@ def update_paiement(
     try:
         if prev_stat is None or prev_stat.upper() not in ("CAPTURED", "PAID", "COMPLETED"):
             if new_stat and new_stat.upper() in ("CAPTURED", "PAID", "COMPLETED"):
-                _finalize_commande(db, obj.id_commande)
+                _finalize_commande(db, int(obj.id_commande))  # type: ignore[arg-type]
                 db.commit()
         # refund transition
         if prev_stat and prev_stat.upper() in ("CAPTURED", "PAID", "COMPLETED") and new_stat and new_stat.upper() == "REFUNDED":
-            _refund_commande(db, obj.id_commande)
+            _refund_commande(db, int(obj.id_commande))  # type: ignore[arg-type]
             db.commit()
     except Exception:
         db.rollback()

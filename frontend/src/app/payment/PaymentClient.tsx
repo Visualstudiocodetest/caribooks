@@ -4,11 +4,10 @@ import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { useAuth } from '@/components/auth/AuthProvider'
-import { useCart } from '@/components/cart/CartProvider'
 import { Money } from '@/components/ui/Money'
 import { ApiError } from '@/services/api'
-import type { CommandeRead, PaiementRead } from '@/types/api'
-import { createPaiement, createPaiementPayrexx, getCommande, updatePaiement } from '@/services/orders'
+import type { CommandeRead } from '@/types/api'
+import { createPaiementPostFinance, getCommande, pollPaiementPostFinance } from '@/services/orders'
 
 function makeReference() {
   return `local-${Date.now()}`
@@ -18,13 +17,10 @@ export function PaymentClient() {
   const searchParams = useSearchParams()
   const commandeId = Number(searchParams.get('commandeId'))
   const { isLoggedIn } = useAuth()
-  const { clear } = useCart()
 
   const [commande, setCommande] = useState<CommandeRead | null>(null)
-  const [paiement, setPaiement] = useState<PaiementRead | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
-  const [paying, setPaying] = useState(false)
 
   const ready = useMemo(
     () => isLoggedIn && Number.isFinite(commandeId) && commandeId > 0,
@@ -40,7 +36,23 @@ export function PaymentClient() {
       .then(async (cmd) => {
         if (!mounted) return
         setCommande(cmd)
-        const resp = await createPaiementPayrexx({
+        // If we have a paiementId coming from the provider redirect, poll its status
+        const paiementIdParam = Number(searchParams.get('paiementId'))
+        if (Number.isFinite(paiementIdParam) && paiementIdParam > 0) {
+          const pollResp = await pollPaiementPostFinance(paiementIdParam)
+          if (!mounted) return
+          const statut = pollResp?.paiement?.statut
+          if (statut && ['CAPTURED', 'PAID', 'COMPLETED', 'AUTHORIZED', 'FULFILL'].includes(String(statut).toUpperCase())) {
+            // Payment successful — redirect to orders or show success state
+            window.location.href = '/account/orders'
+            return
+          }
+          setError('Paiement en attente ou non confirmé. Réessayez ou contactez le support.')
+          return
+        }
+
+        // Otherwise create a new PostFinance payment and redirect
+        const resp = await createPaiementPostFinance({
           id_commande: cmd.id_commande,
           reference_externe: makeReference(),
           montant_chf: cmd.montant_total_chf,
@@ -52,8 +64,11 @@ export function PaymentClient() {
           window.location.href = resp.redirect_url
           return
         }
-        // fallback: set local paiement object
-        setPaiement(resp.paiement)
+        setError(
+          typeof resp?.error === 'string'
+            ? resp.error
+            : 'PostFinance checkout is not available. Check the backend configuration.',
+        )
       })
       .catch((e: unknown) => {
         if (!mounted) return
@@ -67,24 +82,6 @@ export function PaymentClient() {
       mounted = false
     }
   }, [commandeId, ready])
-
-  async function onSimulatePaid() {
-    if (!paiement) return
-    setPaying(true)
-    setError(null)
-    try {
-      const updated = await updatePaiement(paiement.id_paiement, {
-        statut: 'PAID',
-        date_paiement: new Date().toISOString(),
-      })
-      setPaiement(updated)
-      clear()
-    } catch (e: unknown) {
-      setError(e instanceof ApiError ? e.message : 'Paiement impossible')
-    } finally {
-      setPaying(false)
-    }
-  }
 
   if (!isLoggedIn) {
     return (
@@ -127,25 +124,8 @@ export function PaymentClient() {
             <Money amount={commande.montant_total_chf} />
           </div>
 
-          {paiement ? (
-            <div className="card" style={{ padding: 12 }}>
-              <div style={{ fontWeight: 800 }}>Statut: {paiement.statut}</div>
-              <div className="muted">Référence: {paiement.reference_externe}</div>
-            </div>
-          ) : null}
-
-          <button
-            className="btn btnPrimary"
-            type="button"
-            onClick={onSimulatePaid}
-            disabled={paying || paiement?.statut === 'PAID'}
-          >
-            {paiement?.statut === 'PAID' ? 'Payé' : paying ? 'Paiement…' : 'Simuler paiement (dev)'}
-          </button>
-
           <div className="muted">
-            Cette étape enregistre un paiement via l’API (`/orders/paiements`). L’intégration réelle Payrexx
-            pourra remplacer ce bouton plus tard.
+            Vous allez être redirigé vers PostFinance Checkout pour finaliser le paiement.
           </div>
 
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>

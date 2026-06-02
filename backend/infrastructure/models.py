@@ -211,7 +211,7 @@ class Paiement(Base):
     id_commande = Column(
         BigInteger, ForeignKey("commande.id_commande", ondelete="RESTRICT", onupdate="CASCADE"), nullable=False
     )
-    fournisseur_paiement = Column(String(50), nullable=False, server_default="PAYREXX")
+    fournisseur_paiement = Column(String(50), nullable=False, server_default="POSTFINANCE")
     reference_externe = Column(String(255), nullable=False, unique=True)
     montant_chf = Column(DECIMAL(10, 2), nullable=False)
     devise = Column(String(3), nullable=False, server_default="CHF")

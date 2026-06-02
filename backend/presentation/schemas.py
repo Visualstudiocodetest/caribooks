@@ -226,7 +226,7 @@ class LigneCommandeRead(LigneCommandeBase, ORMBase):
 
 class PaiementBase(BaseModel):
     id_commande: int
-    fournisseur_paiement: str = "PAYREXX"
+    fournisseur_paiement: str = "POSTFINANCE"
     reference_externe: str
     montant_chf: float = Field(..., gt=0)  # Must be > 0, not >= 0
     devise: str = "CHF"

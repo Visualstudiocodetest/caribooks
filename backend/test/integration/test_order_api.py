@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from fastapi.testclient import TestClient
+from unittest.mock import patch
 
 
 def test_orders_lignes_paiements_scoped_to_user(client: TestClient, register_and_login, uniq: str):
@@ -83,7 +84,7 @@ def test_orders_lignes_paiements_scoped_to_user(client: TestClient, register_and
             "montant_chf": 60.0,
             "devise": "CHF",
             "statut": "CAPTURED",
-            "fournisseur_paiement": "PAYREXX",
+            "fournisseur_paiement": "POSTFINANCE",
         },
         headers=headers,
     )
@@ -105,3 +106,62 @@ def test_orders_lignes_paiements_scoped_to_user(client: TestClient, register_and
     assert client.delete(f"/orders/lignes/{ligne['id_ligne_commande']}", headers=headers).status_code == 204
     assert client.delete(f"/orders/commandes/{cmd['id_commande']}", headers=headers).status_code == 204
 
+
+@patch("presentation.order_router.create_postfinance_checkout")
+@patch("presentation.order_router.get_postfinance_checkout_status")
+def test_postfinance_checkout_flow(mock_get_status, mock_create, client: TestClient, register_and_login, uniq: str):
+    headers = register_and_login(f"pf_{uniq}@example.com")
+
+    # Create Commande
+    r = client.post(
+        "/orders/commandes",
+        json={"numero_commande": f"CMD_PF_{uniq}", "montant_total_chf": 100.0, "statut": "CREATED"},
+        headers=headers,
+    )
+    cmd = r.json()
+    cmd_id = cmd["id_commande"]
+
+    # Mock postfinance creation
+    mock_create.return_value = {
+        "id": f"pf_{uniq}",
+        "status": "CREATED",
+        "redirect_url": "https://pay.example.com",
+        "raw": {"test": True}
+    }
+
+    # Create paiement postfinance
+    r = client.post(
+        "/orders/paiements/postfinance",
+        json={
+            "id_commande": cmd_id,
+            "montant_chf": 100.0,
+            "devise": "CHF",
+            "reference_externe": f"pf_{uniq}",
+            "statut": "PENDING"
+        },
+        headers=headers,
+    )
+    assert r.status_code == 201, r.text
+    pay = r.json()["paiement"]
+    
+    assert pay["fournisseur_paiement"] == "POSTFINANCE"
+    assert pay["statut"] == "CREATED"
+    assert pay["reference_externe"] == f"pf_{uniq}"
+    
+    # Mock polling status update
+    mock_get_status.return_value = {
+        "id": f"pf_{uniq}",
+        "status": "COMPLETED",
+        "raw": {"test": True}
+    }
+    
+    # Poll
+    r = client.get(f"/orders/paiements/{pay['id_paiement']}/poll-postfinance", headers=headers)
+    assert r.status_code == 200
+    
+    updated_pay = r.json()["paiement"]
+    assert updated_pay["statut"] == "COMPLETED"
+    
+    # Cleanup
+    assert client.delete(f"/orders/paiements/{pay['id_paiement']}", headers=headers).status_code == 204
+    assert client.delete(f"/orders/commandes/{cmd_id}", headers=headers).status_code == 204
