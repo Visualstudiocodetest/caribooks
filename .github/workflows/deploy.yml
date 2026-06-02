@@ -23,7 +23,7 @@ jobs:
             cd /app || exit 1
             sudo -u ubuntu git pull origin main || true
             sudo apt-get update && sudo apt-get install -y python3 python3-venv python3-pip git || true
-            if [ ! -d venv ]; then python3 -m venv venv; fi
+            if [ ! -d venv ]; then sudo python3 -m venv venv; fi
             sudo /app/venv/bin/python -m pip install --upgrade pip
             sudo /app/venv/bin/pip install --no-cache-dir -r requirements.txt
             sudo systemctl restart fastapi
@@ -53,7 +53,7 @@ jobs:
             cd /app || exit 1
             sudo -u ubuntu git pull origin main || true
             sudo apt-get update && sudo apt-get install -y python3 python3-venv python3-pip git || true
-            if [ ! -d venv ]; then python3 -m venv venv; fi
+            if [ ! -d venv ]; then sudo python3 -m venv venv; fi
             sudo /app/venv/bin/python -m pip install --upgrade pip
             sudo /app/venv/bin/pip install --no-cache-dir -r requirements.txt
             sudo systemctl restart fastapi
