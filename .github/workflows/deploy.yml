@@ -32,7 +32,6 @@ jobs:
           script: |
             set -e
 
-            # Bootstrap: clone if /app doesn't exist or isn't a git repo
             if [ ! -d /app/.git ]; then
               echo "Initializing /app from git..."
               sudo rm -rf /app
@@ -42,13 +41,11 @@ jobs:
 
             cd /app
             git fetch origin main
-            git reset --hard origin/main   # safer than pull — no merge conflicts
+            git reset --hard origin/main
 
-            # Install deps only if missing
             dpkg -s python3-venv python3-pip git &>/dev/null || \
               sudo apt-get install -y -q python3 python3-venv python3-pip git
 
-            # Recreate venv if broken
             if [ ! -x /app/venv/bin/python ]; then
               echo "Creating fresh venv..."
               sudo rm -rf /app/venv
@@ -56,7 +53,7 @@ jobs:
             fi
 
             /app/venv/bin/python -m pip install --upgrade pip --quiet
-            /app/venv/bin/pip install --no-cache-dir -r requirements.txt --quiet
+            /app/venv/bin/pip install --no-cache-dir -r /app/backend/requirements.txt --quiet  # ← fixed path
 
             sudo systemctl restart fastapi
 
