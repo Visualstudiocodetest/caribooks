@@ -63,10 +63,19 @@ export async function apiFetch<T>(
       ? joinUrl(getServerBackendBaseUrl(), path)
       : joinUrl(getClientBackendBaseUrl(), path)
 
-  const res = await fetch(url, {
+  const fetchOptions: RequestInit = {
     ...rest,
     headers: mergedHeaders,
-  })
+  }
+
+  // When called from the browser and requesting auth, include credentials (cookies)
+  if (typeof window !== 'undefined' && auth) {
+    fetchOptions.credentials = 'include'
+    // Ensure CORS mode for cross-origin requests
+    fetchOptions.mode = 'cors'
+  }
+
+  const res = await fetch(url, fetchOptions)
 
   const contentType = res.headers.get('content-type') || ''
   const isJson = contentType.includes('application/json')

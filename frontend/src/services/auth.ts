@@ -2,11 +2,11 @@ import { apiFetch } from './api'
 import type { LoginRequest, Token, UserCreate, UserRead } from '@/types/api'
 
 export async function login(payload: LoginRequest): Promise<Token> {
-  return apiFetch<Token>('/auth/token', { method: 'POST', body: JSON.stringify(payload) })
+  return apiFetch<Token>('/auth/token', { method: 'POST', body: JSON.stringify(payload), auth: true })
 }
 
 export async function register(payload: UserCreate): Promise<UserRead> {
-  return apiFetch<UserRead>('/auth/register', { method: 'POST', body: JSON.stringify(payload) })
+  return apiFetch<UserRead>('/auth/register', { method: 'POST', body: JSON.stringify(payload), auth: true })
 }
 
 export function getCurrentUser(): Promise<UserRead> {
