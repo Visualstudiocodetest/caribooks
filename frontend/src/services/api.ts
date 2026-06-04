@@ -68,9 +68,14 @@ export async function apiFetch<T>(
     headers: mergedHeaders,
   }
 
-  // When called from the browser and requesting auth, include credentials (cookies)
+  // When called from the browser and requesting auth, include credentials only if
+  // the deployment explicitly enabled credentialed cross-origin requests.
+  // This avoids sending credentials when the backend returns Access-Control-Allow-Origin: *
+  const allowCredentialedCors = (typeof window !== 'undefined' && (process.env.NEXT_PUBLIC_BACKEND_ALLOW_CREDENTIALS === 'true'))
   if (typeof window !== 'undefined' && auth) {
-    fetchOptions.credentials = 'include'
+    if (allowCredentialedCors) {
+      fetchOptions.credentials = 'include'
+    }
     // Ensure CORS mode for cross-origin requests
     fetchOptions.mode = 'cors'
   }
