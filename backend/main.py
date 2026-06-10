@@ -20,7 +20,12 @@ load_dotenv(dotenv_path=env_path)
 
 app = FastAPI()
 
-origins_env = os.getenv("FRONTEND_ORIGINS", "https://plobooks.vercel.app")
+default_origins = ",".join([
+    "https://plobooks.vercel.app",
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+])
+origins_env = os.getenv("FRONTEND_ORIGINS", default_origins)
 allow_origins = [o.strip() for o in origins_env.split(",") if o.strip()]
 app.add_middleware(
     CORSMiddleware,

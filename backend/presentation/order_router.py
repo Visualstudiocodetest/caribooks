@@ -20,10 +20,15 @@ from  presentation.schemas import (
     PaiementUpdate,
 )
 from services.postfinance_service import (
-    create_postfinance_checkout,
+    build_postfinance_address,
+    build_postfinance_line_items,
+    confirm_postfinance_transaction,
+    create_postfinance_iframe_session,
+    get_postfinance_checkout_status,
+    get_postfinance_transaction,
+    is_postfinance_success_status,
     parse_postfinance_webhook,
     verify_postfinance_webhook_signature,
-    get_postfinance_checkout_status,
 )
 from fastapi import Request
 import os
@@ -344,52 +349,176 @@ def create_paiement(payload: PaiementCreate, db: Session = Depends(get_db), curr
     return created
 
 
+def _load_commande_context(db: Session, id_commande: int, id_utilisateur: int):
+    commande = _get_commande_owned(db, id_commande, id_utilisateur)
+    if commande is None:
+        return None, None, None
+
+    lignes = (
+        db.query(models.LigneCommande)
+        .filter(models.LigneCommande.id_commande == id_commande)
+        .all()
+    )
+    for ligne in lignes:
+        if getattr(ligne, "article", None) is None:
+            ligne.article = db.query(models.Article).filter(models.Article.id_article == ligne.id_article).first()
+
+    user = db.query(models.Utilisateur).filter(models.Utilisateur.id_utilisateur == id_utilisateur).first()
+    return commande, lignes, user
+
+
 @router.post("/paiements/postfinance", status_code=status.HTTP_201_CREATED)
-def create_paiement_postfinance(payload: PaiementCreate, request: Request, db: Session = Depends(get_db), current_user=Depends(get_current_user)):
-    # Create local paiement record and request a PostFinance checkout session
-    if _get_commande_owned(db, payload.id_commande, int(current_user.id_utilisateur)) is None:
+def create_paiement_postfinance(
+    payload: PaiementCreate,
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    """Create a local paiement and initialize a PostFinance iframe checkout session."""
+    commande, lignes, user = _load_commande_context(db, payload.id_commande, int(current_user.id_utilisateur))
+    if commande is None:
         raise HTTPException(status_code=404, detail="Commande not found")
 
-    user = db.query(models.Utilisateur).filter(models.Utilisateur.id_utilisateur == current_user.id_utilisateur).first()
     frontend_base_url = os.getenv("FRONTEND_BASE_URL", str(request.base_url).rstrip("/"))
-    cancel_url = f"{frontend_base_url}/cart"
+    failed_url = f"{frontend_base_url}/payment?commandeId={payload.id_commande}&status=failed"
 
-    # create local record with pending status
     obj = models.Paiement(**payload.model_dump())
     obj.fournisseur_paiement = payload.fournisseur_paiement or "POSTFINANCE"  # type: ignore[assignment]
     obj.statut = payload.statut or "PENDING"  # type: ignore[assignment]
     created = paiement_crud.create(db, obj)
 
-    # build return URL including local paiement id so frontend can poll status
-    return_url = f"{frontend_base_url}/payment?commandeId={payload.id_commande}&paiementId={created.id_paiement}"
+    success_url = (
+        f"{frontend_base_url}/payment?commandeId={payload.id_commande}"
+        f"&paiementId={created.id_paiement}&status=success"
+    )
 
-    # call PostFinance service
-    description = f"Commande {int(created.id_commande)}"  # type: ignore
-    customer_email = str(getattr(user, "email", "")) if user is not None else None
-    pf_resp = create_postfinance_checkout(
-        float(created.montant_chf),  # type: ignore[arg-type]
-        str(created.id_paiement),
-        return_url,
-        cancel_url,
-        description,
-        customer_email,
-    )  # type: ignore
+    shipping_label = "Livraison"
+    if str(getattr(commande, "shipping_method", "POST")).upper() == "CLICK_COLLECT":
+        shipping_label = "Retrait en magasin"
 
-    # update reference_externe with provider id if available
-    ref = pf_resp.get("id")
-    if ref:
-        created.reference_externe = str(ref)  # type: ignore[assignment]
-    if pf_resp.get("status"):
-        created.statut = str(pf_resp.get("status"))  # type: ignore[assignment]
+    line_items = build_postfinance_line_items(
+        lignes,
+        float(getattr(commande, "frais_port_chf", 0) or 0),
+        shipping_label,
+        int(commande.id_commande),
+    )
+    billing_address = build_postfinance_address(user) if user is not None else {
+        "givenName": "",
+        "familyName": "",
+        "emailAddress": "",
+        "street": "",
+        "city": "",
+        "postcode": "",
+        "country": "CH",
+    }
+
+    pf_resp = create_postfinance_iframe_session(
+        line_items=line_items,
+        billing_address=billing_address,
+        success_url=success_url,
+        failed_url=failed_url,
+        merchant_reference=str(created.id_paiement),
+        shipping_address=billing_address,
+    )
+
+    transaction_id = pf_resp.get("transaction_id")
+    if transaction_id:
+        created.reference_externe = str(transaction_id)  # type: ignore[assignment]
+    transaction = pf_resp.get("transaction") or {}
+    transaction_status = transaction.get("state") or transaction.get("status")
+    if transaction_status:
+        created.statut = str(transaction_status)  # type: ignore[assignment]
     db.commit()
     db.refresh(created)
 
     return {
         "paiement": created,
-        "redirect_url": pf_resp.get("redirect_url"),
-        "raw": pf_resp.get("raw"),
+        "transaction_id": transaction_id,
+        "javascript_url": pf_resp.get("javascript_url"),
+        "payment_methods": pf_resp.get("payment_methods") or [],
+        "local_mode": bool(pf_resp.get("local_mode")),
         "error": pf_resp.get("error"),
     }
+
+
+@router.post("/paiements/{id_paiement}/confirm-postfinance")
+def confirm_paiement_postfinance(
+    id_paiement: int,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    """Confirm a PostFinance transaction after iframe validation, before submit()."""
+    obj = (
+        db.query(models.Paiement)
+        .join(models.Commande, models.Paiement.id_commande == models.Commande.id_commande)
+        .filter(
+            models.Paiement.id_paiement == id_paiement,
+            models.Commande.id_utilisateur == current_user.id_utilisateur,
+        )
+        .first()
+    )
+    if obj is None:
+        raise HTTPException(status_code=404, detail="Paiement not found")
+
+    commande, lignes, user = _load_commande_context(db, int(obj.id_commande), int(current_user.id_utilisateur))
+    if commande is None:
+        raise HTTPException(status_code=404, detail="Commande not found")
+
+    transaction_id = getattr(obj, "reference_externe", None)
+    if not transaction_id:
+        raise HTTPException(status_code=400, detail="Missing PostFinance transaction reference")
+
+    shipping_label = "Livraison"
+    if str(getattr(commande, "shipping_method", "POST")).upper() == "CLICK_COLLECT":
+        shipping_label = "Retrait en magasin"
+
+    line_items = build_postfinance_line_items(
+        lignes,
+        float(getattr(commande, "frais_port_chf", 0) or 0),
+        shipping_label,
+        int(commande.id_commande),
+    )
+    billing_address = build_postfinance_address(user) if user is not None else {
+        "givenName": "",
+        "familyName": "",
+        "emailAddress": "",
+        "street": "",
+        "city": "",
+        "postcode": "",
+        "country": "CH",
+    }
+
+    current_tx = get_postfinance_transaction(str(transaction_id))
+    version = int(current_tx.get("version") or 1)
+
+    pf_resp = confirm_postfinance_transaction(
+        transaction_id=str(transaction_id),
+        version=version,
+        merchant_reference=str(obj.id_paiement),
+        line_items=line_items,
+        billing_address=billing_address,
+        shipping_address=billing_address,
+    )
+
+    if pf_resp.get("local"):
+        obj.statut = "AUTHORIZED"  # type: ignore[assignment]
+        obj.date_paiement = datetime.utcnow()  # type: ignore[assignment]
+        db.commit()
+        db.refresh(obj)
+        try:
+            _finalize_commande(db, int(obj.id_commande))  # type: ignore[arg-type]
+            db.commit()
+        except Exception:
+            db.rollback()
+    elif pf_resp.get("state") or pf_resp.get("status"):
+        obj.statut = str(pf_resp.get("state") or pf_resp.get("status"))  # type: ignore[assignment]
+        db.commit()
+        db.refresh(obj)
+
+    if pf_resp.get("error"):
+        raise HTTPException(status_code=502, detail=str(pf_resp.get("error")))
+
+    return {"paiement": obj, "transaction": pf_resp}
 
 
 @router.get("/paiements/{id_paiement}/poll-postfinance")
@@ -413,18 +542,17 @@ def poll_paiement_postfinance(id_paiement: int, db: Session = Depends(get_db), c
     # Try to query provider by stored link id, else by local payment id
     pf_resp = get_postfinance_checkout_status(provider_id, str(obj.id_paiement))
 
-    # If provider returned a status, update local record
-    if pf_resp.get("status"):
-        new_status = str(pf_resp.get("status"))
-        obj.statut = new_status  # type: ignore
-        if new_status and new_status.upper() in ("CAPTURED", "PAID", "COMPLETED", "AUTHORIZED", "FULFILL"):
-            obj.date_paiement = datetime.utcnow()  # type: ignore
+    new_status = pf_resp.get("state") or pf_resp.get("status")
+    if new_status:
+        obj.statut = str(new_status)  # type: ignore[assignment]
+        if is_postfinance_success_status(str(new_status)):
+            obj.date_paiement = datetime.utcnow()  # type: ignore[assignment]
         db.commit()
         db.refresh(obj)
 
         try:
-            if new_status and new_status.upper() in ("CAPTURED", "PAID", "COMPLETED", "AUTHORIZED", "FULFILL"):
-                _finalize_commande(db, int(obj.id_commande))  # type: ignore
+            if is_postfinance_success_status(str(new_status)):
+                _finalize_commande(db, int(obj.id_commande))  # type: ignore[arg-type]
                 db.commit()
         except Exception:
             db.rollback()
@@ -466,8 +594,43 @@ async def postfinance_webhook(request: Request, db: Session = Depends(get_db)):
     db.refresh(obj)
 
     try:
-        if new_status and str(new_status).upper() in ("CAPTURED", "PAID", "COMPLETED", "AUTHORIZED", "FULFILL"):
-            _finalize_commande(db, int(obj.id_commande))  # type: ignore
+        if is_postfinance_success_status(str(new_status)):
+            _finalize_commande(db, int(obj.id_commande))  # type: ignore[arg-type]
+            db.commit()
+    except Exception:
+        db.rollback()
+
+    return {"ok": True}
+
+
+@router.post("/paiements/webhook/local")
+def local_payment_webhook(payload: dict, db: Session = Depends(get_db)):
+    """Development-only webhook simulator for local iframe payments."""
+    if os.getenv("ENVIRONMENT", "development") == "production":
+        raise HTTPException(status_code=404, detail="Not found")
+
+    ref = payload.get("reference") or payload.get("Metadata", {}).get("reference")
+    pay_id = payload.get("Id") or payload.get("id")
+    status = payload.get("Status") or payload.get("status") or "AUTHORIZED"
+
+    obj = None
+    if ref:
+        obj = db.query(models.Paiement).filter(models.Paiement.reference_externe == str(ref)).first()
+    if obj is None and pay_id:
+        obj = db.query(models.Paiement).filter(models.Paiement.id_paiement == int(str(pay_id).replace("local-", ""))).first()
+    if obj is None and ref:
+        obj = db.query(models.Paiement).filter(models.Paiement.id_paiement == int(str(ref).replace("local-", ""))).first()
+    if obj is None:
+        return {"ok": False, "reason": "not_found"}
+
+    obj.statut = str(status)  # type: ignore[assignment]
+    obj.date_paiement = datetime.utcnow()  # type: ignore[assignment]
+    db.commit()
+    db.refresh(obj)
+
+    try:
+        if is_postfinance_success_status(str(status)):
+            _finalize_commande(db, int(obj.id_commande))  # type: ignore[arg-type]
             db.commit()
     except Exception:
         db.rollback()
