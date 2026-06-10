@@ -13,6 +13,10 @@ from presentation.scan_router import router as scan_router
 from presentation.user_router import router as user_router
 from presentation.images_router import router as images_router
 from fastapi.staticfiles import StaticFiles
+from dotenv import load_dotenv
+
+env_path = Path(__file__).resolve().parent.parent / ".env"
+load_dotenv(dotenv_path=env_path)
 
 app = FastAPI()
 

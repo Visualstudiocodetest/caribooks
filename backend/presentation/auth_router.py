@@ -2,14 +2,17 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from presentation.auth_schemas import LoginRequest, UserCreate, UserRead, Token
 from infrastructure import crud_user
-import time
 import os
 from presentation.deps import get_db
-from services.jwt_service import encode_hs256
+from services.jwt_service import create_access_token
 
 
+ENVIRONMENT = os.getenv("ENVIRONMENT", "development").lower()
 SECRET_KEY = os.getenv("SECRET_KEY", "dev-secret-key")
-ALGORITHM = "HS256"
+
+if ENVIRONMENT in ("prod", "production") and SECRET_KEY == "dev-secret-key":
+    raise RuntimeError("CRITICAL: SECRET_KEY is not set securely for production environment.")
+
 ACCESS_TOKEN_EXPIRE_MINUTES = 480
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -51,6 +54,5 @@ def login_for_access_token(payload: LoginRequest, db: Session = Depends(get_db))
     if not user or not verified:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Incorrect credentials")
     to_encode = {"sub": user.email, "role": user.role}
-    to_encode.update({"exp": time.time() + (ACCESS_TOKEN_EXPIRE_MINUTES * 60)})
-    encoded_jwt = encode_hs256(to_encode, SECRET_KEY)
-    return Token(access_token=encoded_jwt)
+    access_token = create_access_token(to_encode, SECRET_KEY, ACCESS_TOKEN_EXPIRE_MINUTES)
+    return Token(access_token=access_token)

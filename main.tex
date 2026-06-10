@@ -1,0 +1,1343 @@
+\documentclass[12pt, a4paper]{report}
+
+% Packages indispensables
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[french]{babel}
+\usepackage{graphicx}
+\usepackage{geometry}
+\usepackage{hyperref}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+\usepackage{xcolor}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{longtable}
+\usepackage{listings}
+\usepackage{mdframed}
+\usepackage{enumitem}
+
+% Configuration de la mise en page
+\geometry{top=2.5cm, bottom=2.5cm, left=2.5cm, right=2.5cm}
+
+% Configuration des liens
+\hypersetup{
+    colorlinks=true,
+    linkcolor=black,
+    filecolor=magenta,      
+    urlcolor=blue,
+    pdftitle={Mémoire CARIBOOKS - Alexandre REY},
+}
+
+% Style SQL listings
+\lstdefinestyle{sqlstyle}{
+    language=SQL,
+    basicstyle=\ttfamily\small,
+    keywordstyle=\color{blue}\bfseries,
+    commentstyle=\color{gray}\itshape,
+    stringstyle=\color{orange},
+    showstringspaces=false,
+    breaklines=true,
+    frame=single,
+    rulecolor=\color{black!30},
+    backgroundcolor=\color{black!5},
+    numbers=left,
+    numberstyle=\tiny\color{gray},
+    numbersep=5pt,
+    tabsize=2,
+}
+
+% Style Python listings
+\lstdefinestyle{pythonstyle}{
+    language=Python,
+    basicstyle=\ttfamily\small,
+    keywordstyle=\color{blue}\bfseries,
+    commentstyle=\color{gray}\itshape,
+    stringstyle=\color{orange},
+    showstringspaces=false,
+    breaklines=true,
+    frame=single,
+    rulecolor=\color{black!30},
+    backgroundcolor=\color{black!5},
+    numbers=left,
+    numberstyle=\tiny\color{gray},
+    numbersep=5pt,
+    tabsize=4,
+}
+
+% Boîte "À compléter"
+\newmdenv[
+  linecolor=red!70,
+  linewidth=2pt,
+  backgroundcolor=red!5,
+  skipabove=12pt,
+  skipbelow=12pt,
+  innertopmargin=10pt,
+  innerbottommargin=10pt,
+]{acompleter}
+
+% Style des en-têtes et pieds de page
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{Projet CARIBOOKS}
+\fancyhead[R]{Alexandre REY - ESTIAM}
+\fancyfoot[C]{\thepage}
+
+\begin{document}
+
+% ==========================================
+% 1. PAGE DE COUVERTURE
+% ==========================================
+\begin{titlepage}
+    \centering
+    \vspace*{2cm}
+    
+    {\Large \textbf{École ESTIAM} }\\[2cm]
+    
+    {\huge \textbf{MÉMOIRE DE PROJET}}\\[1cm]
+    {\Huge \textbf{CARIBOOKS}}\\[2cm]
+  
+    \begin{flushleft}
+        \large
+        \textbf{Présenté par :} Alexandre REY \\
+        \textbf{Classe et spécialité :} E3 DAD (Data and Application Development) \\[0.5cm]
+        \textbf{Encadrant :} Mhand Boufala \\
+        \textbf{Année scolaire :} 2025-2026 \\
+    \end{flushleft}
+    
+    \vfill
+    \vspace{2cm}
+\end{titlepage}
+
+% ==========================================
+% 2. ABSTRACT (Résumé)
+% ==========================================
+\chapter*{Abstract}
+\addcontentsline{toc}{chapter}{Abstract}
+
+\textbf{Contexte du projet :} \\
+Ce projet s'inscrit dans le cadre du titre CDA (Concepteur Développeur d'Applications) et fait suite à une demande réelle d'une bénévole de la recyclerie de Caritas, une association facilitant la réinsertion professionnelle par la vente d'objets de seconde main. Face à un stock de livres invendus, la demande était de créer une plateforme de vente en ligne dédiée, adaptée aux contraintes locales suisses.
+
+Les plateformes de revente existantes fonctionnant principalement en euros et sans restriction géographique, elles ne correspondaient pas au besoin. La plateforme CARIBOOKS a donc été conçue pour opérer exclusivement en Francs Suisses (CHF), avec une livraison restreinte au territoire suisse et un système d'ajout rapide de livres via scan du code ISBN.
+
+\vspace{20pt}
+
+\textbf{Objectif et résultats attendus :} \\
+L'objectif principal est de concevoir et déployer une plateforme e-commerce solidaire (nommée CARIBOOKS), facile d'utilisation pour les bénévoles de Caritas. Elle doit offrir une gestion simplifiée des ventes — de l'ajout rapide de produits grâce à l'API ISBN jusqu'au suivi des commandes — le tout en respectant les contraintes locales (devise CHF, livraison suisse, et paiement via PostFinance, prestataire suisse intégré au service de livraison de la Poste Suisse).
+
+\newpage
+
+% ==========================================
+% 3. SOMMAIRE
+% ==========================================
+\tableofcontents
+\newpage
+
+% ==========================================
+% 4. LISTE DES FIGURES
+% ==========================================
+\listoffigures
+\newpage
+
+% ==========================================
+% 5. INTRODUCTION GÉNÉRALE
+% ==========================================
+\chapter*{Introduction générale}
+\addcontentsline{toc}{chapter}{Introduction générale}
+
+\textit{[À rédiger une fois le mémoire totalement terminé.]}
+
+\noindent Dans le cadre du titre CDA (Concepteur Développeur d'Applications), ce projet représente une opportunité de répondre à une demande utilisateur réelle : créer une plateforme e-commerce solidaire pour la recyclerie de l'association Caritas. Ce projet est né d'un constat simple — de nombreux livres d'occasion finissent invendus, alors qu'une mise en ligne adaptée au marché suisse pourrait leur donner une seconde vie tout en soutenant la réinsertion professionnelle.
+
+\noindent La problématique centrale est la suivante : \textit{comment concevoir et déployer une application e-commerce sur mesure, contrainte au territoire suisse (devise CHF), ergonomique pour des bénévoles non technophiles, et permettant un ajout de stock rapide via scan ISBN ?}
+
+\noindent Pour mener ce projet, une méthodologie Agile a été adoptée, avec des points réguliers avec la demandeuse (qui joue le rôle de Product Owner informelle) pour valider les fonctionnalités développées et ajuster les priorités. Ce mémoire est structuré en quatre chapitres : le contexte et l'état de l'art, l'analyse et la conception, la réalisation et la mise en \oe{}uvre, et enfin les tests et la validation.
+
+% ==========================================
+% 6. LES CHAPITRES PRINCIPAUX
+% ==========================================
+
+% ==========================================
+% CHAPITRE A — PRÉSENTATION DES COMPÉTENCES
+% ==========================================
+\chapter{Présentation des compétences}
+
+\section{Blocs de compétences du référentiel CDA adressés}
+
+Ce projet couvre l'intégralité des trois blocs de compétences du référentiel CDA (RNCP) tel que défini par France Compétences.
+
+\begin{table}[h]
+\centering
+\renewcommand{\arraystretch}{1.5}
+\begin{tabular}{@{}p{1cm}p{5cm}p{8cm}@{}}
+\toprule
+\textbf{Bloc} & \textbf{Intitulé} & \textbf{Compétences mobilisées dans CARIBOOKS} \\
+\midrule
+1 & Développer une application sécurisée &
+  Authentification JWT avec \texttt{python-jose} et hashage \texttt{bcrypt}, validation des données avec Pydantic, contrôle des permissions par rôle (admin / user), requêtes SQL préparées via SQLAlchemy (ORM), gestion des sessions sécurisées, protection des routes FastAPI avec middleware d'autorisation. \\
+\midrule
+2 & Concevoir et développer une application multicouche &
+  Modélisation de la base de données (MCD/MLD MySQL), architecture REST API (FastAPI), frontend découplé (Next.js / React / TypeScript), séparation stricte des couches métier, données et présentation, intégration d'APIs tierces (OpenLibrary, PostFinance), conteneurisation Docker avec \texttt{docker-compose}. \\
+\midrule
+3 & Préparer le déploiement d'une application &
+  Conteneurisation complète de l'application (API + frontend + BDD), pipeline CI/CD via GitHub Actions, déploiement en cours sur environnement cloud, gestion des variables d'environnement, documentation API Swagger générée automatiquement par FastAPI. \\
+\bottomrule
+\end{tabular}
+\caption{Couverture des trois blocs de compétences CDA}
+\label{tab:blocs_cda}
+\end{table}
+
+\section{Liste détaillée des compétences mises en \oe{}uvre}
+
+\subsection{Compétences techniques}
+\begin{itemize}
+    \item Développement backend avec \textbf{FastAPI} (Python) : création d'endpoints REST, gestion des dépendances, validation automatique des données via Pydantic.
+    \item Développement frontend avec \textbf{Next.js} (React / TypeScript) : rendu côté serveur (SSR), routing Next.js, composants réutilisables.
+    \item Modélisation et gestion d'une base de données \textbf{MySQL} : conception MCD/MLD, rédaction du DDL SQL, utilisation de l'ORM SQLAlchemy.
+    \item \textbf{Authentification JWT} : génération et validation de tokens, gestion des rôles utilisateurs, hashage des mots de passe avec bcrypt.
+    \item \textbf{Scan ISBN} via librairie JavaScript de lecture de codes-barres dans le navigateur, avec appel à l'API OpenLibrary pour le préremplissage des métadonnées.
+    \item Intégration de l'\textbf{API PostFinance} pour le paiement en CHF (TWINT, Visa, Mastercard), compatible avec le service de livraison de la Poste Suisse.
+    \item \textbf{Conteneurisation} avec Docker et docker-compose : orchestration multi-services (API, frontend, MySQL).
+    \item Mise en place d'un pipeline \textbf{CI/CD} avec GitHub Actions.
+    \item Rédaction de \textbf{tests unitaires et d'intégration} avec pytest.
+\end{itemize}
+
+\subsection{Compétences transversales}
+\begin{itemize}
+    \item Gestion de projet en méthodologie \textbf{Agile (Scrum)} : planification en sprints, backlog, suivi via Microsoft Planner.
+    \item Communication avec une \textbf{Product Owner non technique} : reformulation des besoins, conduite de démos, recueil des retours utilisateurs.
+    \item \textbf{Veille technologique} et sécurité (OWASP, bonnes pratiques FastAPI).
+    \item Gestion du code source avec \textbf{Git} et \textbf{GitHub} (licence GitHub for Students Pro).
+\end{itemize}
+
+% --- CHAPITRE 1 ---
+\chapter{Contexte et état de l'art}
+
+\section{Présentation du domaine du projet}
+
+Le projet s'inscrit dans le domaine du commerce en ligne (e-commerce) à visée solidaire. Avec l'évolution des habitudes de consommation, la vente d'articles de seconde main connaît un essor majeur : en 2024, le marché mondial de la seconde main dépasse les 128 milliards d'euros, avec une croissance annuelle à deux chiffres portée par des considérations économiques et écologiques. En Suisse, ce phénomène est particulièrement marqué : 57\% de la population pratique régulièrement l'achat-revente en ligne, plaçant la Suisse en tête des pays européens sur ce segment.
+
+\noindent Concernant spécifiquement le livre d'occasion, la part de marché progresse chaque année pour atteindre près de 20\% des livres achetés en 2022, avec une augmentation constante du nombre d'acheteurs. Le marché est désormais massivement opéré en ligne, par des acteurs hétérogènes allant des plateformes de mise en relation entre particuliers aux détaillants entièrement numériques. Dans ce contexte, la recyclerie de Caritas, association facilitant la réinsertion professionnelle en Suisse romande, cherche à digitaliser la vente de ses livres d'occasion pour éviter les invendus et maximiser son impact social.
+
+\section{Étude des solutions existantes}
+
+Il existe plusieurs plateformes de revente de livres et d'objets d'occasion sur le marché. Les principales sont :
+
+\begin{itemize}
+    \item \textbf{Momox} : plateforme spécialisée dans le rachat et la revente de livres, CD et jeux vidéo. Opère principalement en Europe avec tarification en euros.
+    \item \textbf{Vinted} : place de marché généraliste entre particuliers, très populaire en Europe. Interface simple mais sans gestion spécifique des livres ni support natif du CHF.
+    \item \textbf{Shopify} : solution SaaS e-commerce généraliste permettant de créer une boutique en ligne. Flexible mais coûteux à l'usage (abonnement mensuel + frais de transaction) et nécessitant des compétences techniques pour la personnalisation.
+    \item \textbf{WooCommerce} : plugin e-commerce pour WordPress. Open-source et modulable, mais le back-office peut être complexe pour des utilisateurs non technophiles.
+    \item \textbf{Ricardo.ch} : principale plateforme de vente entre particuliers en Suisse, opérant en CHF. Cependant, elle ne propose pas de back-office dédié pour les associations ni d'intégration ISBN.
+\end{itemize}
+
+\section{Comparaison des solutions et Analyse critique}
+
+\begin{table}[h]
+\centering
+\renewcommand{\arraystretch}{1.4}
+\begin{tabular}{@{}p{2.8cm}p{1.8cm}p{2cm}p{2cm}p{2cm}p{2.5cm}@{}}
+\toprule
+\textbf{Solution} & \textbf{Devise CHF} & \textbf{Scan ISBN} & \textbf{Back-office simplifié} & \textbf{Coût} & \textbf{Personnalisable} \\
+\midrule
+Momox & \textcolor{red}{Non} & \textcolor{green}{Oui} & \textcolor{red}{Non} & Gratuit & \textcolor{red}{Non} \\
+Vinted & \textcolor{red}{Non} & \textcolor{red}{Non} & \textcolor{green}{Partiel} & Gratuit & \textcolor{red}{Non} \\
+Shopify & \textcolor{green}{Oui} & \textcolor{red}{Non} & \textcolor{green}{Oui} & Élevé & \textcolor{green}{Partiel} \\
+WooCommerce & \textcolor{green}{Oui} & \textcolor{red}{Non} & \textcolor{red}{Non} & Moyen & \textcolor{green}{Oui} \\
+Ricardo.ch & \textcolor{green}{Oui} & \textcolor{red}{Non} & \textcolor{red}{Non} & Moyen & \textcolor{red}{Non} \\
+\textbf{CARIBOOKS} & \textcolor{green}{\textbf{Oui}} & \textcolor{green}{\textbf{Oui}} & \textcolor{green}{\textbf{Oui}} & \textbf{Faible} & \textcolor{green}{\textbf{Total}} \\
+\bottomrule
+\end{tabular}
+\caption{Comparaison des solutions existantes avec CARIBOOKS}
+\label{tab:comparaison}
+\end{table}
+
+\noindent Bien que les solutions existantes soient performantes dans leur domaine, elles présentent des limites critiques pour le besoin spécifique de Caritas :
+
+\begin{itemize}
+    \item \textbf{Devise et géolocalisation :} La plupart des plateformes standardisées imposent l'euro ou manquent de flexibilité pour forcer exclusivement l'utilisation du CHF et restreindre les expéditions à la Suisse.
+    \item \textbf{Ergonomie pour les bénévoles :} Les back-offices des CMS classiques (Shopify, WooCommerce) sont souvent complexes pour des utilisateurs non technophiles.
+    \item \textbf{Ajout de stock :} Peu d'outils intègrent nativement un scan de code-barres ISBN pour automatiser la récupération des métadonnées (titre, auteur, résumé, couverture) de façon fluide.
+    \item \textbf{Coût de maintenance :} Les solutions SaaS comme Shopify engendrent des frais mensuels récurrents incompatibles avec les contraintes budgétaires d'une association caritative.
+\end{itemize}
+
+\section{Choix de la solution}
+
+Face à ces limites, le choix s'est porté sur un développement sur-mesure de l'application CARIBOOKS. La demandeuse souhaitait expressément une solution modifiable, adaptée à leurs besoins spécifiques, avec un coût de maintenance minimal. Ce positionnement permet :
+
+\begin{itemize}
+    \item L'intégration d'un module de scan ISBN conçu spécifiquement pour la saisie rapide des ouvrages par les bénévoles.
+    \item Le contrôle total sur le tunnel d'achat (devise CHF uniquement, expéditions limitées à la Suisse).
+    \item La création d'une interface d'administration (back-office) épurée, allant à l'essentiel.
+    \item Un coût de maintenance faible grâce à une architecture open-source (FastAPI + Next.js) sans abonnement tiers obligatoire, et un paiement géré par \textbf{PostFinance}, prestataire suisse intégré à l'écosystème de la Poste Suisse, permettant notamment une gestion native des étiquettes de livraison PostPac.
+\end{itemize}
+
+\section{Justification du choix de PostFinance}
+
+Le choix de PostFinance comme prestataire de paiement s'est imposé pour plusieurs raisons pratiques et techniques :
+
+\begin{itemize}
+    \item \textbf{Environnement de test accessible :} PostFinance met à disposition un environnement sandbox complet ne nécessitant pas d'inscription avec une carte bancaire réelle avant la mise en production, ce qui facilite grandement le développement et les tests.
+    \item \textbf{Intégration native avec la Poste Suisse :} La synergie entre le paiement PostFinance et le service de livraison PostPac/Swiss Post permet d'envisager une gestion unifiée des commandes et des expéditions, particulièrement pertinente pour une plateforme à destination exclusive du marché suisse.
+    \item \textbf{Support des moyens de paiement suisses :} PostFinance supporte nativement TWINT (paiement mobile dominant en Suisse), PostCard, Visa et Mastercard, ce qui couvre l'ensemble des préférences de paiement du public cible.
+    \item \textbf{Conformité locale :} Acteur 100\% suisse, PostFinance garantit une conformité avec les réglementations financières helvétiques et inspire confiance auprès des utilisateurs locaux.
+\end{itemize}
+
+% --- CHAPITRE 2 ---
+\chapter{Analyse et conception}
+
+\section{Analyse des besoins}
+
+\subsection{Problématique et public cible}
+
+L'association Caritas dispose d'un stock de livres d'occasion qu'elle ne parvient pas à écouler entièrement en magasin. L'enjeu est de permettre une mise en vente en ligne simple et rapide, sans contraindre les bénévoles à saisir manuellement toutes les informations de chaque ouvrage. La plateforme CARIBOOKS cible trois profils d'utilisateurs distincts :
+
+\begin{itemize}
+    \item \textbf{Les associations caritatives} (notamment Caritas) qui souhaitent éviter de jeter leurs livres invendus en les proposant à la vente en ligne.
+    \item \textbf{Les étudiants} à la recherche de livres à prix abordable.
+    \item \textbf{Les lecteurs en Suisse} souhaitant acheter des livres d'occasion avec des prix affichés exclusivement en CHF.
+\end{itemize}
+
+\subsection{Besoins fonctionnels}
+
+Les besoins fonctionnels sont organisés en trois objectifs mesurables :
+
+\vspace{6pt}
+\noindent\textbf{Objectif 1 — Dépôt d'annonce via scan ISBN :}\\
+Permettre à un vendeur d'ajouter un livre à vendre en scannant son ISBN. Lorsque le code est reconnu, les données principales (titre, auteur, éditeur, couverture) sont récupérées automatiquement via l'API OpenLibrary. Le vendeur complète ensuite l'état du livre et le prix en CHF, puis publie son annonce.
+
+\vspace{6pt}
+\noindent\textbf{Objectif 2 — Recherche et filtres pour l'acheteur :}\\
+L'acheteur peut parcourir le catalogue et filtrer les livres disponibles selon les critères suivants :
+\begin{itemize}
+    \item Titre
+    \item Auteur
+    \item Catégorie / genre
+    \item État du livre (\textit{comme neuf}, \textit{bon état}, \textit{état correct})
+    \item Prix en CHF
+\end{itemize}
+
+\vspace{6pt}
+\noindent\textbf{Objectif 3 — Gestion des annonces et espace utilisateur :}\\
+L'association dispose d'un espace de gestion de ses annonces (création, modification, suppression). Les acheteurs peuvent gérer leur liste de favoris et, dans une version future, laisser des avis sur les livres et contacter le vendeur pour négocier.
+
+\subsection{Fonctionnalités du MVP (Phase 1)}
+
+\begin{itemize}
+    \item Inscription et connexion des utilisateurs
+    \item Ajout d'un livre par scan ISBN ou saisie manuelle
+    \item Préremplissage automatique des métadonnées via API OpenLibrary
+    \item Saisie du prix en CHF
+    \item Sélection de l'état : \textit{comme neuf}, \textit{bon état}, \textit{état correct}
+    \item Publication et suppression d'annonces
+    \item Catalogue de livres disponibles
+    \item Moteur de recherche avec filtres (titre, auteur, genre, prix, état)
+    \item Fiche détaillée du livre avec informations essentielles et coordonnées du vendeur
+    \item Paiement sécurisé via PostFinance (TWINT, Visa/Mastercard en CHF)
+    \item Liste de favoris
+\end{itemize}
+
+\subsection{Critères de succès}
+
+Du point de vue utilisateur, le MVP est considéré comme réussi si l'application permet de :
+\begin{itemize}
+    \item Mettre un livre en vente en \textbf{moins de 2 minutes}
+    \item Trouver rapidement un livre d'occasion avec des critères simples
+    \item Visualiser clairement le prix en CHF, l'état du livre et les informations principales
+    \item Procéder à un paiement en CHF sans friction via TWINT ou carte bancaire
+    \item Enregistrer des livres en favoris pour les consulter plus tard
+\end{itemize}
+
+\subsection{Acteurs et responsabilités}
+
+\begin{table}[h]
+\centering
+\renewcommand{\arraystretch}{1.4}
+\begin{tabular}{@{}p{3.2cm}p{4.5cm}p{6.5cm}@{}}
+\toprule
+\textbf{Acteur} & \textbf{Objectif principal} & \textbf{Actions autorisées} \\
+\midrule
+Administrateur du site & Assurer le bon fonctionnement et la qualité des annonces & CRUD sur les annonces, modération, gestion des comptes utilisateurs \\
+Vendeur (bénévole Caritas) & Mettre en vente rapidement les livres du stock & Ajouter un livre (scan ISBN ou saisie manuelle), fixer un prix en CHF, modifier ou supprimer ses annonces \\
+Acheteur & Trouver et acheter un livre d'occasion à bon prix & Rechercher, filtrer, consulter les fiches, ajouter en favoris, acheter via PostFinance \\
+Modérateur & Garantir la qualité et la conformité des contenus & Vérifier, masquer ou supprimer les annonces non conformes \\
+\bottomrule
+\end{tabular}
+\caption{Acteurs du système CARIBOOKS et leurs responsabilités}
+\label{tab:acteurs}
+\end{table}
+
+\subsection{Besoins non fonctionnels et contraintes}
+
+\begin{itemize}
+    \item \textbf{Délai :} Environ 3 mois, développement réalisé en solo sur la partie technique, le soir (17h–20h, 3 jours par semaine).
+    \item \textbf{Sécurité :} Authentification sécurisée (JWT), validation côté serveur via Pydantic, contrôle strict des permissions par rôle.
+    \item \textbf{Scalabilité :} Architecture conteneurisée (Docker) permettant la montée en charge si le nombre d'utilisateurs augmente.
+    \item \textbf{Dépendance API :} La fonctionnalité de scan ISBN repose sur OpenLibrary. Une saisie manuelle est prévue en secours en cas d'indisponibilité.
+    \item \textbf{Devise et territoire :} Tous les prix sont affichés en CHF ; la livraison est restreinte à la Suisse.
+    \item \textbf{Coût minimal :} L'association ne doit pas supporter de frais d'abonnement mensuels élevés. PostFinance a été retenu pour ses frais de transaction transparents et son intégration avec la Poste Suisse.
+\end{itemize}
+
+\subsection{Risques identifiés}
+
+\begin{table}[h]
+\centering
+\renewcommand{\arraystretch}{1.4}
+\begin{tabular}{@{}p{4cm}p{2.5cm}p{6.5cm}@{}}
+\toprule
+\textbf{Risque} & \textbf{Impact} & \textbf{Action proposée} \\
+\midrule
+Livres anciens sans ISBN ou mal reconnus & Moyen & Prévoir une saisie manuelle complète en complément du scan \\
+Lecture du code-barres lente ou imprécise & Moyen & Optimisation de l'algorithme de détection \\
+Annonces incomplètes ou peu fiables & Élevé & Modération, photos obligatoires, champs standardisés \\
+Sécurité insuffisante & Élevé & Authentification JWT, validation serveur, contrôle des permissions \\
+Indisponibilité de l'API ISBN & Moyen & Mode de saisie manuelle intégré en secours \\
+Demandes fonctionnelles excessives & Élevé & Application stricte du périmètre MVP défini avec la Product Owner \\
+\bottomrule
+\end{tabular}
+\caption{Risques identifiés et actions proposées}
+\label{tab:risques}
+\end{table}
+
+\subsection{Fonctionnalités hors périmètre (Phases 2 et 3)}
+
+\begin{itemize}
+    \item Système de messagerie entre acheteur et vendeur pour négocier le prix
+    \item Gestion avancée des livraisons et étiquettes d'envoi
+    \item Estimation automatique du prix de revente
+    \item Recommandations intelligentes basées sur l'historique de navigation
+    \item Avis et commentaires sur les livres
+\end{itemize}
+
+\section{Gestion du projet}
+
+\subsection{Méthode Agile adoptée}
+
+La méthode de gestion de projet retenue est une approche \textbf{Scrum simplifiée}, adaptée aux contraintes d'un développeur solo travaillant en parallèle de sa formation en apprentissage. Les sprints ont une durée de \textbf{2 semaines}, avec des plages de développement le soir (17h–20h), trois jours par semaine, soit environ \textbf{18 heures de développement effectif par sprint}.
+
+Le suivi des tâches a été réalisé via \textbf{Microsoft Planner}, permettant de visualiser le backlog, les tâches en cours et les tâches terminées sous forme de tableau Kanban.
+
+\vspace{8pt}
+\noindent\textbf{Rôles Scrum adaptés :}
+\begin{itemize}
+    \item \textbf{Product Owner :} La bénévole de la recyclerie Caritas, qui exprimait ses besoins lors de réunions informelles et de démos en fin de sprint.
+    \item \textbf{Développeur :} Alexandre REY, seul contributeur technique du projet.
+    \item \textbf{Scrum Master :} Rôle assumé par le développeur lui-même, avec auto-organisation et ajustement régulier des priorités.
+\end{itemize}
+
+\subsection{Suivi Microsoft Planner}
+
+\begin{acompleter}
+\textbf{\large\textcolor{red}{[SECTION À COMPLÉTER — CAPTURE D'ÉCRAN MICROSOFT PLANNER]}} \\[8pt]
+Insérer ici une ou plusieurs captures d'écran du board Microsoft Planner montrant :
+\begin{itemize}
+    \item Le backlog global du projet
+    \item Un ou plusieurs sprints avec les tâches associées (À faire / En cours / Terminé)
+    \item Exemple de tickets : "Mise en place authentification JWT", "Module scan ISBN", "Intégration PostFinance", etc.
+\end{itemize}
+\textit{Commande LaTeX à utiliser :}
+\begin{verbatim}
+\includegraphics[width=\textwidth]{planner_board.png}
+\end{verbatim}
+\end{acompleter}
+
+\subsection{Planning des sprints}
+
+Le tableau ci-dessous présente le découpage en sprints du projet, planifié sur 12 semaines (6 sprints de 2 semaines) :
+
+\begin{longtable}{@{}p{1.5cm}p{2.5cm}p{5.5cm}p{4.5cm}@{}}
+\toprule
+\textbf{Sprint} & \textbf{Dates} & \textbf{Objectifs} & \textbf{Livrable} \\
+\midrule
+\endhead
+Sprint 1 & Semaines 1–2 &
+  Mise en place de l'environnement (Docker, GitHub, CI/CD), modélisation de la base de données MySQL, création du DDL, configuration FastAPI de base &
+  Environnement de dev opérationnel, schéma BDD validé \\[6pt]
+Sprint 2 & Semaines 3–4 &
+  Authentification : inscription, connexion, JWT, rôles (admin / user), hashage bcrypt, protection des routes &
+  Endpoints \texttt{/auth/register} et \texttt{/auth/login} fonctionnels, middleware JWT \\[6pt]
+Sprint 3 & Semaines 5–6 &
+  Module scan ISBN : intégration librairie de scan dans le frontend, appel API OpenLibrary, préremplissage du formulaire, saisie manuelle en secours &
+  Formulaire d'ajout de livre opérationnel, scan ISBN fonctionnel \\[6pt]
+Sprint 4 & Semaines 7–8 &
+  Catalogue et recherche : affichage des livres disponibles, filtres (titre, auteur, catégorie, état, prix), fiche détaillée, liste de favoris &
+  Pages catalogue et fiche livre, moteur de recherche avec filtres \\[6pt]
+Sprint 5 & Semaines 9–10 &
+  Intégration PostFinance : tunnel de paiement, gestion des webhooks, mise à jour des statuts de commande, tests sur sandbox PostFinance &
+  Paiement CHF fonctionnel (TWINT + carte) en environnement de test \\[6pt]
+Sprint 6 & Semaines 11–12 &
+  Back-office bénévole, tests unitaires et d'intégration (pytest), corrections de bugs, optimisations de performance, préparation du déploiement &
+  Application complète testée, déploiement en cours \\
+\bottomrule
+\caption{Planning des sprints CARIBOOKS}
+\label{tab:sprints}
+\end{longtable}
+
+\section{Modélisation}
+
+\subsection{Diagramme de contexte}
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.85\textwidth]{diagramme_contexte.png}
+    \caption{Diagramme de contexte — CARIBOOKS et ses acteurs externes}
+    \label{fig:contexte}
+\end{figure}
+
+\noindent Le diagramme de contexte positionne CARIBOOKS au centre de ses interactions avec les acteurs externes : les utilisateurs (acheteurs, vendeurs bénévoles, administrateurs), l'API ISBN externe (OpenLibrary), le prestataire de paiement (PostFinance) et le service de livraison (Poste Suisse).
+
+\subsection{Diagramme de cas d'utilisation}
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.85\textwidth]{diagramme_use_case_Scan_ISBN.png}
+    \caption{Diagramme des cas d'utilisation — Flux Scan ISBN}
+    \label{fig:use_case_isbn}
+\end{figure}
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.85\textwidth]{diagramme_use_case_Payment_Workflow.png}
+    \caption{Diagramme des cas d'utilisation — Flux de paiement PostFinance}
+    \label{fig:use_case_payment}
+\end{figure}
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.85\textwidth]{diagramme_use_case_global.png}
+    \caption{Diagramme des cas d'utilisation — Vue globale du système}
+    \label{fig:use_case_global}
+\end{figure}
+
+\subsection{Diagramme d'activités}
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.85\textwidth]{diagramme_activites_achat.png}
+    \caption{Diagramme d'activités — Parcours d'achat complet}
+    \label{fig:activites_achat}
+\end{figure}
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.85\textwidth]{diagramme_activites_isbn.png}
+    \caption{Diagramme d'activités — Flux d'ajout d'un livre via scan ISBN}
+    \label{fig:activites_isbn}
+\end{figure}
+
+\subsection{Diagramme de séquence}
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.85\textwidth]{diagramme_sequence_scan_isbn.png}
+    \caption{Diagramme de séquence — Scan ISBN et préremplissage des métadonnées}
+    \label{fig:sequence_isbn}
+\end{figure}
+
+\noindent Le diagramme de séquence du scan ISBN illustre l'enchaînement suivant : le bénévole scanne le code-barres depuis le navigateur → la librairie de décodage extrait l'ISBN → une requête est envoyée à l'API FastAPI → le backend réutilise les métadonnées OpenLibrary si disponibles → les métadonnées sont retournées au frontend pour préremplissage → le bénévole complète l'état et le prix → publication de l'annonce.
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.85\textwidth]{diagramme_sequence_paiement.png}
+    \caption{Diagramme de séquence — Tunnel de paiement PostFinance}
+    \label{fig:sequence_paiement}
+\end{figure}
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.85\textwidth]{diagramme_sequence_auth.png}
+    \caption{Diagramme de séquence — Authentification JWT}
+    \label{fig:sequence_auth}
+\end{figure}
+
+\noindent Le diagramme de séquence d'authentification décrit le flux suivant : l'utilisateur soumet ses identifiants → FastAPI valide l'email/mot de passe en base (SQLAlchemy + bcrypt) → si valide, un JWT signé est généré et retourné → le frontend stocke le token → chaque requête protégée envoie le token dans l'en-tête \texttt{Authorization: Bearer <token>} → le middleware FastAPI vérifie la signature et extrait le rôle.
+
+\subsection{Diagramme de classes}
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.85\textwidth]{diagramme_classes.png}
+    \caption{Diagramme de classes — Modèle objet CARIBOOKS}
+    \label{fig:classes}
+\end{figure}
+
+\noindent Le diagramme de classes présente les entités principales du domaine métier : \texttt{Utilisateur}, \texttt{Article}, \texttt{Livre} (sous-classe d'\texttt{Article}), \texttt{Categorie}, \texttt{EtatUsure}, \texttt{TypeObjet}, \texttt{Stock}, \texttt{Commande}, \texttt{LigneCommande}, \texttt{Paiement}, \texttt{ScanIsbn}. La relation d'héritage entre \texttt{Article} et \texttt{Livre} reflète la table \texttt{livre} liée à la table \texttt{article} par une clé primaire partagée.
+
+\subsection{Diagramme d'objets}
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.85\textwidth]{diagramme_objets.png}
+    \caption{Diagramme d'objets — Exemple d'une commande en cours}
+    \label{fig:objets}
+\end{figure}
+
+\subsection{Diagramme de composants}
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.85\textwidth]{diagramme_composants.png}
+    \caption{Diagramme de composants — Architecture logicielle CARIBOOKS}
+    \label{fig:composants}
+\end{figure}
+
+\noindent Le diagramme de composants illustre les quatre composants principaux de l'application : le \textbf{Frontend Next.js} (composants React, pages, services API), l'\textbf{API FastAPI} (routers, services, modèles Pydantic, couche SQLAlchemy), la \textbf{Base de données MySQL}, et les \textbf{Services externes} (OpenLibrary API, PostFinance API, Poste Suisse). Les dépendances entre composants respectent le principe de séparation des préoccupations.
+
+\subsection{Modélisation de la base de données (MCD / MLD)}
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.85\textwidth]{mcd_base_donnees.png}
+    \caption{Modèle Conceptuel de Données (MCD) — MySQL}
+    \label{fig:mcd}
+\end{figure}
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.85\textwidth]{mld_base_donnes.png}
+    \caption{Modèle Logique de Données (MLD)}
+    \label{fig:mld}
+\end{figure}
+
+\noindent La base de données CARIBOOKS repose sur \textbf{13 tables} organisées autour d'une architecture en héritage de table (\textit{table per class}) pour les articles : la table \texttt{article} contient les attributs communs à tout objet en vente, et la table \texttt{livre} étend \texttt{article} avec les attributs spécifiques aux livres (ISBN, auteur, éditeur, date de publication, langue). Ce design permet d'étendre la plateforme à d'autres types d'objets (vêtements, jouets, etc.) sans restructurer le schéma de base.
+
+\noindent Les principales relations sont :
+\begin{itemize}
+    \item \texttt{article} $\leftrightarrow$ \texttt{livre} : héritage 1-1 (clé primaire partagée)
+    \item \texttt{article} $\leftrightarrow$ \texttt{categorie} : association N-N via \texttt{article\_categorie}
+    \item \texttt{article} $\leftrightarrow$ \texttt{stock} : 1-N par source de stock
+    \item \texttt{utilisateur} $\leftrightarrow$ \texttt{commande} : 1-N
+    \item \texttt{commande} $\leftrightarrow$ \texttt{ligne\_commande} $\leftrightarrow$ \texttt{article} : N-N décomposée
+    \item \texttt{commande} $\leftrightarrow$ \texttt{paiement} : 1-1
+    \item \texttt{utilisateur} $\leftrightarrow$ \texttt{scan\_isbn} $\leftrightarrow$ \texttt{livre} : traçabilité des scans
+\end{itemize}
+
+\subsection{Architecture technique}
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.85\textwidth]{architecture_technique.png}
+    \caption{Architecture technique — FastAPI / Next.js / MySQL / PostFinance / Docker}
+    \label{fig:architecture}
+\end{figure}
+
+\begin{itemize}
+    \item \textbf{Backend (API REST) :} Développé avec \textbf{FastAPI} (Python). Ce choix apporte de très hautes performances, la validation automatique des données grâce à Pydantic, et une documentation API automatique via Swagger. Une première tentative avec Express.js (Node.js) avait été envisagée, mais abandonnée au profit de FastAPI pour une meilleure maîtrise technique.
+    \item \textbf{Frontend :} Développé avec \textbf{Next.js} (React / TypeScript). Ce framework permet un rendu côté serveur (SSR) ou statique (SSG), offrant d'excellentes performances SEO pour la vitrine en ligne, tout en proposant une interface fluide (SPA) pour le back-office des bénévoles.
+    \item \textbf{Base de données :} \textbf{MySQL}. SGBD relationnel robuste, adapté à la structure de données du catalogue de livres.
+    \item \textbf{ORM :} \textbf{SQLAlchemy}. Permet une abstraction de la base de données, des requêtes paramétrées automatiques (protection contre les injections SQL) et une gestion fluide des transactions.
+    \item \textbf{Paiement :} Intégration de l'API \textbf{PostFinance}, prestataire suisse supportant TWINT, Visa et Mastercard en CHF, avec synergie native avec la Poste Suisse pour la livraison.
+    \item \textbf{Conteneurisation :} L'ensemble de l'application est conteneurisé avec \textbf{Docker} et orchestré via \texttt{docker-compose}, garantissant la reproductibilité de l'environnement du développement au déploiement.
+\end{itemize}
+
+\subsection{Conception UI/UX}
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.85\textwidth]{vue_téléphone.png}
+    \caption{Interface du catalogue sur mobile}
+    \label{fig:ui_ux}
+\end{figure}
+
+% --- CHAPITRE 3 ---
+\chapter{Réalisation et mise en \oe{}uvre}
+
+\section{Environnement et outils de développement}
+
+\begin{itemize}
+    \item \textbf{Système d'exploitation :} macOS (puce Intel)
+    \item \textbf{Éditeur de code :} Visual Studio Code (VS Code) avec GitHub Copilot
+    \item \textbf{Gestion de versions :} Git avec GitHub (licence GitHub for Students Pro)
+    \item \textbf{Conteneurisation :} Docker — l'application complète (API + frontend + base de données MySQL) est conteneurisée via \texttt{docker-compose}
+    \item \textbf{CI/CD :} Pipeline d'intégration et de déploiement continus via GitHub Actions
+    \item \textbf{Test API :} Thunder Client (extension VS Code, alternative à Postman)
+    \item \textbf{Documentation API :} Swagger UI (généré automatiquement par FastAPI)
+    \item \textbf{Suivi de projet :} Microsoft Planner (tableau Kanban, backlog)
+    \item \textbf{Dépôt GitHub :} \url{https://github.com/Visualstudiocodetest/plobooks}
+\end{itemize}
+
+\section{Technologies utilisées}
+
+\begin{itemize}
+    \item \textbf{Frontend :} Next.js (React) — TypeScript
+    \item \textbf{Backend :} FastAPI (Python) — avec Pydantic pour la validation des données
+    \item \textbf{ORM :} SQLAlchemy
+    \item \textbf{Base de données :} MySQL
+    \item \textbf{Authentification :} JWT (\texttt{python-jose}), hashage \texttt{bcrypt} via \texttt{passlib}
+    \item \textbf{Paiement :} API PostFinance (TWINT, Visa/Mastercard en CHF)
+    \item \textbf{API externe :} OpenLibrary (récupération des métadonnées ISBN)
+    \item \textbf{Conteneurisation :} Docker + docker-compose
+    \item \textbf{CI/CD :} GitHub Actions
+\end{itemize}
+
+\section{Développement des modules}
+
+\begin{acompleter}
+\textbf{\large\textcolor{red}{[SECTION À COMPLÉTER — DÉVELOPPEMENT DES MODULES]}} \\[8pt]
+Cette section est à rédiger une fois l'application terminée. Elle doit décrire en détail :
+\begin{itemize}
+    \item \textbf{Module authentification :} description de l'implémentation JWT, des endpoints \texttt{/auth/register} et \texttt{/auth/login}, de la gestion des rôles et du middleware de protection des routes.
+    \item \textbf{Module catalogue et recherche :} organisation des endpoints \texttt{GET /articles}, filtres disponibles, pagination, structure des réponses.
+    \item \textbf{Module scan ISBN :} librairie frontend utilisée, flux de décodage, appel backend, gestion du fallback manuel, traçabilité dans la table \texttt{scan\_isbn}.
+    \item \textbf{Module back-office bénévole :} interface de gestion des annonces, création/modification/suppression, gestion du stock.
+    \item \textbf{Module paiement PostFinance :} flux de redirection, gestion des webhooks, mise à jour du statut de commande et de paiement.
+    \item \textbf{Organisation du code :} structure des dossiers backend (routers, services, models, schemas), structure frontend (pages, components, hooks, services).
+\end{itemize}
+\end{acompleter}
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.85\textwidth]{capture_interface_vendeur.png}
+    \caption{Interface du back-office bénévole — ajout d'un livre via scan ISBN}
+    \label{fig:capture_vendeur}
+\end{figure}
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.85\textwidth]{capture_catalogue.png}
+    \caption{Interface acheteur — catalogue et filtres de recherche}
+    \label{fig:capture_catalogue}
+\end{figure}
+
+\section{Sécurité et architecture logicielle}
+
+\subsection{Authentification JWT et gestion des rôles}
+
+L'authentification repose sur le standard \textbf{JSON Web Token (JWT)}, implémenté côté backend avec la librairie \texttt{python-jose}. Le flux est le suivant :
+
+\begin{enumerate}
+    \item L'utilisateur soumet son email et son mot de passe via \texttt{POST /auth/login}.
+    \item FastAPI récupère l'utilisateur en base via SQLAlchemy et vérifie le mot de passe avec \texttt{passlib} (bcrypt).
+    \item Si les identifiants sont valides, un JWT signé est généré, contenant l'identifiant utilisateur, son rôle et une date d'expiration.
+    \item Le token est retourné au client, qui le stocke et l'inclut dans l'en-tête HTTP \texttt{Authorization: Bearer <token>} de chaque requête protégée.
+    \item Un middleware FastAPI (dépendance \texttt{get\_current\_user}) intercepte chaque requête, vérifie la signature JWT et extrait les informations de l'utilisateur.
+\end{enumerate}
+
+\noindent Les rôles définis dans le système sont :
+\begin{itemize}
+    \item \texttt{admin} : accès complet, CRUD sur toutes les entités, modération.
+    \item \texttt{user} : consultation, favoris, passage de commande.
+\end{itemize}
+
+\subsection{Hashage des mots de passe avec bcrypt}
+
+Le hashage des mots de passe est réalisé avec \textbf{bcrypt}, via la librairie Python \texttt{passlib}. Bcrypt est considéré comme l'algorithme de référence pour le hashage de mots de passe pour plusieurs raisons :
+
+\begin{itemize}
+    \item \textbf{Fonction de coût adaptative (\textit{cost factor}) :} Bcrypt intègre un paramètre de coût (appelé \textit{work factor} ou \textit{rounds}) qui permet d'augmenter le temps de calcul du hash au fur et à mesure que la puissance de calcul des machines augmente. Cela rend les attaques par force brute progressivement plus coûteuses.
+    \item \textbf{Sel aléatoire intégré :} Bcrypt génère automatiquement un sel (\textit{salt}) unique et aléatoire pour chaque mot de passe haché. Deux utilisateurs ayant le même mot de passe auront des hashs différents, ce qui rend les attaques par table arc-en-ciel (\textit{rainbow table}) inopérantes.
+    \item \textbf{Résistance aux GPU :} Contrairement à MD5 ou SHA-256, bcrypt est conçu pour être difficile à paralléliser sur GPU, ce qui ralentit considérablement les attaques par dictionnaire.
+    \item \textbf{Standard éprouvé :} Bcrypt existe depuis 1999 et est recommandé par l'OWASP (\textit{Open Web Application Security Project}) comme algorithme de hashage de mots de passe.
+\end{itemize}
+
+\noindent La valeur du \textit{work factor} utilisée dans CARIBOOKS est de \textbf{12 rounds} (valeur par défaut de passlib), offrant un bon équilibre entre sécurité et performance.
+
+\subsection{Protection contre les injections SQL}
+
+L'utilisation de l'\textbf{ORM SQLAlchemy} protège nativement l'application contre les injections SQL. SQLAlchemy génère des requêtes paramétrées, dans lesquelles les valeurs utilisateur ne sont jamais interpolées directement dans la chaîne SQL, mais transmises comme paramètres liés (\textit{bound parameters}) au pilote de base de données. Même si un utilisateur malveillant tente d'injecter du SQL dans un champ de formulaire, la valeur sera traitée comme une donnée littérale et non comme une instruction SQL.
+
+\noindent En complément, la validation des données d'entrée est systématiquement assurée par \textbf{Pydantic} (schémas de validation FastAPI) avant toute interaction avec la base de données.
+
+\section{Difficultés rencontrées}
+
+\begin{itemize}
+    \item \textbf{Changement de technologie backend :} Une première version du backend avait été initiée avec Express.js (Node.js). Face à un niveau de maîtrise insuffisant de l'écosystème JavaScript côté serveur et aux exigences de robustesse du projet, le choix a été fait de migrer vers FastAPI (Python). Cette décision, bien que coûteuse en temps initialement, a permis de bénéficier d'une validation automatique des données, d'une documentation Swagger native et d'une meilleure productivité globale.
+    \item \textbf{Performance du scan de code-barres :} La première implémentation du module de scan ISBN présentait une latence élevée et un taux de reconnaissance insuffisant. Des optimisations de l'algorithme de détection ont été apportées pour améliorer la précision et la rapidité de lecture.
+    \item \textbf{Changement de prestataire de paiement :} Le prestataire initialement envisagé (Payrexx) a été remplacé par \textbf{PostFinance}, dont l'environnement de test sandbox ne nécessite pas de carte bancaire réelle avant la mise en production, ce qui a considérablement facilité le développement et les tests du tunnel de paiement.
+    \item \textbf{Gestion du périmètre fonctionnel :} La demandeuse, dans son rôle de Product Owner informelle, souhaitait régulièrement ajouter de nouvelles fonctionnalités. Appliquer une gestion stricte du périmètre MVP, en expliquant les contraintes de temps et en reportant les demandes aux phases suivantes, a été un apprentissage professionnel important.
+    \item \textbf{Conciliation apprentissage / projet personnel :} Le développement réalisé uniquement en soirée (17h–20h, 3 jours par semaine) a imposé une discipline de planification rigoureuse pour maintenir la progression du projet tout en respectant les engagements de la formation en alternance.
+\end{itemize}
+
+% --- CHAPITRE 4 ---
+\chapter{Tests et validation}
+
+\section{Stratégie de test}
+
+Une stratégie de test à trois niveaux a été mise en place :
+
+\begin{itemize}
+    \item \textbf{Tests unitaires :} Vérification du comportement individuel de chaque fonction et service (ex. : validation des données ISBN, calcul du montant en CHF, hashage et vérification des mots de passe, génération et décodage des JWT). Réalisés avec \textbf{pytest}.
+    \item \textbf{Tests fonctionnels :} Validation des parcours utilisateur complets (ajout d'un livre, processus d'achat, authentification). Réalisés avec \textbf{pytest} + \texttt{TestClient} FastAPI.
+    \item \textbf{Tests d'intégration :} Vérification des interactions entre les modules (API, base de données MySQL via SQLAlchemy, API PostFinance sandbox, API ISBN). Réalisés avec \textbf{pytest}.
+\end{itemize}
+
+\section{Outils de test}
+
+\begin{itemize}
+    \item \textbf{pytest} : Framework de test Python, utilisé pour les tests unitaires, fonctionnels et d'intégration du backend FastAPI.
+    \item \textbf{TestClient FastAPI} : Client HTTP de test fourni par FastAPI (basé sur \texttt{httpx}), permettant de tester les endpoints sans démarrer un vrai serveur.
+    \item \textbf{Thunder Client} (extension VS Code) : Outil de test d'API REST similaire à Postman, utilisé pour tester manuellement les endpoints pendant le développement.
+    \item \textbf{Swagger UI} : Documentation et test interactif des endpoints générés automatiquement par FastAPI, permettant de valider rapidement les contrats d'API.
+    \item \textbf{Sandbox PostFinance} : Environnement de test fourni par PostFinance permettant de simuler des paiements réels sans carte bancaire réelle, avec des numéros de carte de test et des scénarios de succès/échec.
+\end{itemize}
+
+\section{Plan de tests — Principaux cas de test}
+
+\begin{longtable}{@{}p{2cm}p{4cm}p{4cm}p{3.5cm}@{}}
+\toprule
+\textbf{Module} & \textbf{Cas de test} & \textbf{Données d'entrée} & \textbf{Résultat attendu} \\
+\midrule
+\endhead
+Auth & Inscription valide & Email unique, mot de passe valide & 201, token JWT retourné \\
+Auth & Inscription email existant & Email déjà en base & 400, message d'erreur \\
+Auth & Connexion valide & Email + mot de passe corrects & 200, token JWT \\
+Auth & Connexion mot de passe incorrect & Email valide, mauvais MDP & 401 \\
+Auth & Route protégée sans token & Requête sans header Bearer & 403 \\
+Auth & Route protégée token expiré & Token JWT expiré & 401 \\
+ISBN & Scan ISBN reconnu & ISBN valide (ex. 9782070413119) & 200, métadonnées retournées \\
+ISBN & Scan ISBN inconnu & ISBN non référencé & 404, fallback saisie manuelle \\
+Articles & Création article & Données valides, token utilisateur & 201, article créé \\
+Articles & Création sans auth & Données valides, sans token & 403 \\
+Articles & Récupération catalogue & — & 200, liste paginée \\
+Articles & Filtre par catégorie & id\_categorie valide & 200, liste filtrée \\
+Commande & Passer commande & Panier non vide, user connecté & 201, commande créée \\
+Paiement & Initiation paiement & Commande valide, sandbox PostFinance & Redirection URL PostFinance \\
+Paiement & Webhook succès & Callback PostFinance success & Statut commande = PAYÉE \\
+Paiement & Webhook échec & Callback PostFinance fail & Statut commande = ÉCHEC \\
+\bottomrule
+\caption{Plan de tests — Cas de test principaux}
+\label{tab:tests}
+\end{longtable}
+
+\section{Résultats obtenus}
+
+\begin{acompleter}
+\textbf{\large\textcolor{red}{[SECTION À COMPLÉTER — RÉSULTATS DES TESTS]}} \\[8pt]
+À rédiger une fois les tests exécutés. Indiquer :
+\begin{itemize}
+    \item Taux de réussite des tests (ex. : 42/45 tests passés, 93\%)
+    \item Couverture de code (\texttt{pytest --cov})
+    \item Résultats des tests de charge si effectués
+    \item Captures de la sortie pytest
+\end{itemize}
+\end{acompleter}
+
+\section{Analyse des performances}
+
+\begin{acompleter}
+\textbf{\large\textcolor{red}{[SECTION À COMPLÉTER — PERFORMANCES]}} \\[8pt]
+À compléter. Indiquer :
+\begin{itemize}
+    \item Temps de réponse des endpoints critiques (scan ISBN, tunnel de paiement)
+    \item Charge système sous Docker (mémoire, CPU)
+    \item Résultats Lighthouse (performance, accessibilité) sur le frontend Next.js
+\end{itemize}
+\end{acompleter}
+
+\section{Limites et bugs restants}
+
+\begin{acompleter}
+\textbf{\large\textcolor{red}{[SECTION À COMPLÉTER — BUGS ET LIMITES]}} \\[8pt]
+À compléter. Indiquer les bugs identifiés en attente de correction et les limitations connues du MVP.
+\end{acompleter}
+
+% ==========================================
+% CHAPITRE G — CYBERSÉCURITÉ ET QUALITÉ
+% ==========================================
+\chapter{Cybersécurité et qualité logicielle}
+
+\section{Synthèse des mesures de sécurité}
+
+\begin{table}[h]
+\centering
+\renewcommand{\arraystretch}{1.4}
+\begin{tabular}{@{}p{5cm}p{4cm}p{5cm}@{}}
+\toprule
+\textbf{Menace / Risque} & \textbf{Mesure mise en place} & \textbf{Technologie utilisée} \\
+\midrule
+Injections SQL & Requêtes paramétrées & SQLAlchemy ORM \\
+Mots de passe compromis & Hashage fort & bcrypt via passlib \\
+Accès non autorisé aux routes & Authentification obligatoire & JWT + middleware FastAPI \\
+Élévation de privilèges & Contrôle des rôles & Rôles admin / seller / user \\
+Données invalides côté serveur & Validation stricte & Pydantic (schémas FastAPI) \\
+Tokens interceptés & Expiration courte + HTTPS & JWT \texttt{exp}, TLS en prod \\
+Informations sensibles en clair & Variables d'environnement & Fichiers \texttt{.env}, \texttt{python-dotenv} \\
+\bottomrule
+\end{tabular}
+\caption{Mesures de cybersécurité implémentées dans CARIBOOKS}
+\label{tab:securite}
+\end{table}
+
+\section{Gestion sécurisée des sessions et tokens JWT}
+
+L'accès aux ressources protégées de l'API CARIBOOKS repose exclusivement sur des \textbf{JSON Web Tokens (JWT)}. Chaque token contient :
+\begin{itemize}
+    \item \texttt{sub} : identifiant de l'utilisateur
+    \item \texttt{role} : rôle (admin / user)
+    \item \texttt{exp} : timestamp d'expiration
+\end{itemize}
+
+\noindent Les tokens sont signés avec un algorithme \textbf{HS256} (HMAC-SHA256) et une clé secrète stockée dans les variables d'environnement (jamais en clair dans le code source). La durée de validité est configurée pour limiter la fenêtre d'exposition en cas d'interception.
+
+\section{Gestion des droits et des accès}
+
+Chaque endpoint FastAPI déclare explicitement ses dépendances d'authentification et d'autorisation. Les routes de lecture publique (catalogue, fiche livre) sont accessibles sans token. Les routes d'écriture (création d'annonce, passage de commande) requièrent un token valide. Les routes d'administration requièrent un rôle \texttt{admin} vérifié dans le payload JWT.
+
+\section{Veille technologique et sécurité}
+
+Dans le cadre du développement de CARIBOOKS, une veille régulière a été menée sur les ressources suivantes :
+\begin{itemize}
+    \item \textbf{OWASP Top 10} : référentiel des dix vulnérabilités web les plus critiques, consulté pour orienter les choix de sécurisation (injections SQL, broken authentication, security misconfiguration).
+    \item \textbf{Documentation officielle FastAPI} (sécurité) : bonnes pratiques pour OAuth2, JWT, hashage.
+    \item \textbf{Fireship} (YouTube) : veille technique sur les tendances web et les pratiques de développement modernes.
+    \item \textbf{GitHub Security Advisories} : alertes automatiques sur les dépendances Python du projet via Dependabot.
+\end{itemize}
+
+% ==========================================
+% CHAPITRE H — COMMUNICATION ET COLLABORATION
+% ==========================================
+\chapter{Communication et collaboration}
+
+\section{Relations avec les acteurs du projet}
+
+\subsection{La Product Owner — bénévole Caritas}
+
+La demandeuse du projet est une bénévole de la recyclerie Caritas, avec peu de connaissances techniques. La communication a donc été adaptée en conséquence :
+
+\begin{itemize}
+    \item \textbf{Réunions informelles régulières :} les échanges se tenaient de manière informelle, en présentiel ou par message, à chaque fin de sprint. La demandeuse formulait ses retours après avoir vu une démonstration de l'avancement.
+    \item \textbf{Démos visuelles systématiques :} chaque nouvelle fonctionnalité était présentée sous forme de démonstration en direct (ou via capture vidéo) plutôt qu'expliquée techniquement, afin de permettre à la Product Owner de se prononcer sur l'adéquation au besoin.
+    \item \textbf{Reformulation des besoins :} les demandes fonctionnelles exprimées en langage courant étaient reformulées en user stories et tickets Planner, puis confirmées auprès de la demandeuse avant d'être planifiées.
+    \item \textbf{Gestion des demandes hors périmètre :} plusieurs fonctionnalités ont été demandées en cours de projet (messagerie, avis, estimation de prix). Ces demandes ont été enregistrées dans un backlog de phase 2/3 et expliquées à la demandeuse avec les contraintes de temps associées.
+\end{itemize}
+
+\subsection{Encadrant pédagogique}
+
+Les échanges avec l'encadrant pédagogique (M. Mhand Boufala, ESTIAM) se sont tenus dans le cadre des suivis de formation, avec présentation de l'avancement du projet et validation des choix techniques retenus.
+
+\section{Travail en solo et organisation personnelle}
+
+Le projet CARIBOOKS a été développé en totalité par une seule personne, sans équipe technique. Cette contrainte a imposé une organisation rigoureuse :
+
+\begin{itemize}
+    \item Utilisation de \textbf{Microsoft Planner} pour maintenir un backlog structuré et suivre la progression sprint par sprint.
+    \item Découpage des tâches en unités de travail compatibles avec des séances de développement de 3 heures (17h–20h).
+    \item Priorisation systématique des fonctionnalités selon la valeur utilisateur (MVP first).
+    \item Recours à la documentation officielle et à la veille technique pour pallier l'absence d'un pair reviewer.
+\end{itemize}
+
+% ==========================================
+% 7. CONCLUSION GÉNÉRALE
+% ==========================================
+\chapter*{Conclusion générale}
+\addcontentsline{toc}{chapter}{Conclusion générale}
+
+\section*{Apports du projet}
+
+Ce projet a permis de concevoir et de déployer une application e-commerce full-stack répondant à un besoin utilisateur réel. Sur le plan technique, il a approfondi la maîtrise du déploiement d'applications conteneurisées (Docker, CI/CD GitHub Actions), de l'intégration d'un système de paiement suisse (PostFinance) et du développement d'une API REST avec FastAPI. Il représente également une progression significative par rapport à une première tentative de projet plus simple, avec une architecture plus robuste et une démarche de développement plus rigoureuse.
+
+\noindent Sur le plan professionnel, ce projet a été l'occasion d'apprendre à gérer les attentes d'un client non technique (refus de certaines fonctionnalités hors périmètre, conduite de démos adaptées), à travailler en méthodologie Agile en autonomie complète, et à prendre des décisions architecturales motivées (abandon d'Express.js au profit de FastAPI, choix de PostFinance plutôt que Payrexx, adoption de SQLAlchemy comme ORM).
+
+\noindent Ce projet illustre également la capacité à mener un développement solo dans des contraintes de temps réelles — le soir, en parallèle d'une formation en apprentissage — tout en maintenant un niveau de qualité technique conforme aux exigences du référentiel CDA.
+
+\section*{Limites}
+
+\begin{acompleter}
+\textbf{\large\textcolor{red}{[SECTION À COMPLÉTER — LIMITES DU MVP]}} \\[8pt]
+À rédiger en fin de projet. Exemples à adapter :
+\begin{itemize}
+    \item Fonctionnalités non implémentées dans le MVP (messagerie, avis, estimation de prix)
+    \item Couverture de tests à améliorer
+    \item Déploiement en cours, URL de prod non encore disponible
+    \item Interface mobile à affiner sur certains écrans
+\end{itemize}
+\end{acompleter}
+
+\section*{Perspectives d'évolution}
+
+Plusieurs axes d'évolution sont envisagés pour les phases suivantes du projet :
+\begin{itemize}
+    \item \textbf{Phase 2 :} Ajout d'un système de messagerie entre acheteur et vendeur pour permettre la négociation du prix, ainsi que d'un système d'avis et de commentaires sur les livres pour renforcer la confiance entre utilisateurs.
+    \item \textbf{Phase 3 :} Estimation automatique du prix de revente basée sur les données du marché, recommandations personnalisées basées sur l'historique de navigation, gestion avancée des livraisons avec génération d'étiquettes PostPac intégrées via l'API de la Poste Suisse.
+    \item \textbf{Évolutions techniques :} Migration possible vers une base de données PostgreSQL pour une meilleure gestion des performances à grande échelle, mise en place d'un système de cache (Redis) pour les requêtes fréquentes sur le catalogue, et intégration d'un CDN pour les images de couverture des livres.
+\end{itemize}
+
+% ==========================================
+% 8. BIBLIOGRAPHIE
+% ==========================================
+\chapter*{Bibliographie}
+\addcontentsline{toc}{chapter}{Bibliographie}
+
+\begin{itemize}
+    \item \textbf{Documentation officielle FastAPI} — \url{https://fastapi.tiangolo.com/}
+    \item \textbf{Documentation officielle FastAPI — Sécurité / OAuth2 + JWT} — \url{https://fastapi.tiangolo.com/tutorial/security/oauth2-jwt/}
+    \item \textbf{Documentation officielle Next.js} — \url{https://nextjs.org/docs}
+    \item \textbf{Documentation officielle SQLAlchemy} — \url{https://docs.sqlalchemy.org/}
+    \item \textbf{Documentation PostFinance (API Paiement)} — \url{https://docs.postfinance.ch/}
+    \item \textbf{Open Library API} — \url{https://openlibrary.org/developers/api}
+    \item \textbf{passlib — bcrypt documentation} — \url{https://passlib.readthedocs.io/}
+    \item \textbf{OWASP Top 10} — \textit{Les dix vulnérabilités web les plus critiques} — \url{https://owasp.org/www-project-top-ten/}
+    \item \textbf{Fireship} (veille technique, tutoriels vidéo) — \url{https://www.youtube.com/@Fireship}
+    \item \textbf{Ministère de la Culture / SOFIA} — \textit{Étude sur le marché du livre d'occasion}, 2024 — \url{https://www.la-sofia.org/action-interprofessionnelle/etude-sur-le-livre-doccasion/}
+    \item \textbf{DPD} — \textit{Sondage sur la seconde main en Europe}, 2024 — \url{https://www.20min.ch/fr/story/economie-circulaire-les-suisses-champions-d-europe-de-la-seconde-main-103192492}
+    \item \textbf{pytest documentation} — \url{https://docs.pytest.org/}
+    \item \textbf{Docker documentation} — \url{https://docs.docker.com/}
+    \item \textit{[Ajouter les IA utilisées (ChatGPT, Copilot, Perplexity) et toute autre source consultée]}
+\end{itemize}
+
+% ==========================================
+% 9. ANNEXES
+% ==========================================
+\chapter*{Annexes}
+\addcontentsline{toc}{chapter}{Annexes}
+
+\section*{Annexe A — Lien GitHub}
+
+Le code source complet du projet est disponible sur GitHub :
+\begin{center}
+    \url{https://github.com/Visualstudiocodetest/plobooks}
+\end{center}
+
+\begin{acompleter}
+\textbf{\large\textcolor{red}{[À COMPLÉTER — URL de déploiement]}} \\[4pt]
+L'URL de déploiement de l'application sera ajoutée ici une fois le déploiement effectué.
+\end{acompleter}
+
+\section*{Annexe B — Script SQL de création de la base de données}
+
+Le script DDL ci-dessous présente la création complète de la base de données MySQL de CARIBOOKS.
+
+\begin{lstlisting}[style=sqlstyle, caption={Script DDL — Création de la base de données CARIBOOKS}, label={lst:ddl}]
+CREATE DATABASE caribooks;
+USE caribooks;
+
+CREATE TABLE type_objet (
+    id_type_objet BIGINT AUTO_INCREMENT PRIMARY KEY,
+    libelle VARCHAR(100) NOT NULL,
+    code VARCHAR(50) NOT NULL UNIQUE,
+    description TEXT
+);
+
+CREATE TABLE etat_usure (
+    id_etat_usure BIGINT AUTO_INCREMENT PRIMARY KEY,
+    libelle VARCHAR(100) NOT NULL UNIQUE,
+    description TEXT
+);
+
+CREATE TABLE categorie (
+    id_categorie BIGINT AUTO_INCREMENT PRIMARY KEY,
+    libelle VARCHAR(100) NOT NULL UNIQUE,
+    description TEXT
+);
+
+CREATE TABLE article (
+    id_article BIGINT AUTO_INCREMENT PRIMARY KEY,
+    id_type_objet BIGINT NOT NULL,
+    id_etat_usure BIGINT NOT NULL,
+    sku VARCHAR(100) NOT NULL UNIQUE,
+    titre VARCHAR(255) NOT NULL,
+    description TEXT,
+    prix_chf DECIMAL(10,2) NOT NULL CHECK (prix_chf >= 0),
+    actif BOOLEAN NOT NULL DEFAULT TRUE,
+    date_creation TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (id_type_objet)
+        REFERENCES type_objet(id_type_objet)
+        ON DELETE RESTRICT ON UPDATE CASCADE,
+    FOREIGN KEY (id_etat_usure)
+        REFERENCES etat_usure(id_etat_usure)
+        ON DELETE RESTRICT ON UPDATE CASCADE
+);
+
+CREATE TABLE livre (
+    id_article BIGINT PRIMARY KEY,
+    isbn VARCHAR(20) NOT NULL UNIQUE,
+    auteur VARCHAR(255),
+    editeur VARCHAR(255),
+    date_publication DATE,
+    langue VARCHAR(50),
+    FOREIGN KEY (id_article)
+        REFERENCES article(id_article)
+        ON DELETE CASCADE ON UPDATE CASCADE
+);
+
+CREATE TABLE article_categorie (
+    id_article BIGINT NOT NULL,
+    id_categorie BIGINT NOT NULL,
+    PRIMARY KEY (id_article, id_categorie),
+    FOREIGN KEY (id_article)
+        REFERENCES article(id_article)
+        ON DELETE CASCADE ON UPDATE CASCADE,
+    FOREIGN KEY (id_categorie)
+        REFERENCES categorie(id_categorie)
+        ON DELETE RESTRICT ON UPDATE CASCADE
+);
+
+CREATE TABLE source_stock (
+    id_source_stock BIGINT AUTO_INCREMENT PRIMARY KEY,
+    libelle VARCHAR(150) NOT NULL,
+    type_source VARCHAR(50) NOT NULL,
+    description TEXT
+);
+
+CREATE TABLE stock (
+    id_stock BIGINT AUTO_INCREMENT PRIMARY KEY,
+    id_article BIGINT NOT NULL,
+    id_source_stock BIGINT NOT NULL,
+    quantite_disponible INT NOT NULL DEFAULT 0
+        CHECK (quantite_disponible >= 0),
+    quantite_reservee INT NOT NULL DEFAULT 0
+        CHECK (quantite_reservee >= 0),
+    date_mise_a_jour TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uq_stock_article_source
+        UNIQUE (id_article, id_source_stock),
+    FOREIGN KEY (id_article)
+        REFERENCES article(id_article)
+        ON DELETE CASCADE ON UPDATE CASCADE,
+    FOREIGN KEY (id_source_stock)
+        REFERENCES source_stock(id_source_stock)
+        ON DELETE RESTRICT ON UPDATE CASCADE
+);
+
+CREATE TABLE utilisateur (
+    id_utilisateur BIGINT AUTO_INCREMENT PRIMARY KEY,
+    nom VARCHAR(100) NOT NULL,
+    prenom VARCHAR(100) NOT NULL,
+    email VARCHAR(255) NOT NULL UNIQUE,
+    mot_de_passe_hash VARCHAR(255) NOT NULL,
+    role VARCHAR(50) NOT NULL DEFAULT 'user',
+    date_creation TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    billing_address_line1 VARCHAR(255) NULL,
+    billing_address_line2 VARCHAR(255) NULL,
+    billing_postal_code VARCHAR(30) NULL,
+    billing_city VARCHAR(100) NULL,
+    billing_country VARCHAR(100) NULL,
+    billing_phone VARCHAR(50) NULL
+);
+
+CREATE TABLE commande (
+    id_commande BIGINT AUTO_INCREMENT PRIMARY KEY,
+    id_utilisateur BIGINT NOT NULL,
+    numero_commande VARCHAR(50) NOT NULL UNIQUE,
+    date_commande TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    montant_total_chf DECIMAL(10,2) NOT NULL
+        CHECK (montant_total_chf >= 0),
+    statut VARCHAR(50) NOT NULL,
+    shipping_method VARCHAR(50) NOT NULL DEFAULT 'POST',
+    frais_port_chf DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+    FOREIGN KEY (id_utilisateur)
+        REFERENCES utilisateur(id_utilisateur)
+        ON DELETE RESTRICT ON UPDATE CASCADE
+);
+
+CREATE TABLE ligne_commande (
+    id_ligne_commande BIGINT AUTO_INCREMENT PRIMARY KEY,
+    id_commande BIGINT NOT NULL,
+    id_article BIGINT NOT NULL,
+    quantite INT NOT NULL CHECK (quantite > 0),
+    prix_unitaire_chf DECIMAL(10,2) NOT NULL
+        CHECK (prix_unitaire_chf >= 0),
+    FOREIGN KEY (id_commande)
+        REFERENCES commande(id_commande)
+        ON DELETE CASCADE ON UPDATE CASCADE,
+    FOREIGN KEY (id_article)
+        REFERENCES article(id_article)
+        ON DELETE RESTRICT ON UPDATE CASCADE
+);
+
+CREATE TABLE paiement (
+    id_paiement BIGINT AUTO_INCREMENT PRIMARY KEY,
+    id_commande BIGINT NOT NULL,
+    fournisseur_paiement VARCHAR(50) NOT NULL DEFAULT 'POSTFINANCE',
+    reference_externe VARCHAR(255) NOT NULL UNIQUE,
+    montant_chf DECIMAL(10,2) NOT NULL CHECK (montant_chf >= 0),
+    devise CHAR(3) NOT NULL DEFAULT 'CHF',
+    statut VARCHAR(50) NOT NULL,
+    date_paiement TIMESTAMP NULL DEFAULT NULL,
+    FOREIGN KEY (id_commande)
+        REFERENCES commande(id_commande)
+        ON DELETE RESTRICT ON UPDATE CASCADE
+);
+
+CREATE TABLE scan_isbn (
+    id_scan_isbn BIGINT AUTO_INCREMENT PRIMARY KEY,
+    id_utilisateur BIGINT NOT NULL,
+    id_article_livre BIGINT NOT NULL,
+    isbn_lu VARCHAR(20) NOT NULL,
+    date_scan TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    valide BOOLEAN NOT NULL DEFAULT FALSE,
+    FOREIGN KEY (id_utilisateur)
+        REFERENCES utilisateur(id_utilisateur)
+        ON DELETE CASCADE ON UPDATE CASCADE,
+    FOREIGN KEY (id_article_livre)
+        REFERENCES livre(id_article)
+        ON DELETE CASCADE ON UPDATE CASCADE
+);
+
+-- Index de performance
+CREATE INDEX idx_article_type_objet ON article(id_type_objet);
+CREATE INDEX idx_article_etat_usure ON article(id_etat_usure);
+CREATE INDEX idx_stock_article ON stock(id_article);
+CREATE INDEX idx_stock_source ON stock(id_source_stock);
+CREATE INDEX idx_commande_utilisateur ON commande(id_utilisateur);
+CREATE INDEX idx_ligne_commande_commande ON ligne_commande(id_commande);
+CREATE INDEX idx_ligne_commande_article ON ligne_commande(id_article);
+CREATE INDEX idx_paiement_commande ON paiement(id_commande);
+CREATE INDEX idx_scan_utilisateur ON scan_isbn(id_utilisateur);
+CREATE INDEX idx_scan_livre ON scan_isbn(id_article_livre);
+CREATE INDEX idx_livre_isbn ON livre(isbn);
+\end{lstlisting}
+
+\section*{Annexe C — Extraits de code significatifs}
+
+\subsection*{C.1 — Endpoint d'authentification FastAPI (login + génération JWT)}
+
+\begin{lstlisting}[style=pythonstyle, caption={Endpoint POST /auth/login — FastAPI}, label={lst:auth}]
+from datetime import datetime, timedelta
+from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.security import OAuth2PasswordRequestForm
+from jose import jwt
+from passlib.context import CryptContext
+from sqlalchemy.orm import Session
+from app.database import get_db
+from app.models import Utilisateur
+from app.config import settings
+
+router = APIRouter(prefix="/auth", tags=["auth"])
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+def create_access_token(data: dict) -> str:
+    to_encode = data.copy()
+    expire = datetime.utcnow() + timedelta(
+        minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES
+    )
+    to_encode.update({"exp": expire})
+    return jwt.encode(
+        to_encode,
+        settings.SECRET_KEY,
+        algorithm=settings.ALGORITHM
+    )
+
+@router.post("/login")
+def login(
+    form_data: OAuth2PasswordRequestForm = Depends(),
+    db: Session = Depends(get_db)
+):
+    user = db.query(Utilisateur).filter(
+        Utilisateur.email == form_data.username
+    ).first()
+
+    if not user or not pwd_context.verify(
+        form_data.password, user.mot_de_passe_hash
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Identifiants incorrects",
+        )
+
+    token = create_access_token(
+        data={"sub": str(user.id_utilisateur), "role": user.role}
+    )
+    return {"access_token": token, "token_type": "bearer"}
+\end{lstlisting}
+
+\subsection*{C.2 — Endpoint scan ISBN (lookup API externe)}
+
+\begin{lstlisting}[style=pythonstyle, caption={Endpoint GET /isbn/\{isbn\} — Lookup Open Library}, label={lst:isbn}]
+import httpx
+from fastapi import APIRouter, HTTPException
+
+router = APIRouter(prefix="/isbn", tags=["isbn"])
+
+OPENLIBRARY_URL = "https://openlibrary.org/api/books"
+GOOGLE_BOOKS_URL = "https://www.googleapis.com/books/v1/volumes"
+
+@router.get("/{isbn}")
+async def lookup_isbn(isbn: str):
+    # Tentative Open Library
+    async with httpx.AsyncClient() as client:
+        resp = await client.get(
+            OPENLIBRARY_URL,
+            params={"bibkeys": f"ISBN:{isbn}", "format": "json",
+                    "jscmd": "data"}
+        )
+        data = resp.json()
+        key = f"ISBN:{isbn}"
+        if key in data:
+            book = data[key]
+            return {
+                "isbn": isbn,
+                "titre": book.get("title"),
+                "auteur": book.get("authors", [{}])[0].get("name"),
+                "editeur": book.get("publishers", [{}])[0].get("name"),
+                "couverture": book.get("cover", {}).get("medium"),
+                "source": "openlibrary"
+            }
+
+        # Fallback Google Books
+        resp2 = await client.get(
+            GOOGLE_BOOKS_URL,
+            params={"q": f"isbn:{isbn}"}
+        )
+        gdata = resp2.json()
+        if gdata.get("totalItems", 0) > 0:
+            info = gdata["items"][0]["volumeInfo"]
+            return {
+                "isbn": isbn,
+                "titre": info.get("title"),
+                "auteur": ", ".join(info.get("authors", [])),
+                "editeur": info.get("publisher"),
+                "couverture": info.get("imageLinks", {}).get("thumbnail"),
+                "source": "google_books"
+            }
+
+    raise HTTPException(
+        status_code=404,
+        detail="ISBN non trouvé. Veuillez saisir les informations manuellement."
+    )
+\end{lstlisting}
+
+\section*{Annexe D — Captures d'écran Microsoft Planner}
+
+\begin{acompleter}
+\textbf{\large\textcolor{red}{[À COMPLÉTER — CAPTURES MICROSOFT PLANNER]}} \\[4pt]
+Insérer ici les captures d'écran du board Microsoft Planner.
+Utiliser :
+\begin{verbatim}
+\includegraphics[width=\textwidth]{planner_sprint1.png}
+\includegraphics[width=\textwidth]{planner_backlog.png}
+\end{verbatim}
+\end{acompleter}
+
+\section*{Annexe E — Documentation API Swagger}
+
+\begin{acompleter}
+\textbf{\large\textcolor{red}{[À COMPLÉTER — CAPTURES SWAGGER UI]}} \\[4pt]
+Insérer ici des captures de la documentation Swagger générée automatiquement
+par FastAPI (accessible sur \texttt{/docs} en développement).
+\begin{verbatim}
+\includegraphics[width=\textwidth]{swagger_overview.png}
+\includegraphics[width=\textwidth]{swagger_auth_endpoints.png}
+\end{verbatim}
+\end{acompleter}
+
+\section*{Annexe F — Diagrammes UML détaillés}
+
+\begin{acompleter}
+\textbf{\large\textcolor{red}{[À COMPLÉTER — DIAGRAMMES UML]}} \\[4pt]
+Insérer ici les diagrammes UML exportés depuis votre outil de modélisation
+(draw.io, PlantUML, StarUML, etc.) :
+\begin{itemize}
+    \item Diagramme de classes complet
+    \item Diagramme de séquence — scan ISBN
+    \item Diagramme de séquence — tunnel de paiement PostFinance
+    \item Diagramme de composants
+    \item Diagramme de déploiement (Docker / services)
+    \item Diagramme de contexte
+\end{itemize}
+\end{acompleter}
+
+\section*{Annexe G — Maquettes UI/UX}
+
+\begin{acompleter}
+\textbf{\large\textcolor{red}{[À COMPLÉTER — MAQUETTES]}} \\[4pt]
+Insérer ici les maquettes de l'application (Figma, captures d'écran, etc.) :
+\begin{itemize}
+    \item Page catalogue (desktop + mobile)
+    \item Page fiche livre
+    \item Formulaire d'ajout via scan ISBN
+    \item Interface back-office bénévole
+    \item Tunnel de paiement PostFinance
+\end{itemize}
+\end{acompleter}
+
+\end{document}
