@@ -1,4 +1,5 @@
 import { apiFetch } from './api'
+import type { PostFinanceIframeSession } from '@/types/postfinance'
 import type {
   CommandeCreate,
   CommandeRead,
@@ -35,16 +36,26 @@ export function createPaiement(payload: PaiementCreate): Promise<PaiementRead> {
     body: JSON.stringify(payload),
   })
 }
-export async function createPaiementPostFinance(payload: PaiementCreate): Promise<{ paiement: PaiementRead; redirect_url?: string | null; error?: string | null } > {
-  return apiFetch<any>('/orders/paiements/postfinance', {
+
+export function createPaiementPostFinance(payload: PaiementCreate): Promise<PostFinanceIframeSession> {
+  return apiFetch<PostFinanceIframeSession>('/orders/paiements/postfinance', {
     method: 'POST',
     auth: true,
     body: JSON.stringify(payload),
   })
 }
-export function pollPaiementPostFinance(id_paiement: number): Promise<any> {
-  return apiFetch<any>(`/orders/paiements/${id_paiement}/poll-postfinance`, { auth: true })
+
+export function confirmPaiementPostFinance(id_paiement: number): Promise<{ paiement: PaiementRead }> {
+  return apiFetch<{ paiement: PaiementRead }>(`/orders/paiements/${id_paiement}/confirm-postfinance`, {
+    method: 'POST',
+    auth: true,
+  })
 }
+
+export function pollPaiementPostFinance(id_paiement: number): Promise<{ paiement: PaiementRead }> {
+  return apiFetch<{ paiement: PaiementRead }>(`/orders/paiements/${id_paiement}/poll-postfinance`, { auth: true })
+}
+
 export function getMyCommandes(): Promise<CommandeRead[]> {
   return apiFetch<CommandeRead[]>('/orders/commandes', { auth: true })
 }
@@ -56,4 +67,3 @@ export function updatePaiement(id_paiement: number, payload: PaiementUpdate): Pr
     body: JSON.stringify(payload),
   })
 }
-

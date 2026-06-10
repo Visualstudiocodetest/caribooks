@@ -6,7 +6,7 @@ import hmac
 import json
 import os
 import time
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 import httpx
 from cryptography.exceptions import InvalidSignature
@@ -20,14 +20,17 @@ POSTFINANCE_SPACE_ID = os.getenv("POSTFINANCE_SPACE_ID")
 POSTFINANCE_WEBHOOK_PUBLIC_KEY_PEM = os.getenv("POSTFINANCE_WEBHOOK_PUBLIC_KEY_PEM")
 POSTFINANCE_WEBHOOK_KEY_ID = os.getenv("POSTFINANCE_WEBHOOK_KEY_ID")
 
+SUCCESS_STATUSES = frozenset(
+    {"CAPTURED", "PAID", "COMPLETED", "AUTHORIZED", "FULFILL", "SUCCESSFUL", "FULFILLED"}
+)
 
-def _get_auth_header(request_path: str = "/api/v2.0/payment/links", request_method: str = "POST") -> Dict[str, str]:
-    """Build a JWT Bearer auth header from the application user credentials.
 
-    The PostFinance signing payload must include the request path and method used for
-    the request. This function accepts them so the same signing logic can be used for
-    POST (create) and GET (status) requests.
-    """
+def _credentials_configured() -> bool:
+    return bool(POSTFINANCE_USER_ID and POSTFINANCE_AUTH_KEY and POSTFINANCE_SPACE_ID)
+
+
+def _get_auth_header(request_path: str, request_method: str = "POST") -> Dict[str, str]:
+    """Build a JWT Bearer auth header from the application user credentials."""
     if not POSTFINANCE_USER_ID or not POSTFINANCE_AUTH_KEY:
         return {}
 
@@ -54,78 +57,343 @@ def _get_auth_header(request_path: str = "/api/v2.0/payment/links", request_meth
     return {"Authorization": f"Bearer {token}"}
 
 
-def create_postfinance_checkout(
-    amount_chf: float,
-    reference: str,
-    return_url: str,
-    cancel_url: str,
-    description: str,
-    customer_email: Optional[str] = None,
-) -> Dict[str, Any]:
-    """Create a PostFinance payment link and return its public URL.
-    
-    Uses JWT bearer authentication with the application user ID and auth key.
-    If credentials are not configured, returns a local simulated URL for testing.
-    """
-    amount = int(round(amount_chf * 100))  # cents
-
-    if not POSTFINANCE_USER_ID or not POSTFINANCE_AUTH_KEY or not POSTFINANCE_SPACE_ID:
-        # Development fallback: return a local testing URL
-        return {
-            "id": f"local-{reference}",
-            "status": "CREATED",
-            "redirect_url": f"/orders/paiements/local/redirect/{reference}",
-        }
-
-    from urllib.parse import urlparse
-
-    frontend_origin = f"{urlparse(return_url).scheme}://{urlparse(return_url).netloc}" if return_url else "http://localhost:3000"
-    payload = {
-        "name": description,
-        "externalId": reference,
-        "merchantOrderId": reference,
-        "currency": "CHF",
-        "allowedRedirectionDomains": [frontend_origin],
-        "language": "fr-CH",
-        "successUrl": return_url,
-        "failedUrl": cancel_url,
-        "lineItems": [
-            {
-                "uniqueId": reference,
-                "name": description,
-                "amountIncludingTax": round(amount_chf, 2),
-                "quantity": 1,
-                "type": "PRODUCT",
-            }
-        ],
-    }
-
-    if customer_email:
-        payload["customerEmailAddress"] = customer_email
-
-    headers = _get_auth_header()
+def _space_headers(path: str, method: str) -> Dict[str, str]:
+    headers = _get_auth_header(path, method)
     headers["Content-Type"] = "application/json"
-    # PostFinance may accept different header capitalizations; set common names
+    headers["Accept"] = "application/json"
     headers["space"] = str(POSTFINANCE_SPACE_ID)
     headers["X-Space-Id"] = str(POSTFINANCE_SPACE_ID)
+    return headers
 
-    url = POSTFINANCE_BASE.rstrip("/") + "/v2.0/payment/links"
+
+def _api_url(suffix: str) -> str:
+    return POSTFINANCE_BASE.rstrip("/") + suffix
+
+
+def _decode_string_response(data: Any) -> Optional[str]:
+    if isinstance(data, str):
+        return data
+    if isinstance(data, dict):
+        for key in ("url", "URL", "value", "javascriptUrl"):
+            value = data.get(key)
+            if isinstance(value, str):
+                return value
+    return None
+
+
+def _extract_list_payload(data: Any) -> List[Dict[str, Any]]:
+    if isinstance(data, list):
+        return data
+    if isinstance(data, dict):
+        for key in ("data", "items", "rows", "result"):
+            value = data.get(key)
+            if isinstance(value, list):
+                return value
+        if data.get("id"):
+            return [data]
+    return []
+
+
+def build_postfinance_line_items(
+    lignes: List[Any],
+    frais_port_chf: float,
+    shipping_label: str,
+    commande_id: int,
+) -> List[Dict[str, Any]]:
+    items: List[Dict[str, Any]] = []
+    for ligne in lignes:
+        article = getattr(ligne, "article", None)
+        sku = getattr(article, "sku", None) if article is not None else None
+        titre = getattr(article, "titre", None) if article is not None else None
+        qty = int(getattr(ligne, "quantite", 1) or 1)
+        unit_price = float(getattr(ligne, "prix_unitaire_chf", 0) or 0)
+        ligne_id = getattr(ligne, "id_ligne_commande", 0)
+        article_id = getattr(ligne, "id_article", 0)
+        items.append(
+            {
+                "uniqueId": f"ligne-{ligne_id}",
+                "sku": sku or f"article-{article_id}",
+                "name": titre or f"Article {article_id}",
+                "quantity": str(qty),
+                "amountIncludingTax": round(unit_price * qty, 2),
+                "type": "PRODUCT",
+                "shippingRequired": "true",
+            }
+        )
+
+    if frais_port_chf > 0:
+        items.append(
+            {
+                "uniqueId": f"shipping-{commande_id}",
+                "sku": f"shipping-{commande_id}",
+                "name": shipping_label,
+                "quantity": "1",
+                "amountIncludingTax": round(frais_port_chf, 2),
+                "type": "SHIPPING",
+                "shippingRequired": "false",
+            }
+        )
+    return items
+
+
+def build_postfinance_address(user: Any) -> Dict[str, str]:
+    country = getattr(user, "billing_country", None) or "CH"
+    if len(country) > 2:
+        country = "CH"
+    return {
+        "givenName": getattr(user, "prenom", "") or "",
+        "familyName": getattr(user, "nom", "") or "",
+        "emailAddress": getattr(user, "email", "") or "",
+        "street": getattr(user, "billing_address_line1", "") or "",
+        "city": getattr(user, "billing_city", "") or "",
+        "postcode": getattr(user, "billing_postal_code", "") or "",
+        "country": country,
+        "phoneNumber": getattr(user, "billing_phone", "") or "",
+    }
+
+
+def create_postfinance_transaction(
+    line_items: List[Dict[str, Any]],
+    billing_address: Dict[str, str],
+    success_url: str,
+    failed_url: str,
+    merchant_reference: Optional[str] = None,
+    shipping_address: Optional[Dict[str, str]] = None,
+) -> Dict[str, Any]:
+    """Create a PostFinance transaction for iframe checkout."""
+    if not _credentials_configured():
+        return {
+            "id": f"local-{merchant_reference or int(time.time())}",
+            "status": "PENDING",
+            "state": "PENDING",
+            "version": 1,
+            "local": True,
+        }
+
+    payload: Dict[str, Any] = {
+        "currency": "CHF",
+        "language": "fr-CH",
+        "lineItems": line_items,
+        "billingAddress": billing_address,
+        "shippingAddress": shipping_address or billing_address,
+        "successUrl": success_url,
+        "failedUrl": failed_url,
+        "autoConfirmationEnabled": False,
+        "customersPresence": "VIRTUAL_PRESENT",
+    }
+    if merchant_reference:
+        payload["merchantReference"] = merchant_reference
+
+    path = "/api/v2.0/payment/transactions"
+    url = _api_url("/v2.0/payment/transactions")
+    headers = _space_headers(path, "POST")
 
     try:
-        with httpx.Client(timeout=10.0) as client:
-            r = client.post(url, json=payload, headers=headers)
-            r.raise_for_status()
-            data = r.json()
-            payment_link_id = data.get("id") or data.get("ID")
-            redirect_url = data.get("url") or data.get("URL") or data.get("linkUrl")
+        with httpx.Client(timeout=15.0) as client:
+            response = client.post(url, json=payload, headers=headers)
+            response.raise_for_status()
+            data = response.json()
+            transaction_id = data.get("id")
+            status = data.get("state") or data.get("status")
             return {
-                "id": payment_link_id or reference,
-                "status": "CREATED",
-                "redirect_url": redirect_url,
+                "id": transaction_id,
+                "status": status,
+                "state": status,
+                "version": data.get("version"),
                 "raw": data,
             }
-    except Exception as e:
-        return {"id": reference, "status": "ERROR", "redirect_url": None, "error": str(e)}
+    except Exception as exc:
+        return {"id": None, "status": "ERROR", "state": "ERROR", "error": str(exc)}
+
+
+def get_postfinance_payment_methods(transaction_id: str) -> Dict[str, Any]:
+    """Fetch payment method configurations available for iframe integration."""
+    if not _credentials_configured():
+        return {
+            "data": [
+                {
+                    "id": 0,
+                    "name": "Simulation locale",
+                    "resolvedTitle": {"fr-CH": "Simulation locale"},
+                    "resolvedImageUrl": None,
+                }
+            ],
+            "local": True,
+        }
+
+    path = f"/api/v2.0/payment/transactions/{transaction_id}/payment-method-configurations"
+    url = _api_url(f"/v2.0/payment/transactions/{transaction_id}/payment-method-configurations")
+    headers = _space_headers(path, "GET")
+    params = {"integrationMode": "IFRAME"}
+
+    try:
+        with httpx.Client(timeout=15.0) as client:
+            response = client.get(url, headers=headers, params=params)
+            response.raise_for_status()
+            data = response.json()
+            methods = _extract_list_payload(data)
+            return {"data": methods, "raw": data}
+    except Exception as exc:
+        return {"data": [], "error": str(exc)}
+
+
+def get_postfinance_javascript_url(transaction_id: str) -> Dict[str, Any]:
+    """Retrieve the JavaScript URL required to embed the iframe checkout handler."""
+    if not _credentials_configured():
+        return {"javascript_url": None, "local": True}
+
+    path = f"/api/v2.0/payment/transactions/{transaction_id}/iframe-javascript-url"
+    url = _api_url(f"/v2.0/payment/transactions/{transaction_id}/iframe-javascript-url")
+    headers = _space_headers(path, "GET")
+
+    try:
+        with httpx.Client(timeout=15.0) as client:
+            response = client.get(url, headers=headers)
+            response.raise_for_status()
+            data = response.json()
+            javascript_url = _decode_string_response(data)
+            return {"javascript_url": javascript_url, "raw": data}
+    except Exception as exc:
+        return {"javascript_url": None, "error": str(exc)}
+
+
+def get_postfinance_transaction(transaction_id: str) -> Dict[str, Any]:
+    """Read a transaction by provider id."""
+    if not _credentials_configured():
+        return {
+            "id": transaction_id,
+            "status": "PENDING",
+            "state": "PENDING",
+            "version": 1,
+            "local": True,
+        }
+
+    path = f"/api/v2.0/payment/transactions/{transaction_id}"
+    url = _api_url(f"/v2.0/payment/transactions/{transaction_id}")
+    headers = _space_headers(path, "GET")
+
+    try:
+        with httpx.Client(timeout=15.0) as client:
+            response = client.get(url, headers=headers)
+            response.raise_for_status()
+            data = response.json()
+            status = data.get("state") or data.get("status")
+            return {
+                "id": data.get("id") or transaction_id,
+                "status": status,
+                "state": status,
+                "version": data.get("version"),
+                "merchantReference": data.get("merchantReference"),
+                "raw": data,
+            }
+    except Exception as exc:
+        return {"id": transaction_id, "status": None, "state": None, "error": str(exc)}
+
+
+def confirm_postfinance_transaction(
+    transaction_id: str,
+    version: int,
+    merchant_reference: str,
+    line_items: List[Dict[str, Any]],
+    billing_address: Dict[str, str],
+    shipping_address: Optional[Dict[str, str]] = None,
+) -> Dict[str, Any]:
+    """Confirm a pending transaction before iframe submit."""
+    if not _credentials_configured():
+        return {
+            "id": transaction_id,
+            "status": "CONFIRMED",
+            "state": "CONFIRMED",
+            "version": version,
+            "local": True,
+        }
+
+    payload: Dict[str, Any] = {
+        "id": int(transaction_id),
+        "version": version,
+        "currency": "CHF",
+        "language": "fr-CH",
+        "merchantReference": merchant_reference,
+        "lineItems": line_items,
+        "billingAddress": billing_address,
+        "shippingAddress": shipping_address or billing_address,
+    }
+
+    path = f"/api/v2.0/payment/transactions/{transaction_id}/confirm"
+    url = _api_url(f"/v2.0/payment/transactions/{transaction_id}/confirm")
+    headers = _space_headers(path, "POST")
+
+    try:
+        with httpx.Client(timeout=15.0) as client:
+            response = client.post(url, json=payload, headers=headers)
+            response.raise_for_status()
+            data = response.json()
+            status = data.get("state") or data.get("status")
+            return {
+                "id": data.get("id") or transaction_id,
+                "status": status,
+                "state": status,
+                "version": data.get("version"),
+                "raw": data,
+            }
+    except Exception as exc:
+        return {"id": transaction_id, "status": "ERROR", "state": "ERROR", "error": str(exc)}
+
+
+def create_postfinance_iframe_session(
+    line_items: List[Dict[str, Any]],
+    billing_address: Dict[str, str],
+    success_url: str,
+    failed_url: str,
+    merchant_reference: Optional[str] = None,
+    shipping_address: Optional[Dict[str, str]] = None,
+) -> Dict[str, Any]:
+    """Create a transaction and fetch iframe assets (payment methods + JavaScript URL)."""
+    transaction = create_postfinance_transaction(
+        line_items=line_items,
+        billing_address=billing_address,
+        success_url=success_url,
+        failed_url=failed_url,
+        merchant_reference=merchant_reference,
+        shipping_address=shipping_address,
+    )
+
+    transaction_id = transaction.get("id")
+    if not transaction_id:
+        return {
+            "transaction_id": None,
+            "transaction": transaction,
+            "payment_methods": [],
+            "javascript_url": None,
+            "error": transaction.get("error") or "Could not create PostFinance transaction",
+            "local_mode": not _credentials_configured(),
+        }
+
+    payment_methods_resp = get_postfinance_payment_methods(str(transaction_id))
+    javascript_resp = get_postfinance_javascript_url(str(transaction_id))
+
+    return {
+        "transaction_id": str(transaction_id),
+        "transaction": transaction,
+        "payment_methods": payment_methods_resp.get("data") or [],
+        "javascript_url": javascript_resp.get("javascript_url"),
+        "local_mode": bool(transaction.get("local")),
+        "error": transaction.get("error") or javascript_resp.get("error") or payment_methods_resp.get("error"),
+    }
+
+
+def get_postfinance_checkout_status(
+    link_id: Optional[str] = None,
+    external_id: Optional[str] = None,
+) -> Dict[str, Any]:
+    """Query PostFinance for a transaction status (iframe / transaction API)."""
+    if link_id:
+        return get_postfinance_transaction(str(link_id))
+
+    if external_id:
+        return get_postfinance_transaction(str(external_id))
+
+    return {"id": None, "status": None, "state": None, "raw": None}
 
 
 def parse_postfinance_signature_header(signature_header: str) -> Dict[str, str]:
@@ -134,10 +402,7 @@ def parse_postfinance_signature_header(signature_header: str) -> Dict[str, str]:
         if "=" not in chunk:
             continue
         key, value = chunk.split("=", 1)
-        k = key.strip()
-        # signature header values may be quoted; remove surrounding quotes
-        v = value.strip().strip('"').strip("'")
-        parts[k] = v
+        parts[key.strip()] = value.strip().strip('"').strip("'")
     return parts
 
 
@@ -168,105 +433,46 @@ def verify_postfinance_webhook_signature(raw_body: bytes, signature_header: str)
 
 def parse_postfinance_webhook(payload: Dict[str, Any]) -> Dict[str, Any]:
     """Parse a PostFinance webhook payload into a standard dict."""
-    # Tolerant parsing for different PostFinance webhook shapes
-    checkout_id = payload.get("id") or payload.get("checkoutId")
-    status = payload.get("status") or payload.get("state")
+    entity_id = payload.get("id") or payload.get("transactionId") or payload.get("checkoutId")
+    status = payload.get("state") or payload.get("status")
 
-    # Prefer merchantOrderId, but fallback to externalId or nested values
     merchant_order_id = (
-        payload.get("merchantOrderId")
+        payload.get("merchantReference")
+        or payload.get("merchantOrderId")
         or payload.get("merchantOrderID")
         or payload.get("externalId")
         or payload.get("externalid")
         or payload.get("externalID")
     )
 
-    # If nested object, try to extract id or externalId
     if isinstance(merchant_order_id, dict):
         merchant_order_id = merchant_order_id.get("id") or merchant_order_id.get("externalId")
 
-    # Some webhook payloads include transactions or checkout details
-    if not merchant_order_id:
-        if isinstance(payload.get("transactions"), list) and len(payload.get("transactions")) > 0:
-            t0 = payload["transactions"][0]
-            merchant_order_id = t0.get("merchantOrderId") or t0.get("externalId")
+    if not merchant_order_id and isinstance(payload.get("entity"), dict):
+        entity = payload["entity"]
+        merchant_order_id = entity.get("merchantReference") or entity.get("merchantOrderId")
+        if not entity_id:
+            entity_id = entity.get("id")
+        if not status:
+            status = entity.get("state") or entity.get("status")
+
+    if not merchant_order_id and isinstance(payload.get("transactions"), list) and payload["transactions"]:
+        first = payload["transactions"][0]
+        merchant_order_id = first.get("merchantReference") or first.get("merchantOrderId") or first.get("externalId")
+        if not entity_id:
+            entity_id = first.get("id")
+        if not status:
+            status = first.get("state") or first.get("status")
 
     return {
-        "id": checkout_id,
+        "id": entity_id,
         "status": status,
         "reference": merchant_order_id,
         "raw": payload,
     }
 
 
-def get_postfinance_checkout_status(link_id: Optional[str] = None, external_id: Optional[str] = None) -> Dict[str, Any]:
-    """Query PostFinance for a payment link / checkout status without relying on webhooks.
-
-    Tries to GET the link by `link_id` (provider id) first, then falls back to searching
-    by `external_id` (externalId/merchantOrderId). Returns a dict with `id`, `status`, and
-    the raw provider response under `raw`. In development (no credentials) returns a
-    simulated response.
-    """
-    if not POSTFINANCE_USER_ID or not POSTFINANCE_AUTH_KEY or not POSTFINANCE_SPACE_ID:
-        # Development fallback
-        return {
-            "id": link_id or f"local-{external_id}",
-            "status": "CREATED",
-            "raw": {"local": True},
-        }
-
-    # Helper to add common headers
-    def _common_headers(path: str, method: str) -> Dict[str, str]:
-        h = _get_auth_header(path, method)
-        h["Accept"] = "application/json"
-        h["space"] = str(POSTFINANCE_SPACE_ID)
-        h["X-Space-Id"] = str(POSTFINANCE_SPACE_ID)
-        return h
-
-    base = POSTFINANCE_BASE.rstrip("/")
-
-    # Try lookup by link id
-    if link_id:
-        url = f"{base}/v2.0/payment/links/{link_id}"
-        try:
-            headers = _common_headers(f"/api/v2.0/payment/links/{link_id}", "GET")
-            with httpx.Client(timeout=10.0) as client:
-                r = client.get(url, headers=headers)
-                r.raise_for_status()
-                data = r.json()
-                status = data.get("status") or data.get("state")
-                return {"id": data.get("id") or link_id, "status": status, "raw": data}
-        except Exception:
-            # fall through to try external id
-            pass
-
-    # Try searching by external id
-    if external_id:
-        url = f"{base}/v2.0/payment/links"
-        try:
-            headers = _common_headers("/api/v2.0/payment/links", "GET")
-            params = {"externalId": external_id}
-            with httpx.Client(timeout=10.0) as client:
-                r = client.get(url, headers=headers, params=params)
-                r.raise_for_status()
-                data = r.json()
-                # Extract list-like responses
-                items = []
-                if isinstance(data, dict):
-                    for k in ("data", "items", "rows", "result"):
-                        if isinstance(data.get(k), list):
-                            items = data.get(k)
-                            break
-                    if not items and (data.get("id") or data.get("ID")):
-                        items = [data]
-                elif isinstance(data, list):
-                    items = data
-
-                if items:
-                    first = items[0]
-                    status = first.get("status") or first.get("state")
-                    return {"id": first.get("id") or external_id, "status": status, "raw": first}
-        except Exception as e:
-            return {"error": str(e)}
-
-    return {"id": None, "status": None, "raw": None}
+def is_postfinance_success_status(status: Optional[str]) -> bool:
+    if not status:
+        return False
+    return str(status).upper() in SUCCESS_STATUSES
