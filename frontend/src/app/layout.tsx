@@ -4,6 +4,7 @@ import { Header } from '@/components/layout/Header'
 import { Footer } from '@/components/layout/Footer'
 import { Providers } from './providers'
 import type { ReactNode } from 'react'
+import { SpeedInsights } from '@vercel/speed-insights/next'
 
 export const metadata: Metadata = {
   title: 'Caribooks',
@@ -28,6 +29,7 @@ export default function RootLayout({
           </main>
           <Footer />
         </Providers>
+        <SpeedInsights />
       </body>
     </html>
   )
