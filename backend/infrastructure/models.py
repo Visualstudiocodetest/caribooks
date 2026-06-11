@@ -148,7 +148,8 @@ class Utilisateur(Base):
     nom = Column(String(100), nullable=False)
     prenom = Column(String(100), nullable=False)
     email = Column(String(255), nullable=False, unique=True)
-    mot_de_passe_hash = Column(String(255), nullable=False)
+    mot_de_passe_hash = Column(String(255), nullable=True)
+    google_id = Column(String(255), nullable=True, unique=True)
     role = Column(String(50), nullable=False, default="user")
     # Billing address fields
     billing_address_line1 = Column(String(255), nullable=True)

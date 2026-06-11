@@ -1,11 +1,12 @@
 'use client'
 
-import { Suspense, useState } from 'react'
+import { Suspense, useCallback, useState } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useAuth } from '@/components/auth/AuthProvider'
 import { ApiError } from '@/services/api'
-import { login } from '@/services/auth'
+import { googleLogin, login } from '@/services/auth'
+import { GoogleSignInButton } from '@/components/auth/GoogleSignInButton'
 
 function LoginForm() {
   const router = useRouter()
@@ -17,7 +18,7 @@ function LoginForm() {
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
 
-  async function onSubmit(e: React.FormEvent) {
+  async function onSubmit(e: { preventDefault(): void }) {
     e.preventDefault()
     if (!email.trim() || !password) {
       setError('Email et mot de passe requis.')
@@ -36,6 +37,21 @@ function LoginForm() {
       setLoading(false)
     }
   }
+
+  const handleGoogleCredential = useCallback(async (credential: string) => {
+    setError(null)
+    setLoading(true)
+    try {
+      const token = await googleLogin(credential)
+      setToken(token.access_token)
+      router.push(returnTo)
+    } catch (e) {
+      const err = e as unknown
+      setError(err instanceof ApiError ? err.message : 'Connexion Google impossible.')
+    } finally {
+      setLoading(false)
+    }
+  }, [setToken, router, returnTo])
 
   return (
     <div className="content-center" style={{ maxWidth: 440 }}>
@@ -63,6 +79,12 @@ function LoginForm() {
         <button className="btn btnPrimary" type="submit" disabled={loading} style={{ width: '100%' }}>
           {loading ? 'Connexion…' : 'Se connecter'}
         </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '4px 0' }}>
+          <hr style={{ flex: 1, border: 'none', borderTop: '1px solid var(--color-border)' }} />
+          <span className="muted" style={{ fontSize: '0.8rem' }}>ou</span>
+          <hr style={{ flex: 1, border: 'none', borderTop: '1px solid var(--color-border)' }} />
+        </div>
+        <GoogleSignInButton onCredential={handleGoogleCredential} text="signin_with" />
         <div className="muted" style={{ textAlign: 'center' }}>
           Pas de compte ?{' '}
           <Link href={`/register${returnTo !== '/' ? `?returnTo=${encodeURIComponent(returnTo)}` : ''}`}>

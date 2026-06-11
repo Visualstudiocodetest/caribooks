@@ -1,11 +1,12 @@
 'use client'
 
-import { Suspense, useState } from 'react'
+import { Suspense, useCallback, useState } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { ApiError } from '@/services/api'
-import { register, login } from '@/services/auth'
+import { googleLogin, register, login } from '@/services/auth'
 import { useAuth } from '@/components/auth/AuthProvider'
+import { GoogleSignInButton } from '@/components/auth/GoogleSignInButton'
 
 function RegisterForm() {
   const router = useRouter()
@@ -19,7 +20,22 @@ function RegisterForm() {
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
 
-  async function onSubmit(e: React.FormEvent) {
+  const handleGoogleCredential = useCallback(async (credential: string) => {
+    setError(null)
+    setLoading(true)
+    try {
+      const token = await googleLogin(credential)
+      setToken(token.access_token)
+      router.push(returnTo)
+    } catch (e) {
+      const err = e as unknown
+      setError(err instanceof ApiError ? err.message : 'Connexion Google impossible.')
+    } finally {
+      setLoading(false)
+    }
+  }, [setToken, router, returnTo])
+
+  async function onSubmit(e: { preventDefault(): void }) {
     e.preventDefault()
     if (!prenom.trim() || !nom.trim()) {
       setError('Prénom et nom requis.')
@@ -93,6 +109,12 @@ function RegisterForm() {
         <button className="btn btnPrimary" type="submit" disabled={loading} style={{ width: '100%' }}>
           {loading ? 'Création…' : 'Créer le compte'}
         </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '4px 0' }}>
+          <hr style={{ flex: 1, border: 'none', borderTop: '1px solid var(--color-border)' }} />
+          <span className="muted" style={{ fontSize: '0.8rem' }}>ou</span>
+          <hr style={{ flex: 1, border: 'none', borderTop: '1px solid var(--color-border)' }} />
+        </div>
+        <GoogleSignInButton onCredential={handleGoogleCredential} text="signup_with" />
         <div className="muted" style={{ textAlign: 'center' }}>
           Vous pourrez renseigner votre adresse de livraison dans votre profil.
         </div>

@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, status, Depends, Request
 from sqlalchemy.orm import Session
-from typing import List
+from typing import Any, Dict, List, Optional
 from services.book_service import BookService
 from services.image_service import download_image
 from domain.book import Book
@@ -8,6 +8,8 @@ from presentation.schemas import BookCreate, BookRead, BookUpdate
 from presentation.deps import get_db, require_admin
 from infrastructure import models
 from sqlalchemy.orm import Session
+import os
+import httpx
 
 router = APIRouter(prefix="/books", tags=["books"])
 
@@ -31,6 +33,61 @@ def get_book_by_isbn(isbn: str, db: Session = Depends(get_db)):
     if not book:
         raise HTTPException(status_code=404, detail="Book not found")
     return book
+
+@router.get("/isbn-metadata/{isbn}")
+def get_isbn_metadata(isbn: str) -> Dict[str, Any]:
+    """Proxy ISBN metadata lookup — tries OpenLibrary then Google Books (server-side key)."""
+    clean = isbn.strip().upper().replace("-", "")
+
+    # Try OpenLibrary first (free, no key needed)
+    try:
+        r = httpx.get(
+            f"https://openlibrary.org/api/books?bibkeys=ISBN:{clean}&format=json&jscmd=data",
+            timeout=8,
+        )
+        if r.status_code == 200:
+            data = r.json()
+            book = data.get(f"ISBN:{clean}")
+            if book and book.get("title"):
+                return book
+    except Exception:
+        pass
+
+    # Fallback: Google Books with server-side API key
+    api_key = os.getenv("GOOGLE_BOOKS_API_KEY", "")
+    params: Dict[str, str] = {"q": f"isbn:{clean}", "maxResults": "1"}
+    if api_key:
+        params["key"] = api_key
+    try:
+        r = httpx.get("https://www.googleapis.com/books/v1/volumes", params=params, timeout=8)
+        if r.status_code == 200:
+            data = r.json()
+            items = data.get("items") or []
+            if items:
+                info = items[0].get("volumeInfo") or {}
+                if info.get("title"):
+                    cover: Optional[Dict[str, str]] = None
+                    if info.get("imageLinks", {}).get("thumbnail"):
+                        thumb: str = info["imageLinks"]["thumbnail"]
+                        cover = {
+                            "large": thumb.replace("zoom=1", "zoom=3"),
+                            "medium": thumb,
+                            "small": info["imageLinks"].get("smallThumbnail", thumb),
+                        }
+                    return {
+                        "title": info.get("title"),
+                        "subtitle": info.get("subtitle"),
+                        "authors": [{"name": a} for a in (info.get("authors") or [])],
+                        "publishers": [{"name": info["publisher"]}] if info.get("publisher") else [],
+                        "publish_date": info.get("publishedDate"),
+                        "notes": info.get("description"),
+                        "cover": cover,
+                    }
+    except Exception:
+        pass
+
+    raise HTTPException(status_code=404, detail="ISBN introuvable")
+
 
 @router.get("/{id_article}", response_model=BookRead)
 def get_book(id_article: int, db: Session = Depends(get_db)):

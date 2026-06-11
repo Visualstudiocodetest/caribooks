@@ -51,6 +51,32 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 def get_user_by_email(db: Session, email: str) -> Optional[models.Utilisateur]:
     return db.query(models.Utilisateur).filter(models.Utilisateur.email == email).first()
 
+
+def get_user_by_google_id(db: Session, google_id: str) -> Optional[models.Utilisateur]:
+    return db.query(models.Utilisateur).filter(models.Utilisateur.google_id == google_id).first()
+
+
+def create_oauth_user(db: Session, google_id: str, email: str, prenom: str, nom: str) -> models.Utilisateur:
+    db_user = models.Utilisateur(
+        nom=nom,
+        prenom=prenom,
+        email=email,
+        mot_de_passe_hash=None,
+        google_id=google_id,
+        role="user",
+    )
+    db.add(db_user)
+    db.commit()
+    db.refresh(db_user)
+    return db_user
+
+
+def link_google_id(db: Session, user: models.Utilisateur, google_id: str) -> models.Utilisateur:
+    user.google_id = google_id
+    db.commit()
+    db.refresh(user)
+    return user
+
 def create_user(db: Session, user_data: dict) -> models.Utilisateur:
     db_user = models.Utilisateur(
         nom=user_data["nom"],

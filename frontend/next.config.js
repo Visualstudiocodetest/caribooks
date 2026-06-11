@@ -1,18 +1,18 @@
 /** @type {import('next').NextConfig} */
-// The payment page calls the backend API directly (e.g. to fetch the order),
-// so the backend origin must be allowed in connect-src or the browser's CSP
-// blocks the fetch. Allow the configured backend plus localhost for dev.
 const backendBaseUrl =
-  process.env.NEXT_PUBLIC_BACKEND_BASE_URL || process.env.BACKEND_BASE_URL || 'http://localhost:8000'
+  process.env.BACKEND_BASE_URL || process.env.NEXT_PUBLIC_BACKEND_BASE_URL || 'http://localhost:8000'
+
+// CSP for the payment page only — 'self' already covers /api/proxy requests.
+// Keep the backend origin in connect-src so PostFinance redirect pages that
+// call the backend directly (no proxy needed) still work.
 const backendOrigins = new Set([backendBaseUrl])
 try {
-  // Add both 127.0.0.1 and localhost variants so dev works regardless of which the browser uses.
   const { protocol, port } = new URL(backendBaseUrl)
   const portSuffix = port ? `:${port}` : ''
   backendOrigins.add(`${protocol}//localhost${portSuffix}`)
   backendOrigins.add(`${protocol}//127.0.0.1${portSuffix}`)
 } catch {}
-const connectSrc = ["'self'", 'https://checkout.postfinance.ch', ...backendOrigins].join(' ')
+const connectSrc = ["'self'", 'https://checkout.postfinance.ch', 'https://oauth2.googleapis.com', ...backendOrigins].join(' ')
 
 const postFinanceCsp =
   `script-src 'self' 'unsafe-inline' https://checkout.postfinance.ch; frame-src 'self' https://checkout.postfinance.ch; connect-src ${connectSrc}`
@@ -29,6 +29,17 @@ const nextConfig = {
     ],
   },
   output: 'standalone',
+  // Proxy all /api/proxy/* requests to the backend.
+  // Browser requests stay on the same Vercel origin → no CORS needed.
+  // Server Components bypass this and call backendBaseUrl directly.
+  async rewrites() {
+    return [
+      {
+        source: '/api/proxy/:path*',
+        destination: `${backendBaseUrl}/:path*`,
+      },
+    ]
+  },
   async headers() {
     return [
       {
@@ -41,6 +52,6 @@ const nextConfig = {
       },
     ]
   },
-};
+}
 
 module.exports = nextConfig

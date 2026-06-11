@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import './globals.css'
 import { Header } from '@/components/layout/Header'
 import { Footer } from '@/components/layout/Footer'
+import { CookieBanner } from '@/components/ui/CookieBanner'
 import { Providers } from './providers'
 import type { ReactNode } from 'react'
 import { SpeedInsights } from '@vercel/speed-insights/next'
@@ -28,6 +29,7 @@ export default function RootLayout({
             <div className="container">{children}</div>
           </main>
           <Footer />
+          <CookieBanner />
         </Providers>
         <SpeedInsights />
       </body>
