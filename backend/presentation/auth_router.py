@@ -1,8 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from presentation.auth_schemas import LoginRequest, UserCreate, UserRead, Token
+from presentation.auth_schemas import LoginRequest, UserCreate, UserRead, Token, GoogleAuthRequest
 from infrastructure import crud_user
 import os
+import httpx
 from presentation.deps import get_db
 from services.jwt_service import create_access_token
 
@@ -43,16 +44,58 @@ def register(user_in: UserCreate, db: Session = Depends(get_db)):
 def login_for_access_token(payload: LoginRequest, db: Session = Depends(get_db)):
     user = crud_user.get_user_by_email(db, str(payload.username))
     verified = False
-    if user:
+    if user and user.mot_de_passe_hash:
         try:
             verified = crud_user.verify_password(str(payload.password), str(user.mot_de_passe_hash))
         except Exception:
             verified = False
-        # fallback: accept raw comparison if stored value equals provided (testing convenience)
-        if not verified and str(user.mot_de_passe_hash) == str(payload.password):
-            verified = True
     if not user or not verified:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Incorrect credentials")
+    to_encode = {"sub": user.email, "role": user.role}
+    access_token = create_access_token(to_encode, SECRET_KEY, ACCESS_TOKEN_EXPIRE_MINUTES)
+    return Token(access_token=access_token)
+
+
+if ENVIRONMENT in ("prod", "production"):
+    GOOGLE_CLIENT_ID = os.getenv("PROD_GOOGLE_OAUTH_CLIENT_ID", "")
+else:
+    GOOGLE_CLIENT_ID = os.getenv("DEV_GOOGLE_OAUTH_CLIENT_ID", "")
+
+
+@router.post("/google", response_model=Token)
+def google_auth(payload: GoogleAuthRequest, db: Session = Depends(get_db)):
+    """Verify a Google ID token (credential from Sign In With Google) and return a JWT."""
+    try:
+        r = httpx.get(
+            "https://oauth2.googleapis.com/tokeninfo",
+            params={"id_token": payload.credential},
+            timeout=10,
+        )
+        r.raise_for_status()
+        info = r.json()
+    except Exception:
+        raise HTTPException(status_code=400, detail="Token Google invalide")
+
+    # Validate audience when GOOGLE_CLIENT_ID is configured
+    if GOOGLE_CLIENT_ID and info.get("aud") != GOOGLE_CLIENT_ID:
+        raise HTTPException(status_code=400, detail="Token Google invalide (audience)")
+
+    google_id: str = info.get("sub", "")
+    email: str = info.get("email", "")
+    if not google_id or not email:
+        raise HTTPException(status_code=400, detail="Token Google incomplet")
+
+    # Find existing user by google_id, then by email (link account)
+    user = crud_user.get_user_by_google_id(db, google_id)
+    if user is None:
+        user = crud_user.get_user_by_email(db, email)
+        if user is not None:
+            user = crud_user.link_google_id(db, user, google_id)
+        else:
+            prenom = info.get("given_name") or email.split("@")[0]
+            nom = info.get("family_name") or ""
+            user = crud_user.create_oauth_user(db, google_id=google_id, email=email, prenom=prenom, nom=nom)
+
     to_encode = {"sub": user.email, "role": user.role}
     access_token = create_access_token(to_encode, SECRET_KEY, ACCESS_TOKEN_EXPIRE_MINUTES)
     return Token(access_token=access_token)

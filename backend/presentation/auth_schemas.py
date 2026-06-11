@@ -51,3 +51,7 @@ class Token(BaseModel):
 
 class TokenData(BaseModel):
     email: Optional[str] = None
+
+
+class GoogleAuthRequest(BaseModel):
+    credential: str

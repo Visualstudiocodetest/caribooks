@@ -1,8 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { apiFetch, ApiError } from './api'
 
-const BACKEND = 'http://127.0.0.1:8000'
-
 function jsonResponse(body: unknown, init: { status?: number } = {}) {
   return new Response(JSON.stringify(body), {
     status: init.status ?? 200,
@@ -14,7 +12,6 @@ describe('apiFetch', () => {
   let fetchMock: ReturnType<typeof vi.fn>
 
   beforeEach(() => {
-    process.env.NEXT_PUBLIC_BACKEND_BASE_URL = BACKEND
     fetchMock = vi.fn().mockResolvedValue(jsonResponse({ ok: true }))
     vi.stubGlobal('fetch', fetchMock)
     window.localStorage.clear()
@@ -22,20 +19,18 @@ describe('apiFetch', () => {
 
   afterEach(() => {
     vi.unstubAllGlobals()
-    delete process.env.NEXT_PUBLIC_BACKEND_ALLOW_CREDENTIALS
   })
 
-  it('builds the URL from the configured backend base and joins the path', async () => {
+  it('routes browser requests through the /api/proxy rewrite', async () => {
     await apiFetch('/orders/commandes/73')
     const [url] = fetchMock.mock.calls[0]
-    expect(url).toBe(`${BACKEND}/orders/commandes/73`)
+    expect(url).toBe('/api/proxy/orders/commandes/73')
   })
 
-  it('does not produce a double slash when base has a trailing slash', async () => {
-    process.env.NEXT_PUBLIC_BACKEND_BASE_URL = `${BACKEND}/`
+  it('does not produce a double slash when path has a leading slash', async () => {
     await apiFetch('/health')
     const [url] = fetchMock.mock.calls[0]
-    expect(url).toBe(`${BACKEND}/health`)
+    expect(url).toBe('/api/proxy/health')
   })
 
   it('always sets the Accept header to application/json', async () => {
@@ -69,24 +64,6 @@ describe('apiFetch', () => {
     await apiFetch('/orders/commandes', { auth: true })
     const [, options] = fetchMock.mock.calls[0]
     expect((options.headers as Headers).has('Authorization')).toBe(false)
-  })
-
-  it('uses cors mode for authed browser requests', async () => {
-    window.localStorage.setItem('caribooks_token', JSON.stringify('tok'))
-    await apiFetch('/orders/commandes', { auth: true })
-    const [, options] = fetchMock.mock.calls[0]
-    expect(options.mode).toBe('cors')
-  })
-
-  it('only includes credentials when explicitly enabled', async () => {
-    window.localStorage.setItem('caribooks_token', JSON.stringify('tok'))
-
-    await apiFetch('/orders/commandes', { auth: true })
-    expect(fetchMock.mock.calls[0][1].credentials).toBeUndefined()
-
-    process.env.NEXT_PUBLIC_BACKEND_ALLOW_CREDENTIALS = 'true'
-    await apiFetch('/orders/commandes', { auth: true })
-    expect(fetchMock.mock.calls[1][1].credentials).toBe('include')
   })
 
   it('returns the parsed JSON payload on success', async () => {

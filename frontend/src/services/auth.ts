@@ -17,6 +17,10 @@ export function updateCurrentUser(payload: Partial<UserCreate & { mot_de_passe?:
   return apiFetch<UserRead>('/users/me', { method: 'PUT', auth: true, body: JSON.stringify(payload) })
 }
 
+export async function googleLogin(credential: string): Promise<Token> {
+  return apiFetch<Token>('/auth/google', { method: 'POST', body: JSON.stringify({ credential }) })
+}
+
 export function persistToken(token: string) {
   window.localStorage.setItem('caribooks_token', JSON.stringify(token))
 }

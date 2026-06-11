@@ -31,8 +31,10 @@ function getServerBackendBaseUrl(): string {
 }
 
 function getClientBackendBaseUrl(): string {
-  // Browser runtime: call FastAPI directly (requires CORS on backend)
-  return process.env.NEXT_PUBLIC_BACKEND_BASE_URL || process.env.BACKEND_BASE_URL || 'http://localhost:8000'
+  // Browser runtime: route through the Next.js /api/proxy rewrite so the
+  // request stays on the same origin — eliminates CORS entirely.
+  // In local dev this proxies to NEXT_PUBLIC_BACKEND_BASE_URL via next.config.js.
+  return '/api/proxy'
 }
 
 function joinUrl(base: string, path: string): string {
@@ -66,18 +68,6 @@ export async function apiFetch<T>(
   const fetchOptions: RequestInit = {
     ...rest,
     headers: mergedHeaders,
-  }
-
-  // When called from the browser and requesting auth, include credentials only if
-  // the deployment explicitly enabled credentialed cross-origin requests.
-  // This avoids sending credentials when the backend returns Access-Control-Allow-Origin: *
-  const allowCredentialedCors = (typeof window !== 'undefined' && (process.env.NEXT_PUBLIC_BACKEND_ALLOW_CREDENTIALS === 'true'))
-  if (typeof window !== 'undefined' && auth) {
-    if (allowCredentialedCors) {
-      fetchOptions.credentials = 'include'
-    }
-    // Ensure CORS mode for cross-origin requests
-    fetchOptions.mode = 'cors'
   }
 
   const res = await fetch(url, fetchOptions)
