@@ -85,6 +85,10 @@ export type LigneCommandeCreate = {
   prix_unitaire_chf: number
 }
 
+export type LigneCommandeRead = LigneCommandeCreate & {
+  id_ligne_commande: number
+}
+
 export type PaiementCreate = {
   id_commande: number
   fournisseur_paiement?: string

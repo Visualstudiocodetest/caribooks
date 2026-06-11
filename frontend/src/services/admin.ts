@@ -1,5 +1,9 @@
 import { apiFetch } from './api'
-import type { CommandeRead } from '@/types/api'
+import type { CommandeRead, LigneCommandeRead } from '@/types/api'
+
+export async function adminGetLignes(id_commande: number): Promise<LigneCommandeRead[]> {
+  return apiFetch<LigneCommandeRead[]>(`/orders/admin/commandes/${id_commande}/lignes`, { auth: true })
+}
 
 export async function listAdminCommandes(): Promise<CommandeRead[]> {
   return apiFetch<CommandeRead[]>('/orders/admin/commandes', { auth: true })

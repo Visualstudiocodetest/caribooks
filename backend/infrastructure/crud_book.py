@@ -201,16 +201,20 @@ def create_book(db: Session, book: Book) -> models.Livre:
     return db_livre
 
 def update_book(db: Session, id_article: int, data: dict) -> Optional[models.Livre]:
-    """Update a book and/or its article."""
+    """Update a book and/or its article. Handles categorie_ids separately."""
     db_livre = db.query(models.Livre).filter(models.Livre.id_article == id_article).first()
     if not db_livre:
         return None
     db_article = db_livre.article
+    categorie_ids = data.pop("categorie_ids", None)
     for key, value in data.items():
         if hasattr(db_livre, key):
             setattr(db_livre, key, value)
         elif hasattr(db_article, key):
             setattr(db_article, key, value)
+    if categorie_ids is not None:
+        cats = db.query(models.Categorie).filter(models.Categorie.id_categorie.in_(categorie_ids)).all()
+        db_article.categories = cats
     db.commit()
     db.refresh(db_livre)
     return db_livre

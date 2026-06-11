@@ -10,11 +10,13 @@ export default function TypeObjetsAdmin() {
   const [libelle, setLibelle] = useState('')
   const [code, setCode] = useState('')
   const [error, setError] = useState<string | null>(null)
+  const [editingId, setEditingId] = useState<number | null>(null)
+  const [editLibelle, setEditLibelle] = useState('')
+  const [editCode, setEditCode] = useState('')
 
   async function load() {
     try {
-      const r = await apiFetch<TypeObjet[]>('/catalog/type-objets')
-      setList(r)
+      setList(await apiFetch<TypeObjet[]>('/catalog/type-objets'))
     } catch (e) {
       setError((e as Error).message)
     }
@@ -22,13 +24,24 @@ export default function TypeObjetsAdmin() {
 
   useEffect(() => { load() }, [])
 
-  async function createOne(e: React.FormEvent) {
+  async function createOne(e: { preventDefault(): void }) {
     e.preventDefault()
     if (!libelle.trim()) return
     try {
       await apiFetch('/catalog/type-objets', { method: 'POST', auth: true, body: JSON.stringify({ libelle: libelle.trim(), code: code.trim() || undefined }) })
       setLibelle('')
       setCode('')
+      await load()
+    } catch (e) {
+      setError((e as Error).message)
+    }
+  }
+
+  async function saveEdit(id: number) {
+    if (!editLibelle.trim()) return
+    try {
+      await apiFetch(`/catalog/type-objets/${id}`, { method: 'PUT', auth: true, body: JSON.stringify({ libelle: editLibelle.trim(), code: editCode.trim() || undefined }) })
+      setEditingId(null)
       await load()
     } catch (e) {
       setError((e as Error).message)
@@ -46,48 +59,34 @@ export default function TypeObjetsAdmin() {
   }
 
   return (
-    <div style={{ display: 'grid', gap: 14 }}>
+    <div style={{ display: 'grid', gap: 14, maxWidth: 560 }}>
       <h2 style={{ margin: 0 }}>Types d&apos;objets</h2>
       {error ? <div className="banner-error">{error}</div> : null}
       <form onSubmit={createOne} style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-        <input
-          className="input"
-          style={{ flex: '2 1 160px' }}
-          placeholder="Nom (ex: Livre, DVD…)"
-          value={libelle}
-          onChange={(e) => setLibelle(e.target.value)}
-          required
-        />
-        <input
-          className="input"
-          style={{ flex: '1 1 100px' }}
-          placeholder="Code (ex: BOOK)"
-          value={code}
-          onChange={(e) => setCode(e.target.value.toUpperCase())}
-        />
+        <input className="input" style={{ flex: '2 1 160px' }} placeholder="Nom (ex: Livre, DVD…)" value={libelle} onChange={(e) => setLibelle(e.target.value)} required />
+        <input className="input" style={{ flex: '1 1 100px' }} placeholder="Code (ex: BOOK)" value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} />
         <button className="btn btnPrimary" type="submit">Ajouter</button>
       </form>
-      <div className="card" style={{ padding: 8, display: 'grid', gap: 0 }}>
+      <div className="card" style={{ padding: 8 }}>
         {list.length === 0 ? (
           <div className="muted" style={{ padding: '8px 8px' }}>Aucun type</div>
         ) : list.map((c, i) => (
-          <div
-            key={c.id_type_objet}
-            style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              padding: '8px 8px',
-              borderBottom: i < list.length - 1 ? '1px solid var(--color-border)' : 'none',
-            }}
-          >
-            <div>
-              <span style={{ fontWeight: 700 }}>{c.libelle}</span>
-              {c.code ? <span className="muted" style={{ marginLeft: 8, fontSize: 12 }}>{c.code}</span> : null}
-            </div>
-            <button className="btn" style={{ fontSize: 12, padding: '3px 10px' }} onClick={() => remove(c.id_type_objet)}>
-              Supprimer
-            </button>
+          <div key={c.id_type_objet} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 8px', borderBottom: i < list.length - 1 ? '1px solid var(--color-border)' : 'none' }}>
+            {editingId === c.id_type_objet ? (
+              <>
+                <input className="input" style={{ flex: 2 }} value={editLibelle} onChange={(e) => setEditLibelle(e.target.value)} autoFocus onKeyDown={(e) => { if (e.key === 'Escape') setEditingId(null) }} />
+                <input className="input" style={{ flex: 1 }} value={editCode} onChange={(e) => setEditCode(e.target.value.toUpperCase())} placeholder="Code" />
+                <button className="btn btnPrimary" style={{ fontSize: 12, padding: '4px 10px' }} onClick={() => saveEdit(c.id_type_objet)}>✓</button>
+                <button className="btn" style={{ fontSize: 12, padding: '4px 10px' }} onClick={() => setEditingId(null)}>✕</button>
+              </>
+            ) : (
+              <>
+                <span style={{ flex: 1, fontWeight: 600 }}>{c.libelle}</span>
+                {c.code ? <span className="muted" style={{ fontSize: 12 }}>{c.code}</span> : null}
+                <button className="btn" style={{ fontSize: 12, padding: '3px 10px' }} onClick={() => { setEditingId(c.id_type_objet); setEditLibelle(c.libelle); setEditCode(c.code ?? '') }}>Renommer</button>
+                <button className="btn" style={{ fontSize: 12, padding: '3px 10px', color: '#dc2626' }} onClick={() => remove(c.id_type_objet)}>Supprimer</button>
+              </>
+            )}
           </div>
         ))}
       </div>
