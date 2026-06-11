@@ -20,10 +20,12 @@ const postFinanceCsp =
 const nextConfig = {
   reactStrictMode: true,
   images: {
-    domains: ['127.0.0.1', 'localhost'],
     remotePatterns: [
-      { protocol: 'http', hostname: '127.0.0.1' },
-      { protocol: 'http', hostname: 'localhost' },
+      { protocol: 'http',  hostname: '127.0.0.1' },
+      { protocol: 'http',  hostname: 'localhost' },
+      { protocol: 'https', hostname: 'covers.openlibrary.org' },
+      { protocol: 'https', hostname: 'books.google.com' },
+      { protocol: 'https', hostname: '*.googleusercontent.com' },
     ],
   },
   output: 'standalone',

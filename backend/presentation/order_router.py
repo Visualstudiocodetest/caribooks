@@ -34,7 +34,7 @@ from fastapi import Request
 import os
 import hmac
 import hashlib
-from datetime import datetime
+from datetime import datetime, timezone
 
 router = APIRouter(prefix="/orders", tags=["orders"])
 
@@ -86,8 +86,8 @@ def _finalize_commande(db: Session, id_commande: int):
                 continue
             s.quantite_disponible = avail - take  # type: ignore
             remaining -= take
-    # mark articles inactive if no stock left
-    art_ids = [a.id_article for a in db.query(models.Article).all()]
+    # mark articles inactive if no stock left (only those in this order)
+    art_ids = [l.id_article for l in lignes]
     for aid in art_ids:
         total_left = (
             db.query(models.Stock)
@@ -502,7 +502,7 @@ def confirm_paiement_postfinance(
 
     if pf_resp.get("local"):
         obj.statut = "AUTHORIZED"  # type: ignore[assignment]
-        obj.date_paiement = datetime.utcnow()  # type: ignore[assignment]
+        obj.date_paiement = datetime.now(timezone.utc)  # type: ignore[assignment]
         db.commit()
         db.refresh(obj)
         try:
@@ -538,15 +538,20 @@ def poll_paiement_postfinance(id_paiement: int, db: Session = Depends(get_db), c
     if obj is None:
         raise HTTPException(status_code=404, detail="Paiement not found")
 
+    current_statut = str(getattr(obj, "statut", "") or "")
+    # If already in a terminal success state, return without polling (avoids
+    # local-mode overwriting AUTHORIZED/PAID back to PENDING).
+    if is_postfinance_success_status(current_statut):
+        return {"paiement": obj, "raw": {}}
+
     provider_id = getattr(obj, "reference_externe", None)
-    # Try to query provider by stored link id, else by local payment id
     pf_resp = get_postfinance_checkout_status(provider_id, str(obj.id_paiement))
 
     new_status = pf_resp.get("state") or pf_resp.get("status")
-    if new_status:
+    if new_status and not is_postfinance_success_status(current_statut):
         obj.statut = str(new_status)  # type: ignore[assignment]
         if is_postfinance_success_status(str(new_status)):
-            obj.date_paiement = datetime.utcnow()  # type: ignore[assignment]
+            obj.date_paiement = datetime.now(timezone.utc)  # type: ignore[assignment]
         db.commit()
         db.refresh(obj)
 
@@ -589,7 +594,7 @@ async def postfinance_webhook(request: Request, db: Session = Depends(get_db)):
 
     new_status = parsed.get("status") or "UNKNOWN"
     obj.statut = new_status  # type: ignore
-    obj.date_paiement = datetime.utcnow()  # type: ignore
+    obj.date_paiement = datetime.now(timezone.utc)  # type: ignore
     db.commit()
     db.refresh(obj)
 
@@ -624,7 +629,7 @@ def local_payment_webhook(payload: dict, db: Session = Depends(get_db)):
         return {"ok": False, "reason": "not_found"}
 
     obj.statut = str(status)  # type: ignore[assignment]
-    obj.date_paiement = datetime.utcnow()  # type: ignore[assignment]
+    obj.date_paiement = datetime.now(timezone.utc)  # type: ignore[assignment]
     db.commit()
     db.refresh(obj)
 

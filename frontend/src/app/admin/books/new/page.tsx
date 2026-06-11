@@ -234,7 +234,7 @@ export default function AdminNewBookPage() {
     setLoading(true)
     try {
       // simple client-side validation: all fields required (description optional)
-      if (!titre.trim() || !isbn.trim() || !auteur.trim() || !prix.trim() || !imageLink.trim() || !idEtat || !idType) {
+      if (!titre.trim() || !isbn.trim() || !auteur.trim() || !prix.trim() || !idEtat || !idType) {
         setError('Veuillez remplir tous les champs obligatoires.')
         setLoading(false)
         return
@@ -293,7 +293,7 @@ export default function AdminNewBookPage() {
                 <input type="file" accept="image/*" onChange={onFileUpload} style={{ display: 'none' }} />
               </label>
             </div>
-            {scanError ? <div className="muted">{scanError}</div> : null}
+            {scanError ? <div className="banner-error">{scanError}</div> : null}
           </div>
 
           <div style={{ display: 'grid', gap: 6 }}>
@@ -342,13 +342,12 @@ export default function AdminNewBookPage() {
           </div>
 
           <div style={{ display: 'grid', gap: 6 }}>
-            <label style={{ fontWeight: 700 }}>Contenu</label>
+            <label style={{ fontWeight: 700 }}>Image URL</label>
             <input
               className="input"
               value={imageLink}
               onChange={(e) => setImageLink(e.target.value)}
-              placeholder="Image URL"
-              required
+              placeholder="https://… ou laissez vide si pas d'image"
             />
           </div>
 
@@ -363,12 +362,17 @@ export default function AdminNewBookPage() {
                 unoptimized={Boolean(imageLink && imageLink.startsWith('http') && !imageLink.includes('/static/images/'))}
               />
             ) : (
-              <div className="card" style={{ width: 80, height: 110 }} />
+              <div
+                className="book-image-wrap"
+                style={{ width: 80, height: 110, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+              >
+                <span style={{ fontSize: 24 }}>📖</span>
+              </div>
             )}
           </div>
 
           <div style={{ display: 'grid', gap: 6 }}>
-            <label style={{ fontWeight: 700 }}>Contenu (texte)</label>
+            <label style={{ fontWeight: 700 }}>Description</label>
             <textarea
               className="card"
               style={{ borderRadius: 14, padding: 12, borderColor: 'var(--color-border)', minHeight: 120 }}
@@ -377,7 +381,7 @@ export default function AdminNewBookPage() {
               placeholder="Description (optionnel)"
             />
           </div>
-          {error ? <div className="muted">{error}</div> : null}
+          {error ? <div className="banner-error">{error}</div> : null}
           <button className="btn btnPrimary" type="submit" disabled={loading}>
             {loading ? 'Création…' : 'Créer'}
           </button>

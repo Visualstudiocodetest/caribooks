@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from jose import jwt
@@ -8,7 +8,7 @@ from jose import jwt
 
 def create_access_token(payload: dict[str, Any], secret_key: str, expires_minutes: int) -> str:
     to_encode = payload.copy()
-    expire = datetime.utcnow() + timedelta(minutes=expires_minutes)
+    expire = datetime.now(timezone.utc) + timedelta(minutes=expires_minutes)
     to_encode.update({"exp": expire})
     return jwt.encode(to_encode, secret_key, algorithm="HS256")
 
