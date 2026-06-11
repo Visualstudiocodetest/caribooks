@@ -699,7 +699,12 @@ def delete_paiement(id_paiement: int, db: Session = Depends(get_db), current_use
 
 @router.get("/admin/commandes", response_model=list[CommandeRead])
 def admin_list_commandes(db: Session = Depends(get_db), _admin=Depends(require_admin)):
-    return db.query(models.Commande).all()
+    return db.query(models.Commande).order_by(models.Commande.date_commande.desc()).all()
+
+
+@router.get("/admin/commandes/{id_commande}/lignes", response_model=list[LigneCommandeRead])
+def admin_get_lignes(id_commande: int, db: Session = Depends(get_db), _admin=Depends(require_admin)):
+    return db.query(models.LigneCommande).filter(models.LigneCommande.id_commande == id_commande).all()
 
 
 @router.put("/admin/commandes/{id_commande}/status", response_model=CommandeRead)
