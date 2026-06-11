@@ -258,7 +258,7 @@ export function PaymentClient() {
     if (localMode && paiementId) {
       try {
         await confirmPaiementPostFinance(paiementId)
-        window.location.href = `/payment?commandeId=${commandeId}&paiementId=${paiementId}&status=success`
+        window.location.href = '/account/orders'
       } catch (e: unknown) {
         setPaying(false)
         setError(e instanceof ApiError ? e.message : 'Erreur lors du paiement local.')
@@ -309,8 +309,8 @@ export function PaymentClient() {
     <div style={{ display: 'grid', gap: 16, maxWidth: 820, margin: '0 auto' }}>
       <h1 style={{ margin: 0 }}>Paiement</h1>
 
-      {loading ? <div className="muted">Chargement…</div> : null}
-      {error ? <div className="muted">{error}</div> : null}
+      {loading ? <div className="muted">Chargement du formulaire de paiement…</div> : null}
+      {error ? <div className="banner-error">{error}</div> : null}
 
       {commande ? (
         <div className="card" style={{ padding: 16, display: 'grid', gap: 12 }}>
@@ -360,11 +360,11 @@ export function PaymentClient() {
           )}
 
           {validationErrors.length > 0 ? (
-            <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <div className="banner-error">
               {validationErrors.map((msg) => (
-                <li key={msg} className="muted">{msg}</li>
+                <div key={msg}>{msg}</div>
               ))}
-            </ul>
+            </div>
           ) : null}
 
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>

@@ -1,11 +1,61 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import Link from 'next/link'
 import { getMyCommandes } from '@/services/orders'
 import { useAuth } from '@/components/auth/AuthProvider'
 import { Money } from '@/components/ui/Money'
-import Link from 'next/link'
 import type { CommandeRead } from '@/types/api'
+
+const STATUS_LABELS: Record<string, string> = {
+  CREATED: 'En attente',
+  PENDING: 'En attente',
+  PAID: 'Payée',
+  CAPTURED: 'Payée',
+  COMPLETED: 'Payée',
+  SENT: 'Expédiée',
+  AT_RECEPTION: 'Prête à retirer',
+  FINISHED: 'Terminée',
+  REFUNDED: 'Remboursée',
+  FAILED: 'Échouée',
+  CANCELLED: 'Annulée',
+}
+
+const STATUS_COLORS: Record<string, string> = {
+  CREATED: '#b45309',
+  PENDING: '#b45309',
+  PAID: '#065f46',
+  CAPTURED: '#065f46',
+  COMPLETED: '#065f46',
+  SENT: '#1d4ed8',
+  AT_RECEPTION: '#1d4ed8',
+  FINISHED: '#374151',
+  REFUNDED: '#6b7280',
+  FAILED: '#dc2626',
+  CANCELLED: '#6b7280',
+}
+
+function StatusBadge({ statut }: { statut: string }) {
+  const key = (statut || '').toUpperCase()
+  const label = STATUS_LABELS[key] || statut
+  const color = STATUS_COLORS[key] || '#6b7280'
+  return (
+    <span
+      style={{
+        display: 'inline-block',
+        padding: '2px 10px',
+        borderRadius: '999px',
+        fontSize: 12,
+        fontWeight: 700,
+        background: `${color}18`,
+        color,
+        border: `1px solid ${color}40`,
+      }}
+    >
+      {label}
+    </span>
+  )
+}
 
 export default function AccountOrdersPage() {
   const { isLoggedIn } = useAuth()
@@ -15,74 +65,68 @@ export default function AccountOrdersPage() {
 
   useEffect(() => {
     let mounted = true
-    if (!isLoggedIn) {
-      setLoading(false)
-      return
-    }
+    if (!isLoggedIn) { setLoading(false); return }
     setLoading(true)
     getMyCommandes()
-      .then((list) => {
-        if (!mounted) return
-        setCommandes(list || [])
-      })
-      .catch((e: unknown) => {
-        setError((e as Error).message || 'Impossible de charger les commandes')
-      })
-      .finally(() => {
-        if (mounted) setLoading(false)
-      })
-    return () => {
-      mounted = false
-    }
+      .then((list) => { if (mounted) setCommandes(list || []) })
+      .catch((e: unknown) => { setError((e as Error).message || 'Impossible de charger les commandes') })
+      .finally(() => { if (mounted) setLoading(false) })
+    return () => { mounted = false }
   }, [isLoggedIn])
 
   if (!isLoggedIn) {
     return (
-      <div className="card" style={{ padding: 16 }}>
+      <div className="card" style={{ padding: 16, display: 'grid', gap: 10 }}>
         <div style={{ fontWeight: 800 }}>Authentification requise</div>
-        <div className="muted">Connectez-vous pour voir vos commandes.</div>
-        <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-          <Link className="btn btnPrimary" href="/login">
-            Se connecter
-          </Link>
-        </div>
+        <Link className="btn btnPrimary" href="/login?returnTo=/account/orders">Se connecter</Link>
       </div>
     )
   }
 
   return (
-    <div>
-      <h1>Mes commandes</h1>
-      {loading ? <div className="muted">Chargement…</div> : null}
-      {error ? <div className="muted">{error}</div> : null}
-
-      <div style={{ display: 'grid', gap: 12 }}>
-        {commandes.length === 0 ? (
-          <div className="card cardPadding">Aucune commande</div>
-        ) : (
-          commandes.map((c) => (
-            <div className="card cardPadding" key={c.id_commande}>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <div>
-                  <div style={{ fontWeight: 800 }}>{c.numero_commande}</div>
-                  <div className="muted">{new Date(c.date_commande).toLocaleString()}</div>
-                  <div className="muted">Méthode: {c.shipping_method || '—'}</div>
-                </div>
-                <div style={{ textAlign: 'right' }}>
-                  <Money amount={c.montant_total_chf} />
-                  <div className="muted">Statut: {c.statut || '—'}</div>
-                </div>
-              </div>
-
-              <div style={{ marginTop: 8, display: 'flex', gap: 8 }}>
-                <Link className="btn" href={`/account/orders/${c.id_commande}`}>
-                  Détails
-                </Link>
-              </div>
-            </div>
-          ))
-        )}
+    <div className="content-center">
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+        <h1 style={{ margin: 0 }}>Mes commandes</h1>
+        <Link className="btn" href="/account">Mon profil</Link>
       </div>
+
+      {loading ? <div className="muted">Chargement…</div> : null}
+      {error ? <div className="banner-error">{error}</div> : null}
+
+      {!loading && !error && (
+        <div style={{ display: 'grid', gap: 10 }}>
+          {commandes.length === 0 ? (
+            <div className="card cardPadding" style={{ textAlign: 'center' }}>
+              <div className="muted">Vous n'avez pas encore de commande.</div>
+              <Link className="btn btnPrimary" href="/catalog" style={{ marginTop: 10 }}>
+                Voir le catalogue
+              </Link>
+            </div>
+          ) : (
+            commandes.map((c) => (
+              <div className="card cardPadding" key={c.id_commande}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, flexWrap: 'wrap' }}>
+                  <div style={{ display: 'grid', gap: 4 }}>
+                    <div style={{ fontWeight: 800 }}>{c.numero_commande}</div>
+                    <div className="muted" style={{ fontSize: 13 }}>
+                      {new Date(c.date_commande).toLocaleDateString('fr-CH', {
+                        day: '2-digit', month: 'long', year: 'numeric',
+                      })}
+                    </div>
+                    <div className="muted" style={{ fontSize: 13 }}>
+                      {c.shipping_method === 'CLICK_COLLECT' ? 'Retrait en magasin' : 'Livraison postale'}
+                    </div>
+                  </div>
+                  <div style={{ textAlign: 'right', display: 'grid', gap: 6 }}>
+                    <Money amount={c.montant_total_chf} />
+                    <StatusBadge statut={c.statut || ''} />
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      )}
     </div>
   )
 }

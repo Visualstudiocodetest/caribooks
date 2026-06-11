@@ -21,6 +21,7 @@ load_dotenv(dotenv_path=env_path)
 app = FastAPI()
 
 default_origins = ",".join([
+    "https://caribooks.vercel.app",
     "https://plobooks.vercel.app",
     "http://localhost:3000",
     "http://127.0.0.1:3000",

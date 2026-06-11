@@ -61,7 +61,7 @@ export default function AdminBooksPage() {
       </div>
 
       {loading ? <div className="muted">Chargement…</div> : null}
-      {error ? <div className="muted">{error}</div> : null}
+      {error ? <div className="banner-error">{error}</div> : null}
 
       <div className="card" style={{ padding: 12, display: 'grid', gap: 10 }}>
         {books.map((b) => (

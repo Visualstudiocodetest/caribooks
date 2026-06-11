@@ -244,6 +244,38 @@ a {
   color: var(--color-muted);
 }
 
+.text-error {
+  color: var(--color-primary);
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.text-success {
+  color: #059669;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.banner-error {
+  background: #fff1f2;
+  border: 1px solid #fecdd3;
+  border-radius: var(--radius);
+  padding: 10px 14px;
+  color: var(--color-primary);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.banner-success {
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  border-radius: var(--radius);
+  padding: 10px 14px;
+  color: #065f46;
+  font-size: 14px;
+  font-weight: 600;
+}
+
 /* Book components */
 .book-card {
   overflow: hidden;

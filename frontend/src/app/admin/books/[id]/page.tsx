@@ -124,7 +124,7 @@ export default function AdminEditBookPage({ params }: { params: Promise<{ id: st
           <span>Actif</span>
         </label>
 
-        {error ? <div className="muted">{error}</div> : null}
+        {error ? <div className="banner-error">{error}</div> : null}
 
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', justifyContent: 'space-between' }}>
           <button className="btn btnPrimary" type="button" onClick={onSave} disabled={saving}>
@@ -135,7 +135,6 @@ export default function AdminEditBookPage({ params }: { params: Promise<{ id: st
           </button>
         </div>
 
-        <div className="muted">Nécessite une session (JWT) pour `PUT/DELETE /books/{id}`.</div>
       </div>
     </div>
   )

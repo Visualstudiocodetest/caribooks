@@ -385,8 +385,8 @@ export default function ScanPage() {
         </div>
       ) : null}
 
-      {success ? <div className="muted">{success}</div> : null}
-      {error ? <div className="muted">{error}</div> : null}
+      {success ? <div className="banner-success">{success}</div> : null}
+      {error ? <div className="banner-error">{error}</div> : null}
     </div>
   )
 }

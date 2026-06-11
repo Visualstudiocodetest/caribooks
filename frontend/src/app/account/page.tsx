@@ -1,10 +1,10 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import Link from 'next/link'
 import { getCurrentUser, updateCurrentUser } from '@/services/auth'
 import { useAuth } from '@/components/auth/AuthProvider'
 import { ApiError } from '@/services/api'
-import Link from 'next/link'
 import type { UserRead, UserUpdate } from '@/types/api'
 
 export default function AccountPage() {
@@ -107,9 +107,12 @@ export default function AccountPage() {
 
   return (
     <div className="content-center">
-      <h1 style={{ margin: 0 }}>Mon compte</h1>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
+        <h1 style={{ margin: 0 }}>Mon compte</h1>
+        <Link className="btn" href="/account/orders">Mes commandes</Link>
+      </div>
       {loading ? <div className="muted">Chargement…</div> : null}
-      {error ? <div className="muted">{error}</div> : null}
+      {error ? <div className="banner-error">{error}</div> : null}
       <form className="card cardPadding" onSubmit={onSave}>
         <div className="two-up">
           <input className="input" value={prenom} onChange={(e) => setPrenom(e.target.value)} placeholder="Prénom" />
@@ -136,7 +139,7 @@ export default function AccountPage() {
           type="password"
         />
 
-        {message ? <div className="muted">{message}</div> : null}
+        {message ? <div className="banner-success">{message}</div> : null}
 
         <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
           <button className="btn btnPrimary" type="submit" disabled={saving}>

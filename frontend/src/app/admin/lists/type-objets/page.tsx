@@ -2,71 +2,92 @@
 
 import { useEffect, useState } from 'react'
 import { apiFetch } from '@/services/api'
-import { useAuth } from '@/components/auth/AuthProvider'
 
-type TypeObjet = { id_type_objet: number; libelle: string; code?: string; description?: string }
+type TypeObjet = { id_type_objet: number; libelle: string; code?: string }
 
 export default function TypeObjetsAdmin() {
-  const { isLoggedIn } = useAuth()
   const [list, setList] = useState<TypeObjet[]>([])
   const [libelle, setLibelle] = useState('')
   const [code, setCode] = useState('')
+  const [error, setError] = useState<string | null>(null)
 
   async function load() {
     try {
       const r = await apiFetch<TypeObjet[]>('/catalog/type-objets')
       setList(r)
     } catch (e) {
-      console.error(e)
+      setError((e as Error).message)
     }
   }
 
-  useEffect(() => {
-    load()
-  }, [])
+  useEffect(() => { load() }, [])
 
   async function createOne(e: React.FormEvent) {
     e.preventDefault()
+    if (!libelle.trim()) return
     try {
-      await apiFetch('/catalog/type-objets', { method: 'POST', auth: true, body: JSON.stringify({ libelle, code }) })
+      await apiFetch('/catalog/type-objets', { method: 'POST', auth: true, body: JSON.stringify({ libelle: libelle.trim(), code: code.trim() || undefined }) })
       setLibelle('')
       setCode('')
       await load()
-    } catch (err) {
-      console.error(err)
+    } catch (e) {
+      setError((e as Error).message)
     }
   }
 
   async function remove(id: number) {
-    if (!confirm('Supprimer ce type d\'objet ?')) return
+    if (!confirm('Supprimer ce type ?')) return
     try {
       await apiFetch(`/catalog/type-objets/${id}`, { method: 'DELETE', auth: true })
       await load()
-    } catch (err) {
-      console.error(err)
+    } catch (e) {
+      setError((e as Error).message)
     }
   }
 
-  if (!isLoggedIn) return <div className="card">Connexion requise</div>
-
   return (
-    <div style={{ display: 'grid', gap: 12 }}>
-      <h2>Types d'objets</h2>
-      <form onSubmit={createOne} style={{ display: 'flex', gap: 8 }}>
-        <input placeholder="Libellé" value={libelle} onChange={(e) => setLibelle(e.target.value)} />
-        <input placeholder="Code" value={code} onChange={(e) => setCode(e.target.value)} />
-        <button className="btn btnPrimary" type="submit">Créer</button>
+    <div style={{ display: 'grid', gap: 14 }}>
+      <h2 style={{ margin: 0 }}>Types d&apos;objets</h2>
+      {error ? <div className="banner-error">{error}</div> : null}
+      <form onSubmit={createOne} style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        <input
+          className="input"
+          style={{ flex: '2 1 160px' }}
+          placeholder="Nom (ex: Livre, DVD…)"
+          value={libelle}
+          onChange={(e) => setLibelle(e.target.value)}
+          required
+        />
+        <input
+          className="input"
+          style={{ flex: '1 1 100px' }}
+          placeholder="Code (ex: BOOK)"
+          value={code}
+          onChange={(e) => setCode(e.target.value.toUpperCase())}
+        />
+        <button className="btn btnPrimary" type="submit">Ajouter</button>
       </form>
-      <div style={{ display: 'grid', gap: 8 }}>
-        {list.map((c) => (
-          <div key={c.id_type_objet} className="card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div className="card" style={{ padding: 8, display: 'grid', gap: 0 }}>
+        {list.length === 0 ? (
+          <div className="muted" style={{ padding: '8px 8px' }}>Aucun type</div>
+        ) : list.map((c, i) => (
+          <div
+            key={c.id_type_objet}
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              padding: '8px 8px',
+              borderBottom: i < list.length - 1 ? '1px solid var(--color-border)' : 'none',
+            }}
+          >
             <div>
-              <div style={{ fontWeight: 700 }}>{c.libelle} <span className="muted">{c.code}</span></div>
-              <div className="muted">{c.description}</div>
+              <span style={{ fontWeight: 700 }}>{c.libelle}</span>
+              {c.code ? <span className="muted" style={{ marginLeft: 8, fontSize: 12 }}>{c.code}</span> : null}
             </div>
-            <div>
-              <button className="btn" onClick={() => remove(c.id_type_objet)}>Supprimer</button>
-            </div>
+            <button className="btn" style={{ fontSize: 12, padding: '3px 10px' }} onClick={() => remove(c.id_type_objet)}>
+              Supprimer
+            </button>
           </div>
         ))}
       </div>
