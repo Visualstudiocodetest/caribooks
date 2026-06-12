@@ -60,22 +60,21 @@ def _get_auth_header(request_path: str, request_method: str = "POST") -> Dict[st
 def _signed_request(path_suffix: str, method: str, extra_params: Optional[Dict[str, str]] = None) -> tuple[str, Dict[str, str]]:
     """Return (url, headers) for a PostFinance v2.0 API call.
 
-    Space is passed as the 'Space' header (capital S) per the official SDK.
-    The JWT requestPath is the bare /api/v2.0/... path without spaceId in query.
-    Extra query params (e.g. integrationMode) are appended to the URL only,
-    not to the JWT requestPath, as they are not part of auth signing.
+    spaceId must appear as a query param AND be included in the JWT requestPath
+    for authentication to succeed. Extra params (e.g. integrationMode) are
+    appended to the URL but not to the signed requestPath.
     """
     from urllib.parse import urlencode
-    api_path = f"/api/v2.0{path_suffix}"
+    # Path signed in JWT always includes spaceId
+    signed_path = f"/api/v2.0{path_suffix}?spaceId={POSTFINANCE_SPACE_ID}"
+    # Full URL may have additional query params
     if extra_params:
-        api_path_with_qs = f"{api_path}?{urlencode(extra_params)}"
+        full_url = f"https://checkout.postfinance.ch{signed_path}&{urlencode(extra_params)}"
     else:
-        api_path_with_qs = api_path
-    full_url = f"https://checkout.postfinance.ch{api_path_with_qs}"
-    headers = _get_auth_header(api_path, method)
+        full_url = f"https://checkout.postfinance.ch{signed_path}"
+    headers = _get_auth_header(signed_path, method)
     headers["Content-Type"] = "application/json"
     headers["Accept"] = "application/json"
-    headers["Space"] = str(POSTFINANCE_SPACE_ID)
     return full_url, headers
 
 
