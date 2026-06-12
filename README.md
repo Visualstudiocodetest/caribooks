@@ -86,13 +86,6 @@ graph LR
    AdminUI["Admin UI (/admin)<br/>order management"] 
    AdminUI -->|API| API
    API --> AdminUI
-
-   %% Notes
-   note right of API
-      - Webhook optionally verifies provider signature (optional)
-      - Finalize commande moves reserved stock -> sold
-      - Click&Collect fees applied at order creation
-   end note
 ```
 ## Migrations
 
@@ -181,26 +174,26 @@ sequenceDiagram
 ```mermaid
 graph LR
    subgraph CLIENT
-      Browser[User Browser\n(Next.js client / SSR pages)]
+      Browser["User Browser<br/>(Next.js client / SSR pages)"]
    end
 
    subgraph CDN_VERCEL
-      Frontend[Next.js App\n(routes: /catalog, /cart, /account, /admin, /payment)]
+      Frontend["Next.js App<br/>(routes: /catalog, /cart, /account, /admin, /payment)"]
    end
 
    subgraph BACKEND
-      API[FastAPI (Uvicorn)\nRouters: auth, users, orders]
-      Services[Services: jwt_service, book_service (payment helper optional)]
-      Scripts[Scripts: seed_db, migrations]
+      API["FastAPI (Uvicorn)<br/>Routers: auth, users, orders"]
+      Services["Services: jwt_service, book_service (payment helper optional)"]
+      Scripts["Scripts: seed_db, migrations"]
    end
 
    subgraph DATA
-      MySQL[(MySQL DB)\nTables: utilisateur, commande, paiement, stock, article]
-      Storage[(Static files / images / CDN)]
+      MySQL[("MySQL DB<br/>Tables: utilisateur, commande, paiement, stock, article")]
+      Storage[("Static files / images / CDN")]
    end
 
    subgraph EXTERNAL
-      PaymentProvider[External payment provider\nPayment checkout + webhook]
+      PaymentProvider["External payment provider<br/>Payment checkout + webhook"]
    end
 
    Browser -->|HTTP| Frontend
@@ -211,7 +204,7 @@ graph LR
    PaymentProvider -->|Webhook POST| API
 
    subgraph DEV_FALLBACK
-      LocalRedirect[/orders/paiements/local/redirect/{ref}\n(simulator page)]
+      LocalRedirect["/orders/paiements/local/redirect/ref<br/>(simulator page)"]
    end
    Frontend -->|redirect to local simulator when external payment provider not configured| LocalRedirect
    LocalRedirect -->|POST simulated payload| API
@@ -223,14 +216,7 @@ graph LR
    EnvVars -.-> Frontend
 
    %% Admin & staff
-   AdminUI[Admin UI (/admin)\norder management] 
+   AdminUI["Admin UI (/admin)<br/>order management"]
    AdminUI -->|API| API
    API --> AdminUI
-
-   %% Notes
-   note right of API
-      - Webhook optionally verifies provider signature (optional)
-      - Finalize commande moves reserved stock -> sold
-      - Click&Collect fees applied at order creation
-   end note
 ```
