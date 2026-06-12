@@ -12,3 +12,5 @@ __pycache__/
 .DS_Store
 .vscode/
 .next/
+frontend/.next/
+frontend/.pytest_cache/
