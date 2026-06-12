@@ -1,18 +1,17 @@
 from __future__ import annotations
 
 import base64
-import hashlib
-import hmac
-import json
 import os
 import time
 from typing import Any, Dict, List, Optional
 
 import httpx
 
+from postfinancecheckout import Configuration, TransactionsService
+from postfinancecheckout.models import AddressCreate, LineItemCreate, TransactionCreate, TransactionPending
+
 POSTFINANCE_USER_ID = os.getenv("POSTFINANCE_USER_ID")
 POSTFINANCE_AUTH_KEY = os.getenv("POSTFINANCE_AUTH_KEY")
-POSTFINANCE_BASE = os.getenv("POSTFINANCE_BASE_URL", "https://checkout.postfinance.ch/api")
 POSTFINANCE_SPACE_ID = os.getenv("POSTFINANCE_SPACE_ID")
 POSTFINANCE_WEBHOOK_PUBLIC_KEY_PEM = os.getenv("POSTFINANCE_WEBHOOK_PUBLIC_KEY_PEM")
 POSTFINANCE_WEBHOOK_KEY_ID = os.getenv("POSTFINANCE_WEBHOOK_KEY_ID")
@@ -26,77 +25,22 @@ def _credentials_configured() -> bool:
     return bool(POSTFINANCE_USER_ID and POSTFINANCE_AUTH_KEY and POSTFINANCE_SPACE_ID)
 
 
-def _get_auth_header(request_path: str, request_method: str = "POST") -> Dict[str, str]:
-    """Build a JWT Bearer auth header from the application user credentials."""
-    if not POSTFINANCE_USER_ID or not POSTFINANCE_AUTH_KEY:
-        return {}
-
-    try:
-        signing_key = base64.b64decode(POSTFINANCE_AUTH_KEY)
-    except Exception:
-        signing_key = POSTFINANCE_AUTH_KEY.encode("utf-8")
-
-    payload = {
-        "sub": str(POSTFINANCE_USER_ID),
-        "iat": int(time.time()),
-        "requestPath": request_path,
-        "requestMethod": request_method,
-    }
-    headers = {"alg": "HS256", "typ": "JWT", "ver": 1}
-    header_json = json.dumps(headers, separators=(",", ":")).encode("utf-8")
-    payload_json = json.dumps(payload, separators=(",", ":")).encode("utf-8")
-    header_segment = base64.urlsafe_b64encode(header_json).rstrip(b"=")
-    payload_segment = base64.urlsafe_b64encode(payload_json).rstrip(b"=")
-    signing_input = header_segment + b"." + payload_segment
-    signature = hmac.new(signing_key, signing_input, hashlib.sha256).digest()
-    signature_segment = base64.urlsafe_b64encode(signature).rstrip(b"=")
-    token = b".".join([header_segment, payload_segment, signature_segment]).decode("utf-8")
-    return {"Authorization": f"Bearer {token}"}
+def _transactions_service() -> TransactionsService:
+    config = Configuration(
+        user_id=str(POSTFINANCE_USER_ID),
+        authentication_key=str(POSTFINANCE_AUTH_KEY),
+    )
+    return TransactionsService(config)
 
 
-def _signed_request(path_suffix: str, method: str, extra_params: Optional[Dict[str, str]] = None) -> tuple[str, Dict[str, str]]:
-    """Return (url, headers) for a PostFinance v2.0 API call.
-
-    spaceId must appear as a query param AND be included in the JWT requestPath
-    for authentication to succeed. Extra params (e.g. integrationMode) are
-    appended to the URL but not to the signed requestPath.
-    """
-    from urllib.parse import urlencode
-    # Path signed in JWT always includes spaceId
-    signed_path = f"/api/v2.0{path_suffix}?spaceId={POSTFINANCE_SPACE_ID}"
-    # Full URL may have additional query params
-    if extra_params:
-        full_url = f"https://checkout.postfinance.ch{signed_path}&{urlencode(extra_params)}"
-    else:
-        full_url = f"https://checkout.postfinance.ch{signed_path}"
-    headers = _get_auth_header(signed_path, method)
-    headers["Content-Type"] = "application/json"
-    headers["Accept"] = "application/json"
-    return full_url, headers
+def _space_id() -> int:
+    return int(str(POSTFINANCE_SPACE_ID))
 
 
-def _decode_string_response(data: Any) -> Optional[str]:
-    if isinstance(data, str):
-        return data
-    if isinstance(data, dict):
-        for key in ("url", "URL", "value", "javascriptUrl"):
-            value = data.get(key)
-            if isinstance(value, str):
-                return value
-    return None
-
-
-def _extract_list_payload(data: Any) -> List[Dict[str, Any]]:
-    if isinstance(data, list):
-        return data
-    if isinstance(data, dict):
-        for key in ("data", "items", "rows", "result"):
-            value = data.get(key)
-            if isinstance(value, list):
-                return value
-        if data.get("id"):
-            return [data]
-    return []
+def _state_str(state: Any) -> Optional[str]:
+    if state is None:
+        return None
+    return getattr(state, "value", None) or str(state)
 
 
 def build_postfinance_line_items(
@@ -157,6 +101,14 @@ def build_postfinance_address(user: Any) -> Dict[str, str]:
     }
 
 
+def _line_items_to_models(line_items: List[Dict[str, Any]]) -> List[LineItemCreate]:
+    return [LineItemCreate.from_dict(item) for item in line_items]
+
+
+def _address_to_model(address: Dict[str, str]) -> AddressCreate:
+    return AddressCreate.from_dict(address)
+
+
 def create_postfinance_transaction(
     line_items: List[Dict[str, Any]],
     billing_address: Dict[str, str],
@@ -190,19 +142,28 @@ def create_postfinance_transaction(
     url, headers = _signed_request("/payment/transactions", "POST")
 
     try:
-        with httpx.Client(timeout=15.0) as client:
-            response = client.post(url, json=payload, headers=headers)
-            response.raise_for_status()
-            data = response.json()
-            transaction_id = data.get("id")
-            status = data.get("state") or data.get("status")
-            return {
-                "id": transaction_id,
-                "status": status,
-                "state": status,
-                "version": data.get("version"),
-                "raw": data,
+        tx_create = TransactionCreate.from_dict(
+            {
+                "currency": "CHF",
+                "language": "fr-CH",
+                "lineItems": line_items,
+                "billingAddress": billing_address,
+                "shippingAddress": shipping_address or billing_address,
+                "successUrl": success_url,
+                "failedUrl": failed_url,
+                "merchantReference": merchant_reference,
             }
+        )
+        tx = _transactions_service().post_payment_transactions(
+            space=_space_id(), transaction_create=tx_create
+        )
+        status = _state_str(tx.state)
+        return {
+            "id": tx.id,
+            "status": status,
+            "state": status,
+            "version": tx.version,
+        }
     except Exception as exc:
         return {"id": None, "status": "ERROR", "state": "ERROR", "error": str(exc)}
 
@@ -222,19 +183,12 @@ def get_postfinance_payment_methods(transaction_id: str) -> Dict[str, Any]:
             "local": True,
         }
 
-    url, headers = _signed_request(
-        f"/payment/transactions/{transaction_id}/payment-method-configurations",
-        "GET",
-        {"integrationMode": "IFRAME"},
-    )
-
     try:
-        with httpx.Client(timeout=15.0) as client:
-            response = client.get(url, headers=headers)
-            response.raise_for_status()
-            data = response.json()
-            methods = _extract_list_payload(data)
-            return {"data": methods, "raw": data}
+        resp = _transactions_service().get_payment_transactions_id_payment_method_configurations(
+            id=int(transaction_id), space=_space_id(), integration_mode="IFRAME"
+        )
+        methods = [m.to_dict() for m in (resp.data or [])]
+        return {"data": methods}
     except Exception as exc:
         return {"data": [], "error": str(exc)}
 
@@ -244,23 +198,11 @@ def get_postfinance_javascript_url(transaction_id: str) -> Dict[str, Any]:
     if not _credentials_configured():
         return {"javascript_url": None, "local": True}
 
-    url, headers = _signed_request(
-        f"/payment/transactions/{transaction_id}/iframe-javascript-url",
-        "GET",
-    )
-    # This endpoint returns text/plain (a bare URL string), not JSON.
-    headers["Accept"] = "text/plain, application/json"
-
     try:
-        with httpx.Client(timeout=15.0) as client:
-            response = client.get(url, headers=headers)
-            response.raise_for_status()
-            content_type = response.headers.get("content-type", "")
-            if "application/json" in content_type:
-                javascript_url = _decode_string_response(response.json())
-            else:
-                javascript_url = response.text.strip() or None
-            return {"javascript_url": javascript_url}
+        url = _transactions_service().get_payment_transactions_id_iframe_javascript_url(
+            id=int(transaction_id), space=_space_id()
+        )
+        return {"javascript_url": url or None}
     except Exception as exc:
         return {"javascript_url": None, "error": str(exc)}
 
@@ -276,22 +218,18 @@ def get_postfinance_transaction(transaction_id: str) -> Dict[str, Any]:
             "local": True,
         }
 
-    url, headers = _signed_request(f"/payment/transactions/{transaction_id}", "GET")
-
     try:
-        with httpx.Client(timeout=15.0) as client:
-            response = client.get(url, headers=headers)
-            response.raise_for_status()
-            data = response.json()
-            status = data.get("state") or data.get("status")
-            return {
-                "id": data.get("id") or transaction_id,
-                "status": status,
-                "state": status,
-                "version": data.get("version"),
-                "merchantReference": data.get("merchantReference"),
-                "raw": data,
-            }
+        tx = _transactions_service().get_payment_transactions_id(
+            id=int(transaction_id), space=_space_id()
+        )
+        status = _state_str(tx.state)
+        return {
+            "id": tx.id or transaction_id,
+            "status": status,
+            "state": status,
+            "version": tx.version,
+            "merchantReference": tx.merchant_reference,
+        }
     except Exception as exc:
         return {"id": transaction_id, "status": None, "state": None, "error": str(exc)}
 
@@ -314,32 +252,26 @@ def confirm_postfinance_transaction(
             "local": True,
         }
 
-    payload: Dict[str, Any] = {
-        "id": int(transaction_id),
-        "version": version,
-        "currency": "CHF",
-        "language": "fr-CH",
-        "merchantReference": merchant_reference,
-        "lineItems": line_items,
-        "billingAddress": billing_address,
-        "shippingAddress": shipping_address or billing_address,
-    }
-
-    url, headers = _signed_request(f"/payment/transactions/{transaction_id}/confirm", "POST")
-
     try:
-        with httpx.Client(timeout=15.0) as client:
-            response = client.post(url, json=payload, headers=headers)
-            response.raise_for_status()
-            data = response.json()
-            status = data.get("state") or data.get("status")
-            return {
-                "id": data.get("id") or transaction_id,
-                "status": status,
-                "state": status,
-                "version": data.get("version"),
-                "raw": data,
+        pending = TransactionPending.from_dict(
+            {
+                "version": version,
+                "merchantReference": merchant_reference,
+                "lineItems": line_items,
+                "billingAddress": billing_address,
+                "shippingAddress": shipping_address or billing_address,
             }
+        )
+        tx = _transactions_service().post_payment_transactions_id_confirm(
+            id=int(transaction_id), space=_space_id(), transaction_pending=pending
+        )
+        status = _state_str(tx.state)
+        return {
+            "id": tx.id or transaction_id,
+            "status": status,
+            "state": status,
+            "version": tx.version,
+        }
     except Exception as exc:
         return {"id": transaction_id, "status": "ERROR", "state": "ERROR", "error": str(exc)}
 
