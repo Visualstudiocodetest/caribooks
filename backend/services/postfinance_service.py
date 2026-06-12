@@ -140,7 +140,6 @@ def create_postfinance_transaction(
                 "shippingAddress": shipping_address or billing_address,
                 "successUrl": success_url,
                 "failedUrl": failed_url,
-                "autoConfirmationEnabled": True,
                 "merchantReference": merchant_reference,
             }
         )
