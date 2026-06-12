@@ -6,6 +6,7 @@ import { CookieBanner } from '@/components/ui/CookieBanner'
 import { Providers } from './providers'
 import type { ReactNode } from 'react'
 import { SpeedInsights } from '@vercel/speed-insights/next'
+import { Analytics } from '@vercel/analytics/next'
 
 export const metadata: Metadata = {
   title: 'Caribooks',
@@ -32,6 +33,7 @@ export default function RootLayout({
           <CookieBanner />
         </Providers>
         <SpeedInsights />
+        <Analytics />
       </body>
     </html>
   )
