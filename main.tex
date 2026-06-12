@@ -16,6 +16,74 @@
 \usepackage{listings}
 \usepackage{mdframed}
 \usepackage{enumitem}
+\usepackage{tikz}
+\usetikzlibrary{shapes.geometric, shapes.multipart, arrows.meta, positioning,
+  calc, fit, backgrounds, chains, decorations.pathreplacing}
+% Rend TikZ compatible avec les caractères actifs du babel français (; : ! ?)
+\usetikzlibrary{babel}
+
+% ------------------------------------------------------------------
+% Styles TikZ réutilisables pour les diagrammes du mémoire
+% ------------------------------------------------------------------
+\tikzset{
+  % --- Diagramme de contexte / composants ---
+  syst/.style={rectangle, draw=black, thick, rounded corners=5pt, fill=blue!15,
+    align=center, minimum height=14mm, minimum width=32mm, font=\bfseries\small},
+  box/.style={rectangle, draw=black, rounded corners=3pt, fill=blue!8,
+    align=center, minimum height=9mm, inner sep=6pt, font=\small},
+  extbox/.style={rectangle, draw=black, fill=gray!15, align=center,
+    minimum height=10mm, inner sep=6pt, font=\small},
+  comp/.style={rectangle, draw=black, fill=blue!8, align=center,
+    minimum height=12mm, minimum width=34mm, inner sep=6pt, font=\small},
+  layer/.style={rectangle, draw=black, rounded corners=3pt, align=center,
+    minimum height=12mm, minimum width=46mm, inner sep=6pt, font=\small},
+  flow/.style={-{Stealth[length=2.6mm]}, thick},
+  flowlab/.style={font=\scriptsize, fill=white, inner sep=1.5pt},
+  dep/.style={-{Stealth[length=2.6mm]}, thick, dashed},
+  % --- Cas d'utilisation ---
+  usecase/.style={ellipse, draw=black, fill=yellow!18, align=center,
+    minimum width=30mm, minimum height=11mm, font=\scriptsize, inner sep=1pt},
+  ucsystem/.style={rectangle, draw=black, thick, rounded corners=2pt},
+  % --- Diagramme d'activités ---
+  act/.style={rectangle, rounded corners=4pt, draw=black, fill=blue!8,
+    align=center, minimum height=8mm, minimum width=30mm, font=\scriptsize, inner sep=4pt},
+  decision/.style={diamond, draw=black, fill=orange!20, aspect=2.2,
+    align=center, font=\scriptsize, inner sep=0pt},
+  init/.style={circle, draw=black, fill=black, minimum size=4.5mm, inner sep=0pt},
+  final/.style={circle, draw=black, minimum size=6.5mm, inner sep=0pt,
+    path picture={\fill (path picture bounding box.center) circle (1.6mm);}},
+  % --- Classes / objets UML ---
+  umlclass/.style={rectangle, draw=black, fill=white, font=\scriptsize,
+    rectangle split, rectangle split parts=3, align=left, inner sep=4pt, text width=36mm},
+  umlobject/.style={rectangle, draw=black, fill=blue!6, font=\scriptsize,
+    rectangle split, rectangle split parts=2, align=left, inner sep=4pt, text width=40mm},
+  % --- MLD : tables relationnelles ---
+  table/.style={rectangle, draw=black, fill=white, font=\scriptsize,
+    rectangle split, rectangle split parts=2, align=left, inner sep=4pt, text width=42mm},
+  % --- Entités MCD (Merise) ---
+  entite/.style={rectangle, draw=black, thick, fill=blue!10, font=\scriptsize,
+    rectangle split, rectangle split parts=2, align=left, inner sep=4pt, text width=34mm},
+  assoc/.style={ellipse, draw=black, fill=green!12, align=center,
+    font=\scriptsize, minimum width=22mm, minimum height=11mm, inner sep=1pt},
+  card/.style={font=\scriptsize, fill=white, inner sep=1pt},
+  % --- Diagramme de séquence ---
+  actorbox/.style={rectangle, draw=black, fill=blue!12, font=\scriptsize\bfseries,
+    minimum height=8mm, align=center, inner sep=4pt},
+  lifeline/.style={dashed, gray!70},
+  activation/.style={rectangle, draw=black, fill=blue!15, minimum width=2.2mm},
+  msg/.style={-{Stealth[length=2mm]}, font=\scriptsize},
+  retmsg/.style={-{Stealth[length=2mm]}, dashed, font=\scriptsize},
+}
+
+% Acteur UML (bonhomme bâton) réutilisable
+\newcommand{\umlactor}[1]{%
+  \begin{tikzpicture}[baseline=-2mm, scale=0.5]
+    \draw[thick] (0,0.7) circle (0.18);
+    \draw[thick] (0,0.52) -- (0,-0.1);
+    \draw[thick] (-0.3,0.32) -- (0.3,0.32);
+    \draw[thick] (0,-0.1) -- (-0.25,-0.55);
+    \draw[thick] (0,-0.1) -- (0.25,-0.55);
+  \end{tikzpicture}\\[2pt]\footnotesize\textbf{#1}}
 
 % Configuration de la mise en page
 \geometry{top=2.5cm, bottom=2.5cm, left=2.5cm, right=2.5cm}
@@ -180,7 +248,7 @@ Ce projet couvre l'intégralité des trois blocs de compétences du référentie
   Modélisation de la base de données (MCD/MLD MySQL), architecture REST API (FastAPI), frontend découplé (Next.js / React / TypeScript), séparation stricte des couches métier, données et présentation, intégration d'APIs tierces (OpenLibrary, PostFinance), conteneurisation Docker avec \texttt{docker-compose}. \\
 \midrule
 3 & Préparer le déploiement d'une application &
-  Conteneurisation complète de l'application (API + frontend + BDD), pipeline CI/CD via GitHub Actions, déploiement en cours sur environnement cloud, gestion des variables d'environnement, documentation API Swagger générée automatiquement par FastAPI. \\
+  Conteneurisation complète de l'application (API + frontend + BDD), pipeline CI/CD via GitHub Actions, déploiement sur environnement cloud (frontend sur Vercel, backend et base MySQL sur Oracle Cloud), gestion des variables d'environnement, documentation API Swagger générée automatiquement par FastAPI. \\
 \bottomrule
 \end{tabular}
 \caption{Couverture des trois blocs de compétences CDA}
@@ -334,7 +402,6 @@ L'association dispose d'un espace de gestion de ses annonces (création, modific
     \item Moteur de recherche avec filtres (titre, auteur, genre, prix, état)
     \item Fiche détaillée du livre avec informations essentielles et coordonnées du vendeur
     \item Paiement sécurisé via PostFinance (TWINT, Visa/Mastercard en CHF)
-    \item Liste de favoris
 \end{itemize}
 
 \subsection{Critères de succès}
@@ -345,7 +412,6 @@ Du point de vue utilisateur, le MVP est considéré comme réussi si l'applicati
     \item Trouver rapidement un livre d'occasion avec des critères simples
     \item Visualiser clairement le prix en CHF, l'état du livre et les informations principales
     \item Procéder à un paiement en CHF sans friction via TWINT ou carte bancaire
-    \item Enregistrer des livres en favoris pour les consulter plus tard
 \end{itemize}
 
 \subsection{Acteurs et responsabilités}
@@ -427,19 +493,15 @@ Le suivi des tâches a été réalisé via \textbf{Microsoft Planner}, permettan
 
 \subsection{Suivi Microsoft Planner}
 
-\begin{acompleter}
-\textbf{\large\textcolor{red}{[SECTION À COMPLÉTER — CAPTURE D'ÉCRAN MICROSOFT PLANNER]}} \\[8pt]
-Insérer ici une ou plusieurs captures d'écran du board Microsoft Planner montrant :
-\begin{itemize}
-    \item Le backlog global du projet
-    \item Un ou plusieurs sprints avec les tâches associées (À faire / En cours / Terminé)
-    \item Exemple de tickets : "Mise en place authentification JWT", "Module scan ISBN", "Intégration PostFinance", etc.
-\end{itemize}
-\textit{Commande LaTeX à utiliser :}
-\begin{verbatim}
-\includegraphics[width=\textwidth]{planner_board.png}
-\end{verbatim}
-\end{acompleter}
+
+
+\begin{figure}
+    \centering
+    \includegraphics[width=1\linewidth]{Planning_MVP1_caribooks.png}
+    \caption{Dashboard de suivi du projet sur Microsoft Planner}
+    \label{fig:placeholder}
+\end{figure}
+
 
 \subsection{Planning des sprints}
 
@@ -455,7 +517,7 @@ Sprint 1 & Semaines 1–2 &
   Environnement de dev opérationnel, schéma BDD validé \\[6pt]
 Sprint 2 & Semaines 3–4 &
   Authentification : inscription, connexion, JWT, rôles (admin / user), hashage bcrypt, protection des routes &
-  Endpoints \texttt{/auth/register} et \texttt{/auth/login} fonctionnels, middleware JWT \\[6pt]
+  Endpoints \texttt{/auth/register} et \texttt{/auth/token} fonctionnels, middleware JWT \\[6pt]
 Sprint 3 & Semaines 5–6 &
   Module scan ISBN : intégration librairie de scan dans le frontend, appel API OpenLibrary, préremplissage du formulaire, saisie manuelle en secours &
   Formulaire d'ajout de livre opérationnel, scan ISBN fonctionnel \\[6pt]
@@ -467,7 +529,7 @@ Sprint 5 & Semaines 9–10 &
   Paiement CHF fonctionnel (TWINT + carte) en environnement de test \\[6pt]
 Sprint 6 & Semaines 11–12 &
   Back-office bénévole, tests unitaires et d'intégration (pytest), corrections de bugs, optimisations de performance, préparation du déploiement &
-  Application complète testée, déploiement en cours \\
+  Application complète testée et déployée (Vercel + Oracle Cloud) \\
 \bottomrule
 \caption{Planning des sprints CARIBOOKS}
 \label{tab:sprints}
@@ -479,7 +541,21 @@ Sprint 6 & Semaines 11–12 &
 
 \begin{figure}[h]
     \centering
-    \includegraphics[width=0.85\textwidth]{diagramme_contexte.png}
+    \begin{tikzpicture}[node distance=15mm and 30mm]
+        \node[syst] (sys) {Plateforme\\\textbf{CARIBOOKS}};
+        \node[box, above left=of sys]  (ach)   {Acheteur};
+        \node[box, left=of sys]        (vend)  {Vendeur\\(bénévole)};
+        \node[box, below left=of sys]  (admin) {Administrateur};
+        \node[extbox, above right=of sys] (ol)   {API OpenLibrary\\/ Google Books};
+        \node[extbox, right=of sys]       (pf)   {PostFinance\\(paiement CHF)};
+        \node[extbox, below right=of sys] (post) {Poste Suisse\\(livraison)};
+        \draw[flow] (ach)   -- node[flowlab]{recherche, achat} (sys);
+        \draw[flow] (vend)  -- node[flowlab]{dépôt d'annonce} (sys);
+        \draw[flow] (admin) -- node[flowlab]{modération} (sys);
+        \draw[flow] (sys) -- node[flowlab]{lookup ISBN} (ol);
+        \draw[flow] (sys) -- node[flowlab]{paiement} (pf);
+        \draw[flow] (sys) -- node[flowlab]{expédition} (post);
+    \end{tikzpicture}
     \caption{Diagramme de contexte — CARIBOOKS et ses acteurs externes}
     \label{fig:contexte}
 \end{figure}
@@ -490,21 +566,80 @@ Sprint 6 & Semaines 11–12 &
 
 \begin{figure}[h]
     \centering
-    \includegraphics[width=0.85\textwidth]{diagramme_use_case_Scan_ISBN.png}
+    \begin{tikzpicture}
+        \node[align=center] (vend) at (0,0) {\umlactor{Vendeur\\(bénévole)}};
+        \node[ucsystem, minimum width=66mm, minimum height=72mm,
+              label=above:{\textbf{Ajout d'un livre}}] (sysbox) at (5.6,0) {};
+        \node[usecase] (u1) at (5.6,2.6)  {Scanner le\\code-barres ISBN};
+        \node[usecase] (u2) at (5.6,0.9)  {Récupérer les\\métadonnées};
+        \node[usecase] (u3) at (5.6,-0.8) {Saisir manuellement\\les informations};
+        \node[usecase] (u4) at (5.6,-2.5) {Compléter état \& prix,\\publier l'annonce};
+        \node[align=center] (ol) at (11.2,0.9) {\umlactor{API\\OpenLibrary}};
+        \draw (vend) -- (u1);
+        \draw (vend) -- (u3);
+        \draw (vend) -- (u4);
+        \draw[dep] (u1) -- node[flowlab]{\guillemotleft include\guillemotright} (u2);
+        \draw[dep] (u3) -- node[flowlab, sloped]{\guillemotleft extend\guillemotright} (u1);
+        \draw (u2) -- (ol);
+    \end{tikzpicture}
     \caption{Diagramme des cas d'utilisation — Flux Scan ISBN}
     \label{fig:use_case_isbn}
 \end{figure}
 
 \begin{figure}[h]
     \centering
-    \includegraphics[width=0.85\textwidth]{diagramme_use_case_Payment_Workflow.png}
+    \begin{tikzpicture}
+        \node[align=center] (ach) at (0,0) {\umlactor{Acheteur}};
+        \node[ucsystem, minimum width=66mm, minimum height=72mm,
+              label=above:{\textbf{Tunnel de paiement}}] (sysbox) at (5.6,0) {};
+        \node[usecase] (p1) at (5.6,2.6)  {Valider le panier};
+        \node[usecase] (p2) at (5.6,0.9)  {Choisir le moyen\\(TWINT / carte)};
+        \node[usecase] (p3) at (5.6,-0.8) {Initier le\\paiement};
+        \node[usecase] (p4) at (5.6,-2.5) {Recevoir la confirmation\\(webhook)};
+        \node[align=center] (pf) at (11.2,0.05) {\umlactor{PostFinance}};
+        \draw (ach) -- (p1);
+        \draw (ach) -- (p2);
+        \draw (ach) -- (p3);
+        \draw[dep] (p3) -- node[flowlab]{\guillemotleft include\guillemotright} (p4);
+        \draw (p3) -- (pf);
+        \draw (p4) -- (pf);
+    \end{tikzpicture}
     \caption{Diagramme des cas d'utilisation — Flux de paiement PostFinance}
     \label{fig:use_case_payment}
 \end{figure}
 
 \begin{figure}[h]
     \centering
-    \includegraphics[width=0.85\textwidth]{diagramme_use_case_global.png}
+    \resizebox{\textwidth}{!}{%
+    \begin{tikzpicture}
+        % Acteurs
+        \node[align=center] (ach)   at (0,2.4)  {\umlactor{Acheteur}};
+        \node[align=center] (vend)  at (0,-1.2) {\umlactor{Vendeur}};
+        \node[align=center] (admin) at (0,-4.2) {\umlactor{Administrateur}};
+        \node[align=center] (ol) at (13,3.5)  {\umlactor{OpenLibrary}};
+        \node[align=center] (pf) at (13,-3)   {\umlactor{PostFinance}};
+        % Système
+        \node[ucsystem, minimum width=86mm, minimum height=104mm,
+              label=above:{\textbf{Système CARIBOOKS}}] at (6.5,-0.6) {};
+        \node[usecase] (uc1) at (6.5,4.0)  {S'inscrire /\\se connecter};
+        \node[usecase] (uc2) at (6.5,2.5)  {Parcourir le\\catalogue};
+        \node[usecase] (uc3) at (6.5,1.0)  {Rechercher /\\filtrer};
+        \node[usecase] (uc4) at (6.5,-0.5) {Gérer ses\\favoris};
+        \node[usecase] (uc5) at (6.5,-2.0) {Passer commande\\\& payer};
+        \node[usecase] (uc6) at (6.5,-3.5) {Ajouter un livre\\(scan ISBN)};
+        \node[usecase] (uc7) at (6.5,-5.0) {Gérer ses\\annonces};
+        \node[usecase] (uc8) at (6.5,-6.5) {Modérer / gérer\\les utilisateurs};
+        % Liens acheteur
+        \draw (ach) -- (uc1); \draw (ach) -- (uc2); \draw (ach) -- (uc3);
+        \draw (ach) -- (uc4); \draw (ach) -- (uc5);
+        % Liens vendeur
+        \draw (vend) -- (uc1); \draw (vend) -- (uc6); \draw (vend) -- (uc7);
+        % Liens admin
+        \draw (admin) -- (uc8); \draw (admin) -- (uc7);
+        % Acteurs externes
+        \draw (uc6) -- (ol);
+        \draw (uc5) -- (pf);
+    \end{tikzpicture}}
     \caption{Diagramme des cas d'utilisation — Vue globale du système}
     \label{fig:use_case_global}
 \end{figure}
@@ -513,14 +648,66 @@ Sprint 6 & Semaines 11–12 &
 
 \begin{figure}[h]
     \centering
-    \includegraphics[width=0.85\textwidth]{diagramme_activites_achat.png}
+    \begin{tikzpicture}[node distance=8mm]
+        \node[init] (start) {};
+        \node[act, below=of start] (a1) {Parcourir le catalogue};
+        \node[act, below=of a1] (a2) {Rechercher / filtrer\\(titre, auteur, prix, état)};
+        \node[act, below=of a2] (a3) {Consulter la fiche du livre};
+        \node[act, below=of a3] (a4) {Ajouter au panier};
+        \node[decision, below=of a4] (d1) {Connecté ?};
+        \node[act, left=18mm of d1] (a5) {Se connecter /\\s'inscrire};
+        \node[act, below=14mm of d1] (a6) {Valider le panier};
+        \node[act, below=of a6] (a7) {Paiement PostFinance\\(TWINT / carte, CHF)};
+        \node[decision, below=of a7] (d2) {Paiement\\réussi ?};
+        \node[act, right=16mm of d2] (a8) {Afficher l'erreur};
+        \node[act, below=14mm of d2] (a9) {Commande confirmée\\(statut PAYÉE)};
+        \node[final, below=of a9] (end) {};
+        \draw[flow] (start) -- (a1);
+        \draw[flow] (a1) -- (a2);
+        \draw[flow] (a2) -- (a3);
+        \draw[flow] (a3) -- (a4);
+        \draw[flow] (a4) -- (d1);
+        \draw[flow] (d1) -- node[flowlab]{non} (a5);
+        \draw[flow] (a5) |- (a6);
+        \draw[flow] (d1) -- node[flowlab]{oui} (a6);
+        \draw[flow] (a6) -- (a7);
+        \draw[flow] (a7) -- (d2);
+        \draw[flow] (d2) -- node[flowlab]{non} (a8);
+        \draw[flow] (a8) |- (a6);
+        \draw[flow] (d2) -- node[flowlab]{oui} (a9);
+        \draw[flow] (a9) -- (end);
+    \end{tikzpicture}
     \caption{Diagramme d'activités — Parcours d'achat complet}
     \label{fig:activites_achat}
 \end{figure}
 
 \begin{figure}[h]
     \centering
-    \includegraphics[width=0.85\textwidth]{diagramme_activites_isbn.png}
+    \begin{tikzpicture}[node distance=8mm]
+        \node[init] (start) {};
+        \node[act, below=of start] (a1) {Scanner le code-barres ISBN};
+        \node[decision, below=of a1] (d1) {Code\\reconnu ?};
+        \node[act, below=14mm of d1] (a2) {Appel API OpenLibrary\\(GET /isbn/\{isbn\})};
+        \node[decision, below=of a2] (d2) {Métadonnées\\trouvées ?};
+        \node[act, right=18mm of d2] (a3) {Saisie manuelle\\des informations};
+        \node[act, below=14mm of d2] (a4) {Préremplir le formulaire\\(titre, auteur, éditeur)};
+        \node[act, below=of a4] (a5) {Compléter état \& prix (CHF)};
+        \node[act, below=of a5] (a6) {Publier l'annonce};
+        \node[act, below=of a6] (a7) {Enregistrer le scan\\(table scan\_isbn)};
+        \node[final, below=of a7] (end) {};
+        \draw[flow] (start) -- (a1);
+        \draw[flow] (a1) -- (d1);
+        \draw[flow] (d1) -- node[flowlab]{oui} (a2);
+        \draw[flow] (d1) -| node[flowlab,pos=0.25]{non} (a3);
+        \draw[flow] (a2) -- (d2);
+        \draw[flow] (d2) -- node[flowlab]{non} (a3);
+        \draw[flow] (a3) |- (a5);
+        \draw[flow] (d2) -- node[flowlab]{oui} (a4);
+        \draw[flow] (a4) -- (a5);
+        \draw[flow] (a5) -- (a6);
+        \draw[flow] (a6) -- (a7);
+        \draw[flow] (a7) -- (end);
+    \end{tikzpicture}
     \caption{Diagramme d'activités — Flux d'ajout d'un livre via scan ISBN}
     \label{fig:activites_isbn}
 \end{figure}
@@ -529,7 +716,28 @@ Sprint 6 & Semaines 11–12 &
 
 \begin{figure}[h]
     \centering
-    \includegraphics[width=0.85\textwidth]{diagramme_sequence_scan_isbn.png}
+    \resizebox{\textwidth}{!}{%
+    \begin{tikzpicture}
+        % En-têtes des participants
+        \node[actorbox] (ben) at (0,0)    {Bénévole};
+        \node[actorbox] (nav) at (3.6,0)  {Navigateur\\(scanner JS)};
+        \node[actorbox] (api) at (7.6,0)  {API FastAPI};
+        \node[actorbox] (ol)  at (11,0)   {OpenLibrary\\/ Google Books};
+        \node[actorbox] (bd)  at (14.2,0) {BD MySQL};
+        % Lignes de vie
+        \foreach \p in {ben,nav,api,ol,bd} \draw[lifeline] (\p.south) -- ++(0,-8.6);
+        % Messages
+        \draw[msg] ($(ben)+(0,-1)$) -- node[above]{scanne le code-barres} ($(nav)+(0,-1)$);
+        \draw[msg] ($(nav)+(0,-1.8)$) -- ++(0.9,0) -- ++(0,-0.4) -- ++(-0.9,0)
+            node[pos=0.5, right=9mm, font=\scriptsize]{décode l'ISBN};
+        \draw[msg] ($(nav)+(0,-3)$) -- node[above]{GET /isbn/\{isbn\}} ($(api)+(0,-3)$);
+        \draw[msg] ($(api)+(0,-3.8)$) -- node[above]{requête métadonnées} ($(ol)+(0,-3.8)$);
+        \draw[retmsg] ($(ol)+(0,-4.8)$) -- node[above]{titre, auteur, éditeur} ($(api)+(0,-4.8)$);
+        \draw[retmsg] ($(api)+(0,-5.6)$) -- node[above]{JSON métadonnées} ($(nav)+(0,-5.6)$);
+        \draw[msg] ($(ben)+(0,-6.4)$) -- node[above]{complète état + prix} ($(nav)+(0,-6.4)$);
+        \draw[msg] ($(nav)+(0,-7.2)$) -- node[above]{POST /articles + /scans} ($(api)+(0,-7.2)$);
+        \draw[msg] ($(api)+(0,-8)$) -- node[above]{INSERT livre / scan\_isbn} ($(bd)+(0,-8)$);
+    \end{tikzpicture}}
     \caption{Diagramme de séquence — Scan ISBN et préremplissage des métadonnées}
     \label{fig:sequence_isbn}
 \end{figure}
@@ -538,14 +746,49 @@ Sprint 6 & Semaines 11–12 &
 
 \begin{figure}[h]
     \centering
-    \includegraphics[width=0.85\textwidth]{diagramme_sequence_paiement.png}
+    \resizebox{\textwidth}{!}{%
+    \begin{tikzpicture}
+        \node[actorbox] (ach) at (0,0)    {Acheteur};
+        \node[actorbox] (fro) at (3.4,0)  {Frontend\\Next.js};
+        \node[actorbox] (api) at (7.2,0)  {API FastAPI};
+        \node[actorbox] (pf)  at (11,0)   {PostFinance};
+        \node[actorbox] (bd)  at (14.2,0) {BD MySQL};
+        \foreach \p in {ach,fro,api,pf,bd} \draw[lifeline] (\p.south) -- ++(0,-9.4);
+        \draw[msg] ($(ach)+(0,-1)$) -- node[above]{valide le panier} ($(fro)+(0,-1)$);
+        \draw[msg] ($(fro)+(0,-1.8)$) -- node[above]{POST /orders} ($(api)+(0,-1.8)$);
+        \draw[msg] ($(api)+(0,-2.6)$) -- node[above]{INSERT commande (EN\_ATTENTE)} ($(bd)+(0,-2.6)$);
+        \draw[msg] ($(api)+(0,-3.6)$) -- node[above]{crée la transaction} ($(pf)+(0,-3.6)$);
+        \draw[retmsg] ($(pf)+(0,-4.4)$) -- node[above]{URL de paiement} ($(api)+(0,-4.4)$);
+        \draw[retmsg] ($(api)+(0,-5.2)$) -- node[above]{redirection} ($(fro)+(0,-5.2)$);
+        \draw[msg] ($(fro)+(0,-6)$) -- node[above, font=\scriptsize]{paye (TWINT / carte)} ($(pf)+(0,-6)$);
+        \draw[msg] ($(pf)+(0,-6.8)$) -- node[above]{webhook succès / échec} ($(api)+(0,-6.8)$);
+        \draw[msg] ($(api)+(0,-7.6)$) -- node[above]{UPDATE statut (PAYÉE)} ($(bd)+(0,-7.6)$);
+        \draw[retmsg] ($(api)+(0,-8.6)$) -- node[above]{confirmation} ($(fro)+(0,-8.6)$);
+        \draw[retmsg] ($(fro)+(0,-9.2)$) -- node[above]{page de confirmation} ($(ach)+(0,-9.2)$);
+    \end{tikzpicture}}
     \caption{Diagramme de séquence — Tunnel de paiement PostFinance}
     \label{fig:sequence_paiement}
 \end{figure}
 
 \begin{figure}[h]
     \centering
-    \includegraphics[width=0.85\textwidth]{diagramme_sequence_auth.png}
+    \resizebox{0.92\textwidth}{!}{%
+    \begin{tikzpicture}
+        \node[actorbox] (usr) at (0,0)   {Utilisateur};
+        \node[actorbox] (fro) at (4,0)   {Frontend\\Next.js};
+        \node[actorbox] (api) at (8.5,0) {API FastAPI};
+        \node[actorbox] (bd)  at (12.5,0){BD MySQL};
+        \foreach \p in {usr,fro,api,bd} \draw[lifeline] (\p.south) -- ++(0,-7.6);
+        \draw[msg] ($(usr)+(0,-1)$) -- node[above]{saisit email + mot de passe} ($(fro)+(0,-1)$);
+        \draw[msg] ($(fro)+(0,-1.8)$) -- node[above]{POST /auth/token} ($(api)+(0,-1.8)$);
+        \draw[msg] ($(api)+(0,-2.6)$) -- node[above]{SELECT utilisateur} ($(bd)+(0,-2.6)$);
+        \draw[retmsg] ($(bd)+(0,-3.4)$) -- node[above]{hash bcrypt} ($(api)+(0,-3.4)$);
+        \draw[msg] ($(api)+(0,-4.2)$) -- ++(1,0) -- ++(0,-0.4) -- ++(-1,0)
+            node[pos=0.5, right=10mm, font=\scriptsize]{vérifie (passlib) + signe JWT (HS256)};
+        \draw[retmsg] ($(api)+(0,-5.4)$) -- node[above]{access\_token (JWT)} ($(fro)+(0,-5.4)$);
+        \draw[retmsg] ($(fro)+(0,-6.2)$) -- node[above]{connexion établie} ($(usr)+(0,-6.2)$);
+        \draw[msg] ($(fro)+(0,-7)$) -- node[above]{requêtes : Authorization: Bearer} ($(api)+(0,-7)$);
+    \end{tikzpicture}}
     \caption{Diagramme de séquence — Authentification JWT}
     \label{fig:sequence_auth}
 \end{figure}
@@ -556,7 +799,40 @@ Sprint 6 & Semaines 11–12 &
 
 \begin{figure}[h]
     \centering
-    \includegraphics[width=0.85\textwidth]{diagramme_classes.png}
+    \resizebox{\textwidth}{!}{%
+    \begin{tikzpicture}
+    \begin{scope}[every node/.append style={umlclass, rectangle split parts=2, text width=33mm}]
+        % Colonne gauche
+        \node (typeobjet) at (0,4.6)  {\textbf{TypeObjet}\nodepart{second}- id\_type\_objet\\- libelle\\- code};
+        \node (etat)      at (0,1.6)  {\textbf{EtatUsure}\nodepart{second}- id\_etat\_usure\\- libelle};
+        \node (cat)       at (0,-1.4) {\textbf{Categorie}\nodepart{second}- id\_categorie\\- libelle};
+        \node (source)    at (0,-4.4) {\textbf{SourceStock}\nodepart{second}- id\_source\_stock\\- libelle\\- type\_source};
+        % Colonne centrale
+        \node (article) at (5.2,3.2)  {\textbf{Article}\nodepart{second}- id\_article\\- sku\\- titre\\- prix\_chf\\- actif};
+        \node (livre)   at (5.2,-0.6) {\textbf{Livre}\nodepart{second}- isbn\\- auteur\\- editeur\\- date\_publication\\- langue};
+        \node (stock)   at (5.2,-4.4) {\textbf{Stock}\nodepart{second}- id\_stock\\- quantite\_disponible\\- quantite\_reservee};
+        \node (scan)    at (5.2,-7.6) {\textbf{ScanISBN}\nodepart{second}- id\_scan\_isbn\\- isbn\_lu\\- valide};
+        % Colonne droite
+        \node (user)  at (10.6,4.4)  {\textbf{Utilisateur}\nodepart{second}- id\_utilisateur\\- email\\- mot\_de\_passe\_hash\\- role};
+        \node (cmd)   at (10.6,1.2)  {\textbf{Commande}\nodepart{second}- id\_commande\\- numero\_commande\\- montant\_total\_chf\\- statut};
+        \node (ligne) at (10.6,-2.2) {\textbf{LigneCommande}\nodepart{second}- id\_ligne\_commande\\- quantite\\- prix\_unitaire\_chf};
+        \node (paie)  at (10.6,-5.4) {\textbf{Paiement}\nodepart{second}- id\_paiement\\- reference\_externe\\- montant\_chf\\- statut};
+    \end{scope}
+        % Héritage Livre -> Article
+        \draw[-{Triangle[open, length=3.5mm, width=4mm]}, thick] (livre) -- (article);
+        % Associations
+        \draw (article) -- node[card, near start]{*} node[card, near end]{1} (typeobjet);
+        \draw (article) -- node[card, near start]{*} node[card, near end]{1} (etat);
+        \draw (article) -- node[card, midway, above, font=\scriptsize]{* \quad article\_categorie \quad *} (cat);
+        \draw (stock) -- node[card, near start]{*} node[card, near end]{1} (article);
+        \draw (stock) -- node[card, near start]{*} node[card, near end]{1} (source);
+        \draw (cmd) -- node[card, near start]{*} node[card, near end]{1} (user);
+        \draw (ligne) -- node[card, near start]{*} node[card, near end]{1} (cmd);
+        \draw (ligne) -- node[card, near start]{*} node[card, near end]{1} (article);
+        \draw (paie) -- node[card, near start]{1} node[card, near end]{1} (cmd);
+        \draw (scan) -- node[card, near start]{*} node[card, near end]{1} (user);
+        \draw (scan) -- node[card, near start]{*} node[card, near end]{1} (livre);
+    \end{tikzpicture}}
     \caption{Diagramme de classes — Modèle objet CARIBOOKS}
     \label{fig:classes}
 \end{figure}
@@ -567,7 +843,22 @@ Sprint 6 & Semaines 11–12 &
 
 \begin{figure}[h]
     \centering
-    \includegraphics[width=0.85\textwidth]{diagramme_objets.png}
+    \resizebox{\textwidth}{!}{%
+    \begin{tikzpicture}[every node/.append style={umlobject, text width=44mm}]
+        \node (u) at (0,0) {\underline{\textbf{marie : Utilisateur}}\nodepart{second}email = marie@example.ch\\role = "user"};
+        \node (c) at (6,0) {\underline{\textbf{cmd1024 : Commande}}\nodepart{second}numero = "CMD-2026-1024"\\montant\_total\_chf = 27.50\\statut = "PAYÉE"};
+        \node (p) at (12,0) {\underline{\textbf{paie1 : Paiement}}\nodepart{second}fournisseur = "POSTFINANCE"\\montant\_chf = 27.50\\statut = "RÉUSSI"};
+        \node (l1) at (3,-4) {\underline{\textbf{l1 : LigneCommande}}\nodepart{second}quantite = 1\\prix\_unitaire\_chf = 12.50};
+        \node (l2) at (9,-4) {\underline{\textbf{l2 : LigneCommande}}\nodepart{second}quantite = 1\\prix\_unitaire\_chf = 15.00};
+        \node (a1) at (3,-8) {\underline{\textbf{a1 : Livre}}\nodepart{second}titre = "L'Étranger"\\isbn = "9782070360024"\\prix\_chf = 12.50};
+        \node (a2) at (9,-8) {\underline{\textbf{a2 : Livre}}\nodepart{second}titre = "1984"\\isbn = "9780451524935"\\prix\_chf = 15.00};
+        \draw (u) -- (c);
+        \draw (c) -- (p);
+        \draw (c) -- (l1);
+        \draw (c) -- (l2);
+        \draw (l1) -- (a1);
+        \draw (l2) -- (a2);
+    \end{tikzpicture}}
     \caption{Diagramme d'objets — Exemple d'une commande en cours}
     \label{fig:objets}
 \end{figure}
@@ -576,7 +867,23 @@ Sprint 6 & Semaines 11–12 &
 
 \begin{figure}[h]
     \centering
-    \includegraphics[width=0.85\textwidth]{diagramme_composants.png}
+    \begin{tikzpicture}[node distance=10mm]
+        % Frontend
+        \node[comp, fill=cyan!10, minimum width=44mm, minimum height=20mm] (front)
+            {\textbf{Frontend Next.js}\\\scriptsize Pages, composants React,\\\scriptsize services API, scan ISBN (JS)};
+        % API
+        \node[comp, fill=blue!10, below=18mm of front, minimum width=70mm, minimum height=26mm] (api)
+            {\textbf{API FastAPI}\\[2pt]\scriptsize presentation (routers, schemas Pydantic)\\\scriptsize services (JWT, paiement, books)\\\scriptsize infrastructure (SQLAlchemy, CRUD)};
+        % BD
+        \node[comp, fill=orange!12, below=14mm of api, minimum width=44mm] (db)
+            {\textbf{Base de données MySQL}};
+        % Services externes
+        \node[extbox, right=24mm of api, minimum width=34mm, minimum height=26mm, align=center] (ext)
+            {\textbf{Services externes}\\[3pt]\scriptsize OpenLibrary\\\scriptsize PostFinance\\\scriptsize Poste Suisse};
+        \draw[dep] (front) -- node[flowlab]{HTTP / REST (JSON)} (api);
+        \draw[dep] (api) -- node[flowlab]{ORM SQLAlchemy} (db);
+        \draw[dep] (api) -- node[flowlab]{HTTPS} (ext);
+    \end{tikzpicture}
     \caption{Diagramme de composants — Architecture logicielle CARIBOOKS}
     \label{fig:composants}
 \end{figure}
@@ -587,14 +894,78 @@ Sprint 6 & Semaines 11–12 &
 
 \begin{figure}[h]
     \centering
-    \includegraphics[width=0.85\textwidth]{mcd_base_donnees.png}
+    \resizebox{\textwidth}{!}{%
+    \begin{tikzpicture}
+        % Entités
+        \node[entite] (type)   at (0,1.8)   {\textbf{TYPE\_OBJET}\nodepart{second}\underline{id\_type\_objet}\\libelle, code};
+        \node[entite] (article)at (4.5,0)    {\textbf{ARTICLE}\nodepart{second}\underline{id\_article}\\sku, titre, prix\_chf};
+        \node[entite] (etat)   at (9,1.8)    {\textbf{ETAT\_USURE}\nodepart{second}\underline{id\_etat\_usure}\\libelle};
+        \node[entite] (cat)    at (9,-1.8)   {\textbf{CATEGORIE}\nodepart{second}\underline{id\_categorie}\\libelle};
+        \node[entite] (source) at (0,-1.8)   {\textbf{SOURCE\_STOCK}\nodepart{second}\underline{id\_source\_stock}\\libelle, type\_source};
+        \node[entite] (livre)  at (4.5,-4)    {\textbf{LIVRE}\nodepart{second}isbn, auteur,\\editeur, langue};
+        \node[entite] (user)   at (0,-7)     {\textbf{UTILISATEUR}\nodepart{second}\underline{id\_utilisateur}\\email, role};
+        \node[entite] (cmd)    at (5,-7)      {\textbf{COMMANDE}\nodepart{second}\underline{id\_commande}\\numero, montant, statut};
+        \node[entite] (paie)   at (10,-7)     {\textbf{PAIEMENT}\nodepart{second}\underline{id\_paiement}\\reference, montant};
+        % Associations
+        \node[assoc] (estt) at (2.1,1)   {est de type};
+        \node[assoc] (aet)  at (6.7,1)   {a pour état};
+        \node[assoc] (cla)  at (6.7,-1)  {classé dans};
+        \node[assoc] (sto)  at (2.1,-1)  {stocké\\(quantité)};
+        \node[assoc] (estu) at (4.5,-2)  {est un};
+        \node[assoc] (pas)  at (2.5,-7)  {passe};
+        \node[assoc] (reg)  at (7.5,-7)  {réglée par};
+        \node[assoc] (con)  at (5,-3.4)  {contient\\(qté, prix)};
+        \node[assoc] (sca)  at (1.6,-4.6){scanne};
+        % Liens + cardinalités
+        \draw (article) -- node[card,near start]{(1,1)} node[card,near end]{(0,n)} (estt) -- (type);
+        \draw (article) -- node[card,near start]{(1,1)} node[card,near end]{(0,n)} (aet) -- (etat);
+        \draw (article) -- node[card,near start]{(0,n)} node[card,near end]{(0,n)} (cla) -- (cat);
+        \draw (article) -- node[card,near start]{(1,n)} node[card,near end]{(0,n)} (sto) -- (source);
+        \draw (article) -- node[card,near start]{(0,1)} node[card,near end]{(1,1)} (estu) -- (livre);
+        \draw (user) -- node[card,near start]{(0,n)} node[card,near end]{(1,1)} (pas) -- (cmd);
+        \draw (cmd)  -- node[card,near start]{(1,1)} node[card,near end]{(1,1)} (reg) -- (paie);
+        \draw (cmd)  -- node[card,near start]{(1,n)} node[card,near end]{(0,n)} (con) -- (article);
+        \draw (user) -- node[card,near start]{(0,n)} node[card,near end]{(0,n)} (sca) -- (livre);
+    \end{tikzpicture}}
     \caption{Modèle Conceptuel de Données (MCD) — MySQL}
     \label{fig:mcd}
 \end{figure}
 
 \begin{figure}[h]
     \centering
-    \includegraphics[width=0.85\textwidth]{mld_base_donnes.png}
+    \resizebox{\textwidth}{!}{%
+    \begin{tikzpicture}[every node/.append style={table, text width=40mm}]
+        % Colonne 1 : référentiels
+        \node (type)   at (0,0)   {\textbf{type\_objet}\nodepart{second}\underline{id\_type\_objet}\\libelle, code, description};
+        \node (etat)   at (0,-4)  {\textbf{etat\_usure}\nodepart{second}\underline{id\_etat\_usure}\\libelle, description};
+        \node (cat)    at (0,-8)  {\textbf{categorie}\nodepart{second}\underline{id\_categorie}\\libelle, description};
+        \node (source) at (0,-12) {\textbf{source\_stock}\nodepart{second}\underline{id\_source\_stock}\\libelle, type\_source};
+        % Colonne 2 : articles
+        \node (article) at (6,-1)  {\textbf{article}\nodepart{second}\underline{id\_article}\\\# id\_type\_objet\\\# id\_etat\_usure\\sku, titre, prix\_chf, actif};
+        \node (livre)   at (6,-5)  {\textbf{livre}\nodepart{second}\underline{\# id\_article}\\isbn, auteur, editeur\\date\_publication, langue};
+        \node (artcat)  at (6,-9)  {\textbf{article\_categorie}\nodepart{second}\underline{\# id\_article}\\\underline{\# id\_categorie}};
+        \node (stock)   at (6,-13) {\textbf{stock}\nodepart{second}\underline{id\_stock}\\\# id\_article\\\# id\_source\_stock\\quantite\_disponible, reservee};
+        % Colonne 3 : commandes
+        \node (user)  at (12,0)   {\textbf{utilisateur}\nodepart{second}\underline{id\_utilisateur}\\nom, prenom, email\\mot\_de\_passe\_hash, role};
+        \node (cmd)   at (12,-4)  {\textbf{commande}\nodepart{second}\underline{id\_commande}\\\# id\_utilisateur\\numero, montant\_total\_chf, statut};
+        \node (ligne) at (12,-8)  {\textbf{ligne\_commande}\nodepart{second}\underline{id\_ligne\_commande}\\\# id\_commande\\\# id\_article\\quantite, prix\_unitaire\_chf};
+        \node (scan)  at (12,-12) {\textbf{scan\_isbn}\nodepart{second}\underline{id\_scan\_isbn}\\\# id\_utilisateur\\\# id\_article\_livre\\isbn\_lu, valide};
+        % Colonne 4 : paiement
+        \node (paie)  at (18,-4)  {\textbf{paiement}\nodepart{second}\underline{id\_paiement}\\\# id\_commande\\reference\_externe, montant\_chf, statut};
+        % Clés étrangères
+        \draw[flow] (article.west) -- (type.east);
+        \draw[flow] (article.west) -- (etat.east);
+        \draw[flow] (livre.north) -- (article.south);
+        \draw[flow] (artcat.west) -- (cat.east);
+        \draw[flow] (artcat.north) -- (article.south);
+        \draw[flow] (stock.west) -- (source.east);
+        \draw[flow] (stock.north) -- (article.south);
+        \draw[flow] (cmd.north) -- (user.south);
+        \draw[flow] (ligne.north) -- (cmd.south);
+        \draw[flow] (ligne.west) -- (article.east);
+        \draw[flow] (scan.west) -- (livre.east);
+        \draw[flow] (paie.north) to[out=90,in=0] (cmd.east);
+    \end{tikzpicture}}
     \caption{Modèle Logique de Données (MLD)}
     \label{fig:mld}
 \end{figure}
@@ -616,7 +987,25 @@ Sprint 6 & Semaines 11–12 &
 
 \begin{figure}[h]
     \centering
-    \includegraphics[width=0.85\textwidth]{architecture_technique.png}
+    \begin{tikzpicture}[node distance=12mm]
+        \node[layer, fill=gray!12] (client) {\textbf{Client}\\\scriptsize Navigateur web / mobile};
+        \node[layer, fill=cyan!12, below=of client] (front)
+            {\textbf{Frontend — Next.js (React / TypeScript)}\\\scriptsize SSR/SSG · scan ISBN · déployé sur Vercel};
+        \node[layer, fill=blue!12, below=of front] (api)
+            {\textbf{Backend — API FastAPI (Python)}\\\scriptsize Pydantic · JWT · SQLAlchemy · Swagger};
+        \node[layer, fill=orange!14, below=of api] (db)
+            {\textbf{Base de données — MySQL}};
+        % Services externes à droite
+        \node[extbox, right=22mm of api, minimum width=34mm, minimum height=22mm, align=center] (ext)
+            {\textbf{Services externes}\\[3pt]\scriptsize OpenLibrary / Google Books\\\scriptsize PostFinance (CHF)\\\scriptsize Poste Suisse};
+        % Conteneurisation
+        \node[draw, dashed, rounded corners, fit=(api)(db), inner sep=7mm,
+              label=below:{\scriptsize Docker / docker-compose · CI-CD GitHub Actions}] (docker) {};
+        \draw[flow] (client) -- node[flowlab]{HTTPS} (front);
+        \draw[flow] (front) -- node[flowlab]{REST / JSON} (api);
+        \draw[flow] (api) -- node[flowlab]{ORM} (db);
+        \draw[flow] (api) -- node[flowlab]{HTTPS} (ext);
+    \end{tikzpicture}
     \caption{Architecture technique — FastAPI / Next.js / MySQL / PostFinance / Docker}
     \label{fig:architecture}
 \end{figure}
@@ -630,14 +1019,40 @@ Sprint 6 & Semaines 11–12 &
     \item \textbf{Conteneurisation :} L'ensemble de l'application est conteneurisé avec \textbf{Docker} et orchestré via \texttt{docker-compose}, garantissant la reproductibilité de l'environnement du développement au déploiement.
 \end{itemize}
 
-\subsection{Conception UI/UX}
+\subsection{Diagramme de déploiement (vue physique)}
+
+Le diagramme de déploiement décrit la répartition physique des composants logiciels sur les n\oe{}uds d'exécution : le poste client (navigateur), le frontend hébergé sur \textbf{Vercel}, le backend conteneurisé (API FastAPI) et la base MySQL hébergés sur \textbf{Oracle Cloud}, et les services tiers consommés en HTTPS.
 
 \begin{figure}[h]
     \centering
-    \includegraphics[width=0.85\textwidth]{vue_téléphone.png}
-    \caption{Interface du catalogue sur mobile}
-    \label{fig:ui_ux}
+    \begin{tikzpicture}[
+        device/.style={rectangle, draw=black, thick, fill=gray!12, align=center, font=\small},
+        artifact/.style={rectangle, draw=black, fill=blue!8, align=center, font=\scriptsize, inner sep=3pt}]
+        \node[device, minimum width=32mm, minimum height=15mm,
+              label=above:{\scriptsize\guillemotleft device\guillemotright}] (client) at (0,0)
+              {\textbf{Poste client}\\\scriptsize Navigateur\\\scriptsize web / mobile};
+        \node[device, minimum width=42mm, minimum height=16mm,
+              label=above:{\scriptsize\guillemotleft cloud — Vercel\guillemotright}] (vercel) at (6,3.2) {};
+        \node[artifact, minimum width=34mm] (fe) at (6,3.2) {Frontend Next.js\\\scriptsize SSR / SSG};
+        \node[device, minimum width=48mm, minimum height=34mm,
+              label=above:{\scriptsize\guillemotleft serveur — Oracle Cloud\guillemotright}] (host) at (6,-2) {};
+        \node[artifact, minimum width=38mm] (api) at (6,-1.1) {API FastAPI (Uvicorn)\\\scriptsize VM Docker};
+        \node[artifact, minimum width=38mm] (db) at (6,-3) {Base MySQL\\\scriptsize Oracle Cloud};
+        \node[device, minimum width=34mm, minimum height=22mm,
+              label=above:{\scriptsize\guillemotleft services externes\guillemotright}] (ext) at (12,0.6)
+              {\scriptsize PostFinance\\[2pt]OpenLibrary /\\Google Books\\[2pt]Poste Suisse};
+        \draw[flow] (client) -- node[flowlab]{HTTPS} (vercel);
+        \draw[flow] (client) -- node[flowlab]{HTTPS / REST} (api);
+        \draw[flow] (api) -- node[flowlab]{TCP 3306} (db);
+        \draw[flow] (api) -- node[flowlab]{HTTPS} (ext);
+    \end{tikzpicture}
+    \caption{Diagramme de déploiement — infrastructure physique de CARIBOOKS}
+    \label{fig:deploiement}
 \end{figure}
+
+\subsection{Conception UI/UX}
+
+\includegraphics[with=\textwidth]{vue_telephone.png}
 
 % --- CHAPITRE 3 ---
 \chapter{Réalisation et mise en \oe{}uvre}
@@ -670,34 +1085,40 @@ Sprint 6 & Semaines 11–12 &
     \item \textbf{CI/CD :} GitHub Actions
 \end{itemize}
 
-\section{Développement des modules}
+\section{Présentation des développements réalisés}
 
-\begin{acompleter}
-\textbf{\large\textcolor{red}{[SECTION À COMPLÉTER — DÉVELOPPEMENT DES MODULES]}} \\[8pt]
-Cette section est à rédiger une fois l'application terminée. Elle doit décrire en détail :
+\subsection{Organisation du code (architecture en couches)}
+
+Le backend suit une \textbf{architecture en couches} inspirée des principes de l'architecture hexagonale, garantissant la séparation des préoccupations exigée par le bloc 2 du référentiel. Le code est organisé en quatre répertoires :
+
 \begin{itemize}
-    \item \textbf{Module authentification :} description de l'implémentation JWT, des endpoints \texttt{/auth/register} et \texttt{/auth/login}, de la gestion des rôles et du middleware de protection des routes.
-    \item \textbf{Module catalogue et recherche :} organisation des endpoints \texttt{GET /articles}, filtres disponibles, pagination, structure des réponses.
-    \item \textbf{Module scan ISBN :} librairie frontend utilisée, flux de décodage, appel backend, gestion du fallback manuel, traçabilité dans la table \texttt{scan\_isbn}.
-    \item \textbf{Module back-office bénévole :} interface de gestion des annonces, création/modification/suppression, gestion du stock.
-    \item \textbf{Module paiement PostFinance :} flux de redirection, gestion des webhooks, mise à jour du statut de commande et de paiement.
-    \item \textbf{Organisation du code :} structure des dossiers backend (routers, services, models, schemas), structure frontend (pages, components, hooks, services).
+    \item \texttt{presentation/} — couche de présentation : les \textit{routers} FastAPI (un par domaine fonctionnel : \texttt{auth\_router}, \texttt{book\_router}, \texttt{catalog\_router}, \texttt{article\_router}, \texttt{stock\_router}, \texttt{order\_router}, \texttt{scan\_router}, \texttt{user\_router}, \texttt{images\_router}), les schémas Pydantic de validation (\texttt{schemas.py}, \texttt{auth\_schemas.py}) et les dépendances d'injection (\texttt{deps.py}).
+    \item \texttt{services/} — couche métier : logique applicative isolée des routes (\texttt{jwt\_service}, \texttt{payment\_service}, \texttt{postfinance\_service}, \texttt{book\_service}, \texttt{image\_service}).
+    \item \texttt{infrastructure/} — couche d'accès aux données : configuration SQLAlchemy (\texttt{db.py}), modèles ORM (\texttt{models.py}) et opérations CRUD génériques et spécialisées (\texttt{crud\_base}, \texttt{crud\_user}, \texttt{crud\_book}).
+    \item \texttt{domain/} — entités métier (\texttt{book.py}).
 \end{itemize}
-\end{acompleter}
 
-\begin{figure}[h]
-    \centering
-    \includegraphics[width=0.85\textwidth]{capture_interface_vendeur.png}
-    \caption{Interface du back-office bénévole — ajout d'un livre via scan ISBN}
-    \label{fig:capture_vendeur}
-\end{figure}
+\noindent Le point d'entrée \texttt{main.py} instancie l'application FastAPI, enregistre l'ensemble des routers, configure le middleware \textbf{CORS} (origines autorisées : domaine Vercel de production et \texttt{localhost} en développement) et monte le service de fichiers statiques (\texttt{/static}) pour les images. Un endpoint \texttt{/health} est exposé pour les sondes de disponibilité (monitoring, load balancer). Le frontend Next.js est structuré classiquement en \texttt{pages}, \texttt{components}, \texttt{hooks} et services d'appel à l'API.
 
-\begin{figure}[h]
-    \centering
-    \includegraphics[width=0.85\textwidth]{capture_catalogue.png}
-    \caption{Interface acheteur — catalogue et filtres de recherche}
-    \label{fig:capture_catalogue}
-\end{figure}
+\subsection{Module authentification}
+
+Le module d'authentification expose deux endpoints : \texttt{POST /auth/register} (création de compte, renvoie un \texttt{201} ou un \texttt{400} si l'email existe déjà) et \texttt{POST /auth/token} (connexion, convention OAuth2). À la connexion, l'utilisateur est récupéré par email via \texttt{crud\_user}, et le mot de passe est vérifié avec \texttt{passlib} (bcrypt). Si les identifiants sont valides, un JWT signé en \textbf{HS256} est généré (\texttt{jwt\_service.create\_access\_token}), contenant l'email (\texttt{sub}), le rôle et une expiration de \textbf{480 minutes}. La protection des routes repose sur des dépendances FastAPI : \texttt{get\_current\_user} (décode et valide le token via le schéma \texttt{HTTPBearer}), \texttt{require\_admin} et \texttt{require\_user} (contrôle du rôle). En environnement de production, l'application refuse de démarrer si la \texttt{SECRET\_KEY} n'est pas configurée de façon sécurisée.
+
+\subsection{Module catalogue, articles et stock}
+
+Le catalogue s'appuie sur une classe CRUD générique typée (\texttt{CrudBase}) réutilisée par tous les routers, ce qui factorise les opérations \texttt{list / get / create / update / delete}. Le \texttt{catalog\_router} gère les référentiels (types d'objet, états d'usure, catégories), le \texttt{book\_router} expose les livres (notamment \texttt{GET /books/by-isbn/\{isbn\}} et \texttt{GET /books/\{id\}}) via un \texttt{BookService} dédié, et le \texttt{stock\_router} pilote les quantités disponibles et réservées. Les lectures du catalogue sont publiques ; les opérations d'écriture exigent un utilisateur authentifié (et un rôle \texttt{admin} pour la création de livres).
+
+\subsection{Module scan ISBN}
+
+Côté frontend, le code-barres est décodé directement dans le navigateur, puis l'ISBN est envoyé à l'API qui interroge \textbf{OpenLibrary} avec repli automatique sur \textbf{Google Books} (\texttt{GET /isbn/\{isbn\}}, cf. annexe~\ref{lst:isbn}) ; un \texttt{404} déclenche la saisie manuelle. Les images de couverture distantes sont rapatriées via \texttt{image\_service.download\_image} et re-servies depuis \texttt{/static} afin de ne pas dépendre d'URL tierces. Le \texttt{scan\_router} assure la traçabilité : chaque scan est enregistré dans la table \texttt{scan\_isbn} (rattaché à l'utilisateur courant et au livre concerné), avec vérification préalable de l'existence du livre.
+
+\subsection{Module commande et paiement PostFinance}
+
+Le \texttt{order\_router} gère le cycle de vie des commandes (\texttt{commande}, \texttt{ligne\_commande}, \texttt{paiement}). À la validation, une transaction PostFinance est créée (\texttt{create\_postfinance\_iframe\_session}) à partir des lignes et de l'adresse de facturation, et l'utilisateur est redirigé vers le tunnel de paiement. Le retour est traité par \textbf{webhook} : la signature est vérifiée (\texttt{verify\_postfinance\_webhook\_signature}) avant toute mise à jour, puis le statut de paiement est interprété (\texttt{is\_postfinance\_success\_status}). En cas de succès, la commande passe au statut payé et la fonction \texttt{\_finalize\_commande} transforme le stock réservé en stock vendu (avec verrou \texttt{with\_for\_update} pour éviter les accès concurrents). Un prestataire alternatif (Payrexx) avait été initialement intégré puis abandonné au profit de PostFinance.
+
+\subsection{Back-office bénévole}
+
+Le back-office réutilise les mêmes endpoints sécurisés pour offrir aux bénévoles une interface de gestion des annonces (création via scan ISBN ou saisie manuelle, modification, suppression) et de suivi du stock, sans exposer la complexité technique sous-jacente.
 
 \section{Sécurité et architecture logicielle}
 
@@ -706,7 +1127,7 @@ Cette section est à rédiger une fois l'application terminée. Elle doit décri
 L'authentification repose sur le standard \textbf{JSON Web Token (JWT)}, implémenté côté backend avec la librairie \texttt{python-jose}. Le flux est le suivant :
 
 \begin{enumerate}
-    \item L'utilisateur soumet son email et son mot de passe via \texttt{POST /auth/login}.
+    \item L'utilisateur soumet son email et son mot de passe via \texttt{POST /auth/token}.
     \item FastAPI récupère l'utilisateur en base via SQLAlchemy et vérifie le mot de passe avec \texttt{passlib} (bcrypt).
     \item Si les identifiants sont valides, un JWT signé est généré, contenant l'identifiant utilisateur, son rôle et une date d'expiration.
     \item Le token est retourné au client, qui le stocke et l'inclut dans l'en-tête HTTP \texttt{Authorization: Bearer <token>} de chaque requête protégée.
@@ -801,35 +1222,59 @@ Paiement & Webhook échec & Callback PostFinance fail & Statut commande = ÉCHEC
 
 \section{Résultats obtenus}
 
-\begin{acompleter}
-\textbf{\large\textcolor{red}{[SECTION À COMPLÉTER — RÉSULTATS DES TESTS]}} \\[8pt]
-À rédiger une fois les tests exécutés. Indiquer :
-\begin{itemize}
-    \item Taux de réussite des tests (ex. : 42/45 tests passés, 93\%)
-    \item Couverture de code (\texttt{pytest --cov})
-    \item Résultats des tests de charge si effectués
-    \item Captures de la sortie pytest
-\end{itemize}
-\end{acompleter}
+La suite de tests automatisés a été exécutée avec \textbf{pytest} et l'extension \texttt{pytest-cov}. L'intégralité des tests passe : \textbf{20 tests sur 20 réussis, soit 100\,\% de réussite}, répartis entre tests unitaires, tests d'intégration (via \texttt{TestClient}) et un test fonctionnel de bout en bout.
+
+\noindent La \textbf{couverture de code globale atteint 70\,\%} (2\,326 instructions analysées, 708 non couvertes). Le tableau ci-dessous synthétise la couverture des principaux modules :
+
+\vspace{5pt}
+
+\begin{table}[h]
+\centering
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{@{}p{7cm}p{2.5cm}p{2.5cm}@{}}
+\toprule
+\textbf{Module} & \textbf{Instructions} & \textbf{Couverture} \\
+\midrule
+\texttt{infrastructure/models.py}       & 135 & 100\,\% \\
+\texttt{presentation/schemas.py}        & 197 & 96\,\% \\
+\texttt{presentation/scan\_router.py}    & 45  & 91\,\% \\
+\texttt{presentation/catalog\_router.py} & 83  & 89\,\% \\
+\texttt{presentation/auth\_router.py}    & 36  & 83\,\% \\
+\texttt{services/jwt\_service.py}        & 14  & 86\,\% \\
+\texttt{services/book\_service.py}       & 39  & 77\,\% \\
+\texttt{presentation/book\_router.py}    & 139 & 68\,\% \\
+\texttt{services/postfinance\_service.py}& 234 & 64\,\% \\
+\texttt{services/image\_service.py}      & 56  & 23\,\% \\
+\texttt{presentation/order\_router.py}   & 412 & 17\,\% \\
+\midrule
+\textbf{TOTAL} & \textbf{2\,326} & \textbf{70\,\%} \\
+\bottomrule
+\end{tabular}
+\caption{Couverture de code par module (\texttt{pytest --cov})}
+\label{tab:couverture}
+\end{table}
+
+\noindent Les modèles de données, les schémas de validation et les modules d'authentification et de catalogue sont très bien couverts (83\,\% à 100\,\%). Les modules les moins couverts sont le routeur de commande et de paiement (\texttt{order\_router}, 17\,\%) et le service de traitement d'images (23\,\%) : 
+\vspace{5px}
+ce sont précisément les parties identifiées comme prioritaires pour la consolidation (voir la section \og Limites et bugs restants \fg{}). Aucun test de charge ni de performance n'a été réalisé dans le cadre de ce MVP.
+
+\includegraphics[width=\textwidth]{PYTEST_RESULT_SCREENSHOT.png}
 
 \section{Analyse des performances}
 
-\begin{acompleter}
-\textbf{\large\textcolor{red}{[SECTION À COMPLÉTER — PERFORMANCES]}} \\[8pt]
-À compléter. Indiquer :
-\begin{itemize}
-    \item Temps de réponse des endpoints critiques (scan ISBN, tunnel de paiement)
-    \item Charge système sous Docker (mémoire, CPU)
-    \item Résultats Lighthouse (performance, accessibilité) sur le frontend Next.js
-\end{itemize}
-\end{acompleter}
+Aucune campagne formelle de tests de performance ou de charge (\textit{benchmark}, montée en charge, \textit{stress test}) n'a été menée durant cette première itération : la priorité du MVP portait sur la couverture fonctionnelle et la sécurité. L'architecture retenue offre néanmoins de bonnes bases de performance : FastAPI repose sur un serveur ASGI asynchrone (Uvicorn) reconnu pour ses temps de réponse faibles, l'ORM SQLAlchemy s'appuie sur des index dédiés (voir le script DDL en annexe~\ref{lst:ddl}) pour accélérer les requêtes fréquentes du catalogue, et la conteneurisation Docker garantit la reproductibilité des conditions d'exécution. La mise en place de tests de charge (par exemple avec \texttt{locust} ou \texttt{k6}) et d'un audit Lighthouse du frontend constitue un axe d'amélioration identifié pour la phase suivante.
 
 \section{Limites et bugs restants}
 
-\begin{acompleter}
-\textbf{\large\textcolor{red}{[SECTION À COMPLÉTER — BUGS ET LIMITES]}} \\[8pt]
-À compléter. Indiquer les bugs identifiés en attente de correction et les limitations connues du MVP.
-\end{acompleter}
+À l'issue de cette première itération, plusieurs limites et points de consolidation ont été identifiés :
+
+\begin{itemize}
+    \item \textbf{Fiabilisation du paiement :} la fonctionnalité de paiement (intégration PostFinance, gestion des webhooks et mise à jour des statuts de commande) reste à corriger et à fiabiliser. C'est le module le moins couvert par les tests automatisés (\texttt{order\_router} à 17\,\%).
+    \item \textbf{Fluidité du tunnel d'achat :} le flux de paiement doit être amélioré afin de rendre le passage à l'achat puis au paiement plus simple et plus intuitif pour l'acheteur.
+    \item \textbf{Interface mobile :} certains écrans de l'interface mobile restent à affiner pour une expérience pleinement responsive.
+    \item \textbf{Suivi des commandes côté administrateur :} le suivi et la gestion des commandes par l'administrateur doivent être complétés et améliorés.
+    \item \textbf{Couverture de tests :} la couverture des modules de commande/paiement et de traitement d'images est à renforcer.
+\end{itemize}
 
 % ==========================================
 % CHAPITRE G — CYBERSÉCURITÉ ET QUALITÉ
@@ -881,6 +1326,8 @@ Dans le cadre du développement de CARIBOOKS, une veille régulière a été men
     \item \textbf{Documentation officielle FastAPI} (sécurité) : bonnes pratiques pour OAuth2, JWT, hashage.
     \item \textbf{Fireship} (YouTube) : veille technique sur les tendances web et les pratiques de développement modernes.
     \item \textbf{GitHub Security Advisories} : alertes automatiques sur les dépendances Python du projet via Dependabot.
+    \item \textbf{Daily.DEV et bytes} : 
+    Newsletter email sur les dernière nouveautées informatique
 \end{itemize}
 
 % ==========================================
@@ -932,16 +1379,16 @@ Ce projet a permis de concevoir et de déployer une application e-commerce full-
 
 \section*{Limites}
 
-\begin{acompleter}
-\textbf{\large\textcolor{red}{[SECTION À COMPLÉTER — LIMITES DU MVP]}} \\[8pt]
-À rédiger en fin de projet. Exemples à adapter :
+Malgré l'atteinte des objectifs du MVP, plusieurs limites subsistent à la fin de cette première itération :
+
 \begin{itemize}
-    \item Fonctionnalités non implémentées dans le MVP (messagerie, avis, estimation de prix)
-    \item Couverture de tests à améliorer
-    \item Déploiement en cours, URL de prod non encore disponible
-    \item Interface mobile à affiner sur certains écrans
+    \item \textbf{Paiement à fiabiliser :} le tunnel de paiement PostFinance (webhooks, mise à jour des statuts) doit encore être corrigé et consolidé ; c'est le module le moins couvert par les tests (17\,\%).
+    \item \textbf{Parcours d'achat :} le passage à l'achat et au paiement reste à fluidifier pour l'acheteur.
+    \item \textbf{Suivi des commandes :} la gestion et le suivi des commandes côté administrateur sont à compléter.
+    \item \textbf{Interface mobile :} certains écrans restent à affiner pour une expérience pleinement responsive.
+    \item \textbf{Fonctionnalités hors MVP :} la messagerie acheteur-vendeur, les avis et l'estimation automatique de prix n'ont pas été implémentés (renvoyés aux phases 2 et 3).
+    \item \textbf{Couverture de tests :} à renforcer sur les modules de commande/paiement et de traitement d'images.
 \end{itemize}
-\end{acompleter}
 
 \section*{Perspectives d'évolution}
 
@@ -981,17 +1428,19 @@ Plusieurs axes d'évolution sont envisagés pour les phases suivantes du projet 
 \chapter*{Annexes}
 \addcontentsline{toc}{chapter}{Annexes}
 
-\section*{Annexe A — Lien GitHub}
+\section*{Annexe A — Liens du projet}
 
 Le code source complet du projet est disponible sur GitHub :
 \begin{center}
     \url{https://github.com/Visualstudiocodetest/plobooks}
 \end{center}
 
-\begin{acompleter}
-\textbf{\large\textcolor{red}{[À COMPLÉTER — URL de déploiement]}} \\[4pt]
-L'URL de déploiement de l'application sera ajoutée ici une fois le déploiement effectué.
-\end{acompleter}
+\noindent L'application est déployée et accessible en ligne à l'adresse suivante :
+\begin{center}
+    \url{https://caribooks.vercel.app}
+\end{center}
+
+\noindent L'hébergement repose sur une architecture hybride : le \textbf{frontend Next.js} est déployé sur \textbf{Vercel}, tandis que le \textbf{backend FastAPI} et la \textbf{base de données MySQL} sont hébergés sur \textbf{Oracle Cloud} (machine virtuelle et instance MySQL).
 
 \section*{Annexe B — Script SQL de création de la base de données}
 
@@ -1179,55 +1628,48 @@ CREATE INDEX idx_livre_isbn ON livre(isbn);
 
 \section*{Annexe C — Extraits de code significatifs}
 
-\subsection*{C.1 — Endpoint d'authentification FastAPI (login + génération JWT)}
+\subsection*{C.1 — Génération du JWT et endpoint de connexion (FastAPI)}
 
-\begin{lstlisting}[style=pythonstyle, caption={Endpoint POST /auth/login — FastAPI}, label={lst:auth}]
+\begin{lstlisting}[style=pythonstyle, caption={Service JWT (HS256) et endpoint POST /auth/token}, label={lst:auth}]
+# services/jwt_service.py
 from datetime import datetime, timedelta
-from fastapi import APIRouter, Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordRequestForm
 from jose import jwt
-from passlib.context import CryptContext
-from sqlalchemy.orm import Session
-from app.database import get_db
-from app.models import Utilisateur
-from app.config import settings
 
-router = APIRouter(prefix="/auth", tags=["auth"])
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
-def create_access_token(data: dict) -> str:
-    to_encode = data.copy()
-    expire = datetime.utcnow() + timedelta(
-        minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES
-    )
+def create_access_token(payload: dict, secret_key: str,
+                        expires_minutes: int) -> str:
+    to_encode = payload.copy()
+    expire = datetime.utcnow() + timedelta(minutes=expires_minutes)
     to_encode.update({"exp": expire})
-    return jwt.encode(
-        to_encode,
-        settings.SECRET_KEY,
-        algorithm=settings.ALGORITHM
+    return jwt.encode(to_encode, secret_key, algorithm="HS256")
+
+# presentation/auth_router.py
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.orm import Session
+from infrastructure import crud_user
+from presentation.deps import get_db
+from presentation.auth_schemas import LoginRequest, Token
+from services.jwt_service import create_access_token
+
+ACCESS_TOKEN_EXPIRE_MINUTES = 480
+router = APIRouter(prefix="/auth", tags=["auth"])
+
+@router.post("/token", response_model=Token)
+def login_for_access_token(payload: LoginRequest,
+                           db: Session = Depends(get_db)):
+    user = crud_user.get_user_by_email(db, str(payload.username))
+    verified = bool(user) and crud_user.verify_password(
+        str(payload.password), str(user.mot_de_passe_hash)
     )
-
-@router.post("/login")
-def login(
-    form_data: OAuth2PasswordRequestForm = Depends(),
-    db: Session = Depends(get_db)
-):
-    user = db.query(Utilisateur).filter(
-        Utilisateur.email == form_data.username
-    ).first()
-
-    if not user or not pwd_context.verify(
-        form_data.password, user.mot_de_passe_hash
-    ):
+    if not user or not verified:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Identifiants incorrects",
+            detail="Incorrect credentials",
         )
-
-    token = create_access_token(
-        data={"sub": str(user.id_utilisateur), "role": user.role}
+    to_encode = {"sub": user.email, "role": user.role}
+    access_token = create_access_token(
+        to_encode, SECRET_KEY, ACCESS_TOKEN_EXPIRE_MINUTES
     )
-    return {"access_token": token, "token_type": "bearer"}
+    return Token(access_token=access_token)
 \end{lstlisting}
 
 \subsection*{C.2 — Endpoint scan ISBN (lookup API externe)}
@@ -1286,58 +1728,28 @@ async def lookup_isbn(isbn: str):
     )
 \end{lstlisting}
 
-\section*{Annexe D — Captures d'écran Microsoft Planner}
 
-\begin{acompleter}
-\textbf{\large\textcolor{red}{[À COMPLÉTER — CAPTURES MICROSOFT PLANNER]}} \\[4pt]
-Insérer ici les captures d'écran du board Microsoft Planner.
-Utiliser :
-\begin{verbatim}
-\includegraphics[width=\textwidth]{planner_sprint1.png}
-\includegraphics[width=\textwidth]{planner_backlog.png}
-\end{verbatim}
-\end{acompleter}
+
 
 \section*{Annexe E — Documentation API Swagger}
 
-\begin{acompleter}
-\textbf{\large\textcolor{red}{[À COMPLÉTER — CAPTURES SWAGGER UI]}} \\[4pt]
-Insérer ici des captures de la documentation Swagger générée automatiquement
-par FastAPI (accessible sur \texttt{/docs} en développement).
-\begin{verbatim}
-\includegraphics[width=\textwidth]{swagger_overview.png}
-\includegraphics[width=\textwidth]{swagger_auth_endpoints.png}
-\end{verbatim}
-\end{acompleter}
+
+
+\includegraphics[width=\textwidth]{Fast_API_SWAGGER_OVERVIEW.png}
+\includegraphics[width=\textwidth]{SWAGGER_LOGIN_DETAIL.png}
 
 \section*{Annexe F — Diagrammes UML détaillés}
 
-\begin{acompleter}
-\textbf{\large\textcolor{red}{[À COMPLÉTER — DIAGRAMMES UML]}} \\[4pt]
-Insérer ici les diagrammes UML exportés depuis votre outil de modélisation
-(draw.io, PlantUML, StarUML, etc.) :
-\begin{itemize}
-    \item Diagramme de classes complet
-    \item Diagramme de séquence — scan ISBN
-    \item Diagramme de séquence — tunnel de paiement PostFinance
-    \item Diagramme de composants
-    \item Diagramme de déploiement (Docker / services)
-    \item Diagramme de contexte
-\end{itemize}
-\end{acompleter}
+L'ensemble des diagrammes UML et Merise du projet est présenté directement dans le chapitre \og Analyse et conception \fg{}. Pour rappel, le dossier comprend :
 
-\section*{Annexe G — Maquettes UI/UX}
-
-\begin{acompleter}
-\textbf{\large\textcolor{red}{[À COMPLÉTER — MAQUETTES]}} \\[4pt]
-Insérer ici les maquettes de l'application (Figma, captures d'écran, etc.) :
 \begin{itemize}
-    \item Page catalogue (desktop + mobile)
-    \item Page fiche livre
-    \item Formulaire d'ajout via scan ISBN
-    \item Interface back-office bénévole
-    \item Tunnel de paiement PostFinance
+    \item Diagramme de contexte (figure~\ref{fig:contexte}) ;
+    \item Diagrammes de cas d'utilisation : scan ISBN (figure~\ref{fig:use_case_isbn}), paiement (figure~\ref{fig:use_case_payment}), vue globale (figure~\ref{fig:use_case_global}) ;
+    \item Diagrammes d'activités : parcours d'achat (figure~\ref{fig:activites_achat}) et scan ISBN (figure~\ref{fig:activites_isbn}) ;
+    \item Diagrammes de séquence : scan ISBN (figure~\ref{fig:sequence_isbn}), paiement (figure~\ref{fig:sequence_paiement}), authentification (figure~\ref{fig:sequence_auth}) ;
+    \item Diagramme de classes (figure~\ref{fig:classes}) et diagramme d'objets (figure~\ref{fig:objets}) ;
+    \item Diagramme de composants (figure~\ref{fig:composants}) et diagramme de déploiement (figure~\ref{fig:deploiement}) ;
+    \item Modélisation Merise : MCD (figure~\ref{fig:mcd}) et MLD (figure~\ref{fig:mld}).
 \end{itemize}
-\end{acompleter}
 
 \end{document}

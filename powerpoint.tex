@@ -1,0 +1,1184 @@
+\documentclass[aspectratio=169,10pt]{beamer}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[french]{babel}
+\AtBeginDocument{\shorthandoff{;:!?}}
+\usepackage{amssymb}
+\usepackage{lmodern}
+\usepackage{graphicx}
+\usepackage{tikz}
+\usetikzlibrary{shapes.geometric,arrows.meta,positioning,calc,fit,backgrounds,shapes.multipart,decorations.pathreplacing}
+\usetikzlibrary{babel}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{colortbl}
+\usepackage{hyperref}
+
+% ─────────────────────────────────────────
+%  COULEURS
+% ─────────────────────────────────────────
+\definecolor{myblue}{RGB}{27,63,139}
+\definecolor{mybluelight}{RGB}{74,134,200}
+\definecolor{mybluepale}{RGB}{232,240,251}
+\definecolor{myaccent}{RGB}{230,100,20}
+\definecolor{mysuccess}{RGB}{34,139,68}
+\definecolor{codebg}{RGB}{245,247,250}
+\definecolor{mygray}{RGB}{100,100,100}
+
+% ─────────────────────────────────────────
+%  THÈME BEAMER
+% ─────────────────────────────────────────
+\usetheme{Boadilla}
+\usecolortheme[named=myblue]{structure}
+
+\setbeamercolor{palette primary}{bg=myblue,fg=white}
+\setbeamercolor{palette secondary}{bg=mybluelight,fg=white}
+\setbeamercolor{palette tertiary}{bg=myblue!80,fg=white}
+\setbeamercolor{palette quaternary}{bg=myblue,fg=white}
+\setbeamercolor{frametitle}{bg=myblue,fg=white}
+\setbeamercolor{title}{fg=white}
+\setbeamercolor{subtitle}{fg=white!80}
+\setbeamercolor{block title}{bg=myblue!90,fg=white}
+\setbeamercolor{block body}{bg=mybluepale!60}
+\setbeamercolor{alerted text}{fg=myaccent}
+\setbeamercolor{block title alerted}{bg=myaccent,fg=white}
+\setbeamercolor{block body alerted}{bg=myaccent!10}
+\setbeamercolor{block title example}{bg=mysuccess!80,fg=white}
+\setbeamercolor{block body example}{bg=mysuccess!12}
+\setbeamercolor{itemize item}{fg=myblue}
+\setbeamercolor{itemize subitem}{fg=mybluelight}
+\setbeamercolor{enumerate item}{fg=myblue}
+
+\setbeamertemplate{navigation symbols}{}
+\setbeamertemplate{itemize item}{\color{myblue}\small$\blacktriangleright$}
+\setbeamertemplate{itemize subitem}{\color{mybluelight}\small$\triangleright$}
+\setbeamertemplate{enumerate item}{\color{myblue}\textbf{\insertenumlabel.}}
+
+\setbeamerfont{frametitle}{series=\bfseries,size=\normalsize}
+\setbeamerfont{block title}{series=\bfseries,size=\small}
+\setbeamerfont{block body}{size=\small}
+
+% Section intermédiaire (cadre bleu)
+\AtBeginSection[]{
+  \begin{frame}[plain]
+    \begin{tikzpicture}[remember picture,overlay]
+      \fill[myblue] (current page.north west) rectangle (current page.south east);
+      \fill[mybluelight!40,opacity=0.5]
+        (current page.south west) rectangle ++(\paperwidth,1.4cm);
+    \end{tikzpicture}
+    \vfill
+    \begin{center}
+    {\color{white!60}\large\textit{Partie \thesection}}\\[8pt]
+    {\color{white}\LARGE\bfseries\insertsectionhead}
+    \end{center}
+    \vfill
+  \end{frame}
+}
+
+% ─────────────────────────────────────────
+%  LISTINGS
+% ─────────────────────────────────────────
+\lstdefinestyle{pysmall}{
+    language=Python,
+    basicstyle=\ttfamily\tiny,
+    keywordstyle=\color{myblue}\bfseries,
+    commentstyle=\color{mygray}\itshape,
+    stringstyle=\color{myaccent},
+    showstringspaces=false,
+    breaklines=true,
+    frame=single,
+    rulecolor=\color{myblue!30},
+    backgroundcolor=\color{codebg},
+    numbers=left,
+    numberstyle=\tiny\color{mygray},
+    numbersep=4pt,
+    tabsize=4,
+    xleftmargin=6pt,
+    framexleftmargin=6pt,
+}
+\lstdefinestyle{sqlsmall}{
+    language=SQL,
+    basicstyle=\ttfamily\tiny,
+    keywordstyle=\color{myblue}\bfseries,
+    commentstyle=\color{mygray}\itshape,
+    stringstyle=\color{myaccent},
+    showstringspaces=false,
+    breaklines=true,
+    frame=single,
+    rulecolor=\color{myblue!30},
+    backgroundcolor=\color{codebg},
+    tabsize=2,
+    xleftmargin=6pt,
+}
+
+% ─────────────────────────────────────────
+%  TIKZ STYLES RÉUTILISABLES
+% ─────────────────────────────────────────
+\tikzset{
+  syst/.style={rectangle,draw=myblue,thick,rounded corners=4pt,fill=mybluepale,
+    align=center,minimum height=10mm,minimum width=28mm,font=\bfseries\scriptsize},
+  box/.style={rectangle,draw=myblue,rounded corners=3pt,fill=mybluepale,
+    align=center,minimum height=7mm,inner sep=5pt,font=\scriptsize},
+  extbox/.style={rectangle,draw=mygray,fill=gray!10,align=center,
+    minimum height=8mm,inner sep=5pt,font=\scriptsize},
+  comp/.style={rectangle,draw=myblue,fill=mybluepale,align=center,
+    minimum height=10mm,minimum width=30mm,inner sep=5pt,font=\scriptsize},
+  layer/.style={rectangle,draw=myblue,rounded corners=3pt,align=center,
+    minimum height=10mm,minimum width=42mm,inner sep=5pt,font=\scriptsize},
+  flow/.style={-{Stealth[length=2mm]},thick,color=myblue},
+  flowlab/.style={font=\tiny,fill=white,inner sep=1pt},
+  dep/.style={-{Stealth[length=2mm]},thick,dashed,color=mybluelight},
+  act/.style={rectangle,rounded corners=3pt,draw=myblue,fill=mybluepale,
+    align=center,minimum height=6mm,minimum width=26mm,font=\scriptsize,inner sep=3pt},
+  decision/.style={diamond,draw=myblue,fill=orange!15,aspect=2.2,
+    align=center,font=\tiny,inner sep=0pt},
+  init/.style={circle,draw=myblue,fill=myblue,minimum size=4mm,inner sep=0pt},
+  final/.style={circle,draw=myblue,minimum size=5.5mm,inner sep=0pt,
+    path picture={\fill[myblue] (path picture bounding box.center) circle (1.5mm);}},
+  tag/.style={rectangle,rounded corners=2pt,fill=myblue,text=white,
+    font=\tiny\bfseries,inner sep=2.5pt},
+  taggreen/.style={rectangle,rounded corners=2pt,fill=mysuccess,text=white,
+    font=\tiny\bfseries,inner sep=2.5pt},
+  tagorange/.style={rectangle,rounded corners=2pt,fill=myaccent,text=white,
+    font=\tiny\bfseries,inner sep=2.5pt},
+  tbl/.style={rectangle,draw=myblue,fill=white,font=\scriptsize,
+    rectangle split,rectangle split parts=2,align=left,inner sep=3pt,text width=26mm},
+  usecase/.style={ellipse,draw=myblue,fill=mybluepale,align=center,
+    minimum width=26mm,minimum height=8mm,font=\tiny,inner sep=1pt},
+  ucsys/.style={rectangle,draw=myblue,thick,rounded corners=2pt},
+  actorbox/.style={rectangle,draw=myblue,fill=mybluepale,font=\tiny\bfseries,
+    minimum height=6mm,align=center,inner sep=3pt},
+  lifeline/.style={dashed,color=mygray!70},
+  seqmsg/.style={-{Stealth[length=1.6mm]},font=\tiny,color=myblue},
+  seqret/.style={-{Stealth[length=1.6mm]},dashed,font=\tiny,color=mygray},
+}
+
+% Acteur UML
+\newcommand{\umlactor}[3]{
+  \begin{scope}[shift={(#1,#2)}]
+    \draw[thick,myblue] (0,0.55) circle (0.14);
+    \draw[thick,myblue] (0,0.41) -- (0,-0.05);
+    \draw[thick,myblue] (-0.22,0.26) -- (0.22,0.26);
+    \draw[thick,myblue] (0,-0.05) -- (-0.18,-0.38);
+    \draw[thick,myblue] (0,-0.05) -- (0.18,-0.38);
+    \node[font=\tiny\bfseries,align=center,text=myblue] at (0,-0.58) {#3};
+  \end{scope}
+}
+
+% Commandes utilitaires
+\newcommand{\tech}[1]{\textcolor{myblue}{\textbf{#1}}}
+\newcommand{\yes}{\textcolor{mysuccess}{\textbf{\checkmark}}}
+\newcommand{\no}{\textcolor{red}{\textbf{$\times$}}}
+\newcommand{\badge}[1]{\tikz[baseline=-1mm]{\node[tag]{#1};}}
+\newcommand{\badgegreen}[1]{\tikz[baseline=-1mm]{\node[taggreen]{#1};}}
+\newcommand{\badgeorange}[1]{\tikz[baseline=-1mm]{\node[tagorange]{#1};}}
+
+% ─────────────────────────────────────────
+%  MÉTADONNÉES
+% ─────────────────────────────────────────
+\title[CARIBOOKS]{\textbf{CARIBOOKS}}
+\subtitle{Plateforme e-commerce solidaire de livres d'occasion}
+\author[Alexandre REY]{Alexandre REY}
+\institute[ESTIAM]{Titre Professionnel CDA --- Concepteur Développeur d'Applications\\[4pt]
+ESTIAM --- Promotion E3 DAD --- Encadrant : Mhand Boufala}
+\date{Juin 2026}
+
+% ══════════════════════════════════════════════════════════════════════
+\begin{document}
+% ══════════════════════════════════════════════════════════════════════
+
+% ─────────────────────────────────────────
+%  SLIDE 1 — TITRE
+% ─────────────────────────────────────────
+\begin{frame}[plain]
+  \begin{tikzpicture}[remember picture,overlay]
+    \fill[myblue] (current page.north west) rectangle (current page.south east);
+    \fill[mybluelight!50,opacity=0.3]
+      (current page.south west) rectangle ++(\paperwidth,0.22\paperheight);
+    \fill[white,opacity=0.04] (current page.center) ++(-2,1.8) circle (5);
+    \fill[white,opacity=0.03] (current page.center) ++(3,-1.5) circle (3.5);
+  \end{tikzpicture}
+  \vspace{0.6cm}
+  \begin{center}
+    {\color{white}\fontsize{36}{40}\selectfont\bfseries CARIBOOKS}\\[6pt]
+    {\color{white!75}\large Plateforme e-commerce solidaire de livres d'occasion}\\[14pt]
+    \begin{tikzpicture}
+      \draw[white!50,line width=0.8pt] (0,0) -- (9,0);
+    \end{tikzpicture}\\[12pt]
+    {\color{white!85}\normalsize Titre Professionnel \textbf{CDA} --- Concepteur Développeur d'Applications}\\[18pt]
+    {\color{white}\large\textbf{Alexandre REY}}\\[3pt]
+    {\color{white!70}\small ESTIAM --- E3 DAD \quad\textbullet\quad Encadrant : Mhand Boufala \quad\textbullet\quad Juin 2026}
+  \end{center}
+\end{frame}
+
+% ─────────────────────────────────────────
+%  SLIDE 2 — PLAN
+% ─────────────────────────────────────────
+\begin{frame}{Plan de la présentation}
+  \tableofcontents[hideallsubsections]
+\end{frame}
+
+% ══════════════════════════════════════════════════════════════════════
+\section{Contexte et problématique}
+% ══════════════════════════════════════════════════════════════════════
+
+% ─────────────────────────────────────────
+%  SLIDE 3 — CONTEXTE
+% ─────────────────────────────────────────
+\begin{frame}{Contexte du projet — Association Caritas}
+  \begin{columns}[T]
+    \column{0.54\textwidth}
+    \begin{block}{L'association Caritas}
+      \begin{itemize}
+        \item Recyclerie associative en \textbf{Suisse romande}
+        \item Mission : réinsertion professionnelle par la vente d'objets de seconde main
+        \item Problème concret : \textbf{stock de livres invendus} en rayon
+        \item Besoin : mettre ces livres en ligne rapidement
+      \end{itemize}
+    \end{block}
+    \vspace{6pt}
+    \begin{alertblock}{Problématique centrale}
+      Comment mettre en vente des livres d'occasion \textbf{exclusivement en CHF},
+      livraison \textbf{Suisse uniquement}, via une interface
+      \textbf{accessible aux bénévoles non technophiles} ?
+    \end{alertblock}
+    \column{0.43\textwidth}
+    \vspace{4pt}
+    \begin{center}
+    \begin{tikzpicture}[node distance=12mm and 20mm]
+      \node[syst] (sys) {Plateforme\\\textbf{CARIBOOKS}};
+      \node[box, above left=of sys]  (ach)   {Acheteur};
+      \node[box, left=of sys]        (vend)  {Bénévole\\Caritas};
+      \node[box, below left=of sys]  (admin) {Admin};
+      \node[extbox, above right=of sys] (ol) {\scriptsize OpenLibrary\\Google Books};
+      \node[extbox, right=of sys]    (pf)    {\scriptsize PostFinance\\(CHF)};
+      \node[extbox, below right=of sys](post) {\scriptsize Poste Suisse\\(livraison)};
+      \draw[flow] (ach)   -- (sys);
+      \draw[flow] (vend)  -- (sys);
+      \draw[flow] (admin) -- (sys);
+      \draw[dep]  (sys)   -- (ol);
+      \draw[dep]  (sys)   -- (pf);
+      \draw[dep]  (sys)   -- (post);
+    \end{tikzpicture}\\[4pt]
+    \scriptsize\textit{Diagramme de contexte}
+    \end{center}
+  \end{columns}
+\end{frame}
+
+% ─────────────────────────────────────────
+%  SLIDE 4 — BESOINS
+% ─────────────────────────────────────────
+\begin{frame}{Analyse des besoins}
+  \begin{columns}[T]
+    \column{0.48\textwidth}
+    \begin{block}{Trois profils utilisateurs}
+      \begin{itemize}
+        \item \textbf{Bénévoles Caritas} — ajout rapide de stock
+        \item \textbf{Acheteurs} — trouver un livre pas cher en CHF
+        \item \textbf{Administrateur} — modération et suivi
+      \end{itemize}
+    \end{block}
+    \vspace{5pt}
+    \begin{block}{Critères de succès du MVP}
+      \begin{itemize}
+        \item Mettre un livre en vente en \textbf{$<$ 2 minutes}
+        \item Paiement \textbf{CHF natif} (TWINT, Visa/MC)
+        \item \textbf{Livraison restreinte à la Suisse}
+        \item Interface \textbf{épurée} pour bénévoles
+      \end{itemize}
+    \end{block}
+    \column{0.48\textwidth}
+    \begin{block}{Contraintes techniques et organisationnelles}
+      \begin{itemize}
+        \item Développement \textbf{solo}, le soir (17h--20h)
+        \item \textbf{3 mois} / 6 sprints de 2 semaines
+        \item Coût de maintenance \textbf{minimal} (association)
+        \item Fallback ISBN manuel si API indisponible
+      \end{itemize}
+    \end{block}
+    \vspace{6pt}
+    \begin{center}
+    \begin{tikzpicture}
+      \node[tag] at (0,0)     {Scan ISBN};
+      \node[tag] at (1.7,0)   {CHF uniquement};
+      \node[tag] at (3.8,0)   {JWT Auth};
+      \node[tag] at (0,-0.52)  {PostFinance};
+      \node[tag] at (1.9,-0.52){Docker};
+      \node[tag] at (3.2,-0.52){CI/CD};
+    \end{tikzpicture}
+    \end{center}
+  \end{columns}
+\end{frame}
+
+% ══════════════════════════════════════════════════════════════════════
+\section{État de l\textquotesingle{}art et choix technique}
+% ══════════════════════════════════════════════════════════════════════
+
+% ─────────────────────────────────────────
+%  SLIDE 5 — COMPARATIF
+% ─────────────────────────────────────────
+\begin{frame}{Solutions existantes -- Pourquoi développer sur mesure ?}
+  \begin{center}
+  \small
+  \renewcommand{\arraystretch}{1.4}
+  \begin{tabular}{@{}lcccccc@{}}
+    \toprule
+    \textbf{Solution} & \textbf{Devise CHF} & \textbf{Scan ISBN}
+      & \textbf{Back-office} & \textbf{Coût} & \textbf{Personnali\-sable} \\
+    \midrule
+    Momox       & \no  & \yes & \no     & Gratuit & \no \\
+    Vinted      & \no  & \no  & Partiel & Gratuit & \no \\
+    Shopify     & \yes & \no  & \yes    & Élevé   & Partiel \\
+    WooCommerce & \yes & \no  & \no     & Moyen   & \yes \\
+    Ricardo.ch  & \yes & \no  & \no     & Moyen   & \no \\
+    \midrule
+    \rowcolor{mybluepale}
+    \textbf{CARIBOOKS} & \textbf{\yes} & \textbf{\yes} & \textbf{\yes}
+      & \textbf{Faible} & \textbf{\yes\; Total} \\
+    \bottomrule
+  \end{tabular}
+  \end{center}
+  \vspace{4pt}
+  \begin{columns}[T]
+    \column{0.48\textwidth}
+    \begin{alertblock}{Lacunes des solutions existantes}
+      \begin{itemize}\small
+        \item Aucune ne combine CHF + Scan ISBN + back-office simple
+        \item Devise EUR imposée (Momox, Vinted)
+        \item Back-offices complexes (WooCommerce, Shopify)
+        \item Abonnements mensuels incompatibles avec une asso.
+      \end{itemize}
+    \end{alertblock}
+    \column{0.48\textwidth}
+    \begin{exampleblock}{Avantages du développement sur mesure}
+      \begin{itemize}\small
+        \item Contrôle total sur le tunnel CHF
+        \item Scan ISBN intégré nativement
+        \item UI épurée taillée pour les bénévoles
+        \item \textbf{PostFinance} : TWINT, sandbox sans CB réelle
+      \end{itemize}
+    \end{exampleblock}
+  \end{columns}
+\end{frame}
+
+% ─────────────────────────────────────────
+%  SLIDE 6 — STACK TECHNIQUE
+% ─────────────────────────────────────────
+\begin{frame}{Stack technique et justifications}
+  \begin{columns}[T]
+    \column{0.46\textwidth}
+    \begin{center}
+    \begin{tikzpicture}[node distance=6mm]
+      \node[layer,fill=gray!12,minimum width=52mm] (client)
+        {\textbf{Client}\\\tiny Navigateur web / Mobile};
+      \node[layer,fill=cyan!15,below=of client,minimum width=52mm] (front)
+        {\textbf{Frontend --- Next.js (React / TS)}\\\tiny SSR/SSG \textbullet{} Scan ISBN (JS) \textbullet{} Vercel};
+      \node[layer,fill=myblue!15,below=of front,minimum width=52mm] (api)
+        {\textbf{Backend --- FastAPI (Python)}\\\tiny Pydantic \textbullet{} JWT \textbullet{} SQLAlchemy \textbullet{} Swagger};
+      \node[layer,fill=orange!15,below=of api,minimum width=52mm] (db)
+        {\textbf{Base de données --- MySQL}};
+      \node[extbox,right=10mm of api,minimum width=24mm,align=center] (ext)
+        {\tiny OpenLibrary\\\tiny PostFinance\\\tiny Poste Suisse};
+      \node[draw,dashed,rounded corners,fit=(api)(db),inner sep=4mm,
+            label=below:{\tiny Docker / docker-compose \textbullet{} GitHub Actions CI/CD}] {};
+      \draw[flow] (client) -- node[flowlab]{HTTPS} (front);
+      \draw[flow] (front)  -- node[flowlab]{REST / JSON} (api);
+      \draw[flow] (api)    -- node[flowlab]{ORM} (db);
+      \draw[dep]  (api)    -- node[flowlab]{HTTPS} (ext);
+    \end{tikzpicture}
+    \end{center}
+    \column{0.51\textwidth}
+    \begin{block}{Justifications des choix}
+      \begin{itemize}\small
+        \item \tech{FastAPI} : performances ASGI, Pydantic auto, Swagger natif\\
+          \badgeorange{Migration depuis Express.js}
+        \item \tech{Next.js} : SSR pour le SEO vitrine, SPA pour le back-office
+        \item \tech{MySQL} : relationnel éprouvé, transactions ACID
+        \item \tech{SQLAlchemy} : requêtes paramétrées $\Rightarrow$ anti-injections SQL
+        \item \tech{PostFinance} : TWINT natif, sandbox accessible, 100\% suisse\\
+          \badgeorange{Migration depuis Payrexx}
+        \item \tech{Docker} + \tech{GitHub Actions} : reproductibilité et CI/CD
+        \item \tech{Vercel} : déploiement frontend CDN global, gratuit
+      \end{itemize}
+    \end{block}
+  \end{columns}
+\end{frame}
+
+% ══════════════════════════════════════════════════════════════════════
+\section{Gestion de projet}
+% ══════════════════════════════════════════════════════════════════════
+
+% ─────────────────────────────────────────
+%  SLIDE 7 — SCRUM
+% ─────────────────────────────────────────
+\begin{frame}{Gestion de projet --- Scrum simplifié}
+  \begin{columns}[T]
+    \column{0.42\textwidth}
+    \begin{block}{Méthodologie Agile Scrum}
+      \begin{itemize}\small
+        \item \textbf{6 sprints} de 2 semaines
+        \item Sessions : \textbf{17h--20h} (3 soirs/semaine)
+        \item Suivi : \textbf{Microsoft Planner} (Kanban)
+        \item \textbf{Product Owner} : bénévole Caritas
+        \item Démo en fin de chaque sprint
+      \end{itemize}
+    \end{block}
+    \vspace{5pt}
+    \begin{center}
+    \begin{tikzpicture}[every node/.style={font=\tiny}]
+      \node[tag,fill=myblue,minimum width=5.4cm,text width=5.0cm,align=left]
+        at (0, 0.00) {\textbf{Sprint 1} \; Env. Docker -- BDD -- Modélisation};
+      \node[tag,fill=myblue,minimum width=5.4cm,text width=5.0cm,align=left]
+        at (0,-0.54) {\textbf{Sprint 2} \; Authentification JWT -- Rôles};
+      \node[tag,fill=myblue,minimum width=5.4cm,text width=5.0cm,align=left]
+        at (0,-1.08) {\textbf{Sprint 3} \; Scan ISBN -- API OpenLibrary};
+      \node[tag,fill=myblue,minimum width=5.4cm,text width=5.0cm,align=left]
+        at (0,-1.62) {\textbf{Sprint 4} \; Catalogue -- Filtres -- Fiche livre};
+      \node[tag,fill=myblue,minimum width=5.4cm,text width=5.0cm,align=left]
+        at (0,-2.16) {\textbf{Sprint 5} \; PostFinance -- Tunnel paiement};
+      \node[tag,fill=mysuccess,minimum width=5.4cm,text width=5.0cm,align=left]
+        at (0,-2.70) {\textbf{Sprint 6} \; Back-office -- Tests -- Déploiement};
+    \end{tikzpicture}
+    \end{center}
+    \column{0.55\textwidth}
+    \begin{block}{Fonctionnalités MVP livrées}
+      \begin{enumerate}\small
+        \item Inscription / Connexion (JWT + bcrypt)
+        \item Ajout livre par scan ISBN ou saisie manuelle
+        \item Préremplissage OpenLibrary avec fallback Google Books
+        \item Catalogue avec filtres (titre, auteur, prix, état)
+        \item Paiement PostFinance en CHF (TWINT, Visa/MC)
+        \item Back-office bénévole (CRUD annonces + stock)
+        \item CI/CD GitHub Actions + déploiement cloud
+      \end{enumerate}
+    \end{block}
+    \vspace{6pt}
+    \begin{center}
+    \badgegreen{20/20 tests passants}\quad\badgegreen{70\% couverture code}\quad\badge{Déployé en ligne}
+    \end{center}
+  \end{columns}
+\end{frame}
+
+% ══════════════════════════════════════════════════════════════════════
+\section{Analyse et conception}
+% ══════════════════════════════════════════════════════════════════════
+
+% ─────────────────────────────────────────
+%  SLIDE 8 — CAS D'UTILISATION
+% ─────────────────────────────────────────
+\begin{frame}{Diagramme de cas d'utilisation --- Vue globale}
+  \begin{center}
+  \resizebox{0.88\textwidth}{!}{%
+  \begin{tikzpicture}
+    % Acteurs gauche
+    \umlactor{0}{2.6}{Acheteur}
+    \umlactor{0}{-0.8}{Vendeur\\(bénévole)}
+    \umlactor{0}{-4.0}{Admin}
+    % Acteurs droite
+    \umlactor{11.5}{2.8}{OpenLibrary}
+    \umlactor{11.5}{-2.0}{PostFinance}
+    % Système
+    \node[ucsys,minimum width=70mm,minimum height=100mm,
+          label=above:{\small\bfseries Système CARIBOOKS}] at (5.6,-0.8) {};
+    % Use cases
+    \node[usecase] (uc1) at (5.6, 3.2) {S'inscrire / Se connecter};
+    \node[usecase] (uc2) at (5.6, 1.8) {Parcourir le catalogue};
+    \node[usecase] (uc3) at (5.6, 0.4) {Rechercher / Filtrer};
+    \node[usecase] (uc4) at (5.6,-1.0) {Gérer ses favoris};
+    \node[usecase] (uc5) at (5.6,-2.4) {Passer commande \& payer};
+    \node[usecase] (uc6) at (5.6,-3.8) {Ajouter livre (scan ISBN)};
+    \node[usecase] (uc7) at (5.6,-5.2) {Modérer / Gérer utilisateurs};
+    % Liens acheteur
+    \draw (0.22,3.0) -- (uc1); \draw (0.22,3.0) -- (uc2);
+    \draw (0.22,3.0) -- (uc3); \draw (0.22,3.0) -- (uc4);
+    \draw (0.22,3.0) -- (uc5);
+    % Liens vendeur
+    \draw (0.22,-0.4) -- (uc1);
+    \draw (0.22,-0.4) -- (uc6);
+    % Liens admin
+    \draw (0.22,-3.6) -- (uc7);
+    % Acteurs externes
+    \draw (uc6) -- (11.3,3.2);
+    \draw (uc5) -- (11.3,-1.6);
+  \end{tikzpicture}}
+  \end{center}
+\end{frame}
+
+% ─────────────────────────────────────────
+%  SLIDE 9 — MODÈLE DE DONNÉES
+% ─────────────────────────────────────────
+\begin{frame}{Modèle de données --- Architecture en héritage de table}
+  \begin{columns}[T]
+    \column{0.52\textwidth}
+    \begin{center}
+    \resizebox{0.92\textwidth}{!}{%
+    \begin{tikzpicture}
+      \node[tbl] (article) at (0,0)     {\textbf{article}\nodepart{second}id, sku, titre\\\textbf{prix\_chf}, actif};
+      \node[tbl] (livre)   at (0,-3.2)  {\textbf{livre}\nodepart{second}\textbf{isbn}, auteur\\editeur, langue};
+      \node[tbl] (cat)     at (-3.4,-1.6){\textbf{categorie}\nodepart{second}id, libelle};
+      \node[tbl] (etat)    at (3.4,0)   {\textbf{etat\_usure}\nodepart{second}id, libelle};
+      \node[tbl] (user)    at (4.5,-4.5){\textbf{utilisateur}\nodepart{second}id, email, role\\mot\_de\_passe\_hash};
+      \node[tbl] (cmd)     at (4.5,-7.5){\textbf{commande}\nodepart{second}id, numero, statut\\\textbf{montant\_total\_chf}};
+      \node[tbl] (paie)    at (4.5,-10.6){\textbf{paiement}\nodepart{second}id, reference\_ext\\\textbf{montant\_chf}, statut};
+      \node[tbl] (ligne)   at (0,-7.2)  {\textbf{ligne\_commande}\nodepart{second}id, quantite\\\textbf{prix\_unitaire\_chf}};
+      \node[tbl] (stock)   at (-3.4,-4.8){\textbf{stock}\nodepart{second}id, qte\_disponible\\qte\_reservee};
+      \node[tbl] (scan)    at (0,-10.6) {\textbf{scan\_isbn}\nodepart{second}id, isbn\_lu, valide};
+      % Inheritance
+      \draw[-{Triangle[open,length=3.5mm,width=4.5mm]},thick,myblue]
+        (livre.north) -- (article.south);
+      % Associations
+      \draw[flow] (article.east) -- (etat.west);
+      \draw[flow] (article.west) -- (cat.east);
+      \draw[flow] (stock.north)  to[out=90,in=180] (article.west);
+      \draw[flow] (cmd.north)    -- (user.south);
+      \draw[flow] (ligne.east)   -- (cmd.west);
+      \draw[flow] (ligne.west)   to[out=180,in=270] (article.south west);
+      \draw[flow] (paie.north)   -- (cmd.south);
+      \draw[flow] (scan.east)    to[out=0,in=270] (user.south);
+      \draw[flow] (scan.north)   -- (livre.south);
+    \end{tikzpicture}}
+    \end{center}
+    \column{0.45\textwidth}
+    \begin{block}{13 tables MySQL}
+      \begin{itemize}\small
+        \item \texttt{article} / \texttt{livre} : héritage 1-1\\
+          \textit{(clé primaire partagée)}
+        \item \texttt{categorie} + \texttt{article\_categorie} (N-N)
+        \item \texttt{etat\_usure}, \texttt{type\_objet}
+        \item \texttt{stock}, \texttt{source\_stock}
+        \item \texttt{utilisateur}, \texttt{commande}
+        \item \texttt{ligne\_commande}, \texttt{paiement}
+        \item \texttt{scan\_isbn} (traçabilité des scans)
+      \end{itemize}
+    \end{block}
+    \vspace{4pt}
+    \begin{block}{Pattern Table Per Class}
+      La table \texttt{livre} étend \texttt{article} par
+      clé primaire partagée. Permet d'ajouter d'autres
+      types (vêtements, jouets\ldots) \textbf{sans restructurer} le schéma.
+    \end{block}
+    \vspace{4pt}
+    \begin{exampleblock}{Index de performance}
+      \scriptsize
+      \texttt{idx\_livre\_isbn}, \texttt{idx\_stock\_article},
+      \texttt{idx\_commande\_utilisateur}\ldots \\
+      Accélèrent les requêtes fréquentes du catalogue.
+    \end{exampleblock}
+  \end{columns}
+\end{frame}
+
+% ══════════════════════════════════════════════════════════════════════
+\section{Réalisations techniques}
+% ══════════════════════════════════════════════════════════════════════
+
+% ─────────────────────────────────────────
+%  SLIDE 10 — AUTH JWT
+% ─────────────────────────────────────────
+\begin{frame}[fragile]{Authentification JWT --- Flux sécurisé}
+  \begin{columns}[T]
+    \column{0.53\textwidth}
+\begin{lstlisting}[style=pysmall,caption={}]
+# services/jwt_service.py
+def create_access_token(payload: dict,
+    secret_key: str, expires_minutes: int) -> str:
+    to_encode = payload.copy()
+    expire = datetime.utcnow() + timedelta(
+        minutes=expires_minutes)
+    to_encode.update({"exp": expire})
+    return jwt.encode(to_encode, secret_key,
+                      algorithm="HS256")
+
+# presentation/deps.py
+ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
+SECRET_KEY  = os.getenv("SECRET_KEY", "dev-secret")
+
+if ENVIRONMENT in ("prod","production") \
+   and SECRET_KEY == "dev-secret":
+    raise RuntimeError(
+        "SECRET_KEY non securisee en production!")
+
+def get_current_user(
+    credentials = Depends(HTTPBearer()),
+    db: Session = Depends(get_db),
+) -> models.Utilisateur:
+    payload = decode_access_token(
+        credentials.credentials, SECRET_KEY)
+    user = crud_user.get_user_by_email(
+        db, payload["sub"])
+    if user is None:
+        raise HTTPException(401)
+    return user
+
+def require_admin(user=Depends(get_current_user)):
+    if str(user.role) != "admin":
+        raise HTTPException(403)
+    return user
+\end{lstlisting}
+    \column{0.44\textwidth}
+    \begin{block}{Flux d'authentification}
+      \begin{enumerate}\small
+        \item \texttt{POST /auth/token} (email + mdp)
+        \item Vérification hash \textbf{bcrypt} (passlib)
+        \item Génération \textbf{JWT HS256}\\
+          \texttt{\{sub, role, exp: 480 min\}}
+        \item Stockage client → \texttt{Bearer token}
+        \item Middleware \texttt{get\_current\_user} sur chaque route protégée
+        \item \texttt{require\_admin} pour le back-office
+      \end{enumerate}
+    \end{block}
+    \vspace{5pt}
+    \begin{tikzpicture}
+      \node[tag]      at (0,0)    {HS256};
+      \node[tag]      at (0.9,0)  {bcrypt rounds=12};
+      \node[tag]      at (0,-0.5) {exp 480 min};
+      \node[tagorange] at (2.6,-0.5) {env SECRET\_KEY};
+    \end{tikzpicture}
+    \vspace{5pt}
+    \begin{alertblock}{\small Sécurité de démarrage}
+      \small L'API \textbf{refuse de démarrer} si la \texttt{SECRET\_KEY} par défaut
+      est détectée en environnement de production.
+    \end{alertblock}
+  \end{columns}
+\end{frame}
+
+% ─────────────────────────────────────────
+%  SLIDE 11 — SCAN ISBN
+% ─────────────────────────────────────────
+\begin{frame}[fragile]{Module Scan ISBN --- Ajout de livre en $<$ 2 min}
+  \begin{columns}[T]
+    \column{0.51\textwidth}
+\begin{lstlisting}[style=pysmall,caption={}]
+# presentation/book_router.py
+@router.get("/isbn/{isbn}")
+async def lookup_isbn(isbn: str):
+    async with httpx.AsyncClient() as client:
+
+        # 1. OpenLibrary (source principale)
+        resp = await client.get(
+            "https://openlibrary.org/api/books",
+            params={"bibkeys": f"ISBN:{isbn}",
+                    "format": "json",
+                    "jscmd":  "data"})
+        data = resp.json()
+        if f"ISBN:{isbn}" in data:
+            book = data[f"ISBN:{isbn}"]
+            return {"isbn":    isbn,
+                "titre":   book.get("title"),
+                "auteur":  book["authors"][0]["name"],
+                "editeur": book["publishers"][0]["name"],
+                "source":  "openlibrary"}
+
+        # 2. Fallback Google Books
+        resp2 = await client.get(
+            "https://www.googleapis.com/books/v1/volumes",
+            params={"q": f"isbn:{isbn}"})
+        if resp2.json().get("totalItems", 0) > 0:
+            info = resp2.json()["items"][0]["volumeInfo"]
+            return {"titre":  info.get("title"),
+                    "source": "google_books", ...}
+
+    raise HTTPException(404,
+        "ISBN non trouve. Saisie manuelle.")
+\end{lstlisting}
+    \column{0.46\textwidth}
+    \vspace{2pt}
+    \begin{center}
+    \begin{tikzpicture}[node distance=5mm]
+      \node[init] (s) {};
+      \node[act,below=of s,minimum width=32mm] (a1)
+        {Scanner code-barres\\(JS navigateur)};
+      \node[act,below=of a1] (a2)
+        {GET /isbn/\{isbn\}};
+      \node[decision,below=of a2] (d1) {OpenLib ?};
+      \node[act,below=11mm of d1,minimum width=32mm] (a3)
+        {Fallback Google Books};
+      \node[decision,below=of a3] (d2) {Trouvé ?};
+      \node[act,right=9mm of d2,minimum width=20mm,text width=18mm] (a4)
+        {Saisie\\manuelle};
+      \node[act,below=11mm of d2,minimum width=32mm] (a5)
+        {Préremplir formulaire};
+      \node[act,below=of a5] (a6)
+        {État + Prix CHF};
+      \node[act,below=of a6] (a7)
+        {POST /articles + /scans};
+      \node[final,below=of a7] (e) {};
+      \draw[flow] (s)  -- (a1);
+      \draw[flow] (a1) -- (a2);
+      \draw[flow] (a2) -- (d1);
+      \draw[flow] (d1) -- node[flowlab,right]{\tiny non} (a3);
+      \draw[flow] (d1.west) to[out=180,in=180]
+        node[flowlab,left]{\tiny oui} (a5.west);
+      \draw[flow] (a3) -- (d2);
+      \draw[flow] (d2) -- node[flowlab,right]{\tiny non} (a4);
+      \draw[flow] (a4.north) |- (a6.east);
+      \draw[flow] (d2) -- node[flowlab,right]{\tiny oui} (a5);
+      \draw[flow] (a5) -- (a6);
+      \draw[flow] (a6) -- (a7);
+      \draw[flow] (a7) -- (e);
+    \end{tikzpicture}
+    \end{center}
+  \end{columns}
+\end{frame}
+
+% ─────────────────────────────────────────
+%  SLIDE 12 — POSTFINANCE
+% ─────────────────────────────────────────
+\begin{frame}{Module Paiement PostFinance --- Tunnel CHF}
+  \begin{columns}[T]
+    \column{0.56\textwidth}
+    \begin{center}
+    \resizebox{0.97\textwidth}{!}{%
+    \begin{tikzpicture}
+      \node[actorbox] (ach) at (0,0)     {Acheteur};
+      \node[actorbox] (fro) at (2.8,0)   {Next.js};
+      \node[actorbox] (api) at (5.8,0)   {FastAPI};
+      \node[actorbox] (pf)  at (8.8,0)   {PostFinance};
+      \node[actorbox] (bd)  at (11.4,0)  {MySQL};
+      \foreach \p in {ach,fro,api,pf,bd}
+        \draw[lifeline] (\p.south) -- ++(0,-8.4);
+      \draw[seqmsg] ($(ach)+(0,-0.8)$) --
+        node[above]{\tiny valide le panier} ($(fro)+(0,-0.8)$);
+      \draw[seqmsg] ($(fro)+(0,-1.6)$) --
+        node[above]{\tiny POST /orders} ($(api)+(0,-1.6)$);
+      \draw[seqmsg] ($(api)+(0,-2.4)$) --
+        node[above]{\tiny INSERT commande (EN\_ATTENTE)} ($(bd)+(0,-2.4)$);
+      \draw[seqmsg] ($(api)+(0,-3.2)$) --
+        node[above]{\tiny crée transaction PostFinance} ($(pf)+(0,-3.2)$);
+      \draw[seqret] ($(pf)+(0,-4.0)$) --
+        node[above]{\tiny URL de paiement} ($(api)+(0,-4.0)$);
+      \draw[seqret] ($(api)+(0,-4.8)$) --
+        node[above]{\tiny redirection} ($(fro)+(0,-4.8)$);
+      \draw[seqmsg] ($(fro)+(0,-5.6)$) --
+        node[above]{\tiny TWINT / carte (CHF)} ($(pf)+(0,-5.6)$);
+      \draw[seqmsg] ($(pf)+(0,-6.4)$) --
+        node[above]{\tiny webhook CAPTURED/PAID} ($(api)+(0,-6.4)$);
+      \draw[seqmsg] ($(api)+(0,-7.2)$) --
+        node[above]{\tiny UPDATE statut PAYÉE} ($(bd)+(0,-7.2)$);
+      \draw[seqret] ($(api)+(0,-8.0)$) --
+        node[above]{\tiny confirmation} ($(fro)+(0,-8.0)$);
+    \end{tikzpicture}}
+    \end{center}
+    \column{0.41\textwidth}
+    \begin{block}{Pourquoi PostFinance ?}
+      \begin{itemize}\small
+        \item \textbf{TWINT} natif (paiement mobile dominant CH)
+        \item \textbf{Sandbox} sans CB réelle en développement
+        \item PostCard, Visa, Mastercard en \textbf{CHF}
+        \item Synergie \textbf{Poste Suisse} (livraison PostPac)
+        \item Acteur 100\% suisse, réglementation conforme
+      \end{itemize}
+    \end{block}
+    \vspace{5pt}
+    \begin{block}{Sécurisation webhook}
+      \begin{itemize}\small
+        \item Signature \textbf{ECDSA} vérifiée avant mise à jour
+        \item \texttt{with\_for\_update()} : verrou SQL contre les accès concurrents au stock
+        \item Finalisation atomique de la commande
+      \end{itemize}
+    \end{block}
+    \vspace{4pt}
+    \badgeorange{Migration Payrexx $\rightarrow$ PostFinance en cours de projet}
+  \end{columns}
+\end{frame}
+
+% ─────────────────────────────────────────
+%  SLIDE 13 — ARCHITECTURE EN COUCHES
+% ─────────────────────────────────────────
+\begin{frame}{Architecture hexagonale --- Séparation des préoccupations}
+  \begin{columns}[T]
+    \column{0.47\textwidth}
+    \begin{center}
+    \begin{tikzpicture}[node distance=5mm]
+      \node[layer,fill=cyan!15,minimum width=58mm] (pres)
+        {\textbf{Présentation (Routers)}\\\tiny auth \textbullet{} book \textbullet{} catalog \textbullet{} order \textbullet{} scan \textbullet{} user \textbullet{} stock \textbullet{} images};
+      \node[layer,fill=myblue!15,below=of pres,minimum width=58mm] (svc)
+        {\textbf{Services (Métier)}\\\tiny jwt\_service \textbullet{} payment\_service \textbullet{} book\_service \textbullet{} image\_service};
+      \node[layer,fill=orange!15,below=of svc,minimum width=58mm] (infra)
+        {\textbf{Infrastructure (Données)}\\\tiny SQLAlchemy models \textbullet{} crud\_base \textbullet{} crud\_user \textbullet{} db.py};
+      \node[layer,fill=green!12,below=of infra,minimum width=58mm] (dom)
+        {\textbf{Domaine (Entités)}\\\tiny book.py};
+      \draw[dep] (pres)  -- (svc);
+      \draw[dep] (svc)   -- (infra);
+      \draw[dep] (infra) -- (dom);
+      \node[right=2mm of pres,font=\tiny,text=mygray]  {couche};
+      \node[right=2mm of svc,font=\tiny,text=mygray]   {couche};
+      \node[right=2mm of infra,font=\tiny,text=mygray] {couche};
+      \node[right=2mm of dom,font=\tiny,text=mygray]   {couche};
+    \end{tikzpicture}
+    \end{center}
+    \column{0.50\textwidth}
+    \begin{block}{\texttt{CrudBase<T>} --- Pattern générique}
+      \begin{itemize}\small
+        \item Classe typée réutilisée par tous les routers
+        \item \texttt{list / get / create / update / delete}
+        \item SQLAlchemy génère des requêtes \textbf{paramétrées}\\
+          $\Rightarrow$ protection native contre les injections SQL
+      \end{itemize}
+    \end{block}
+    \vspace{5pt}
+    \begin{block}{Principes SOLID appliqués}
+      \begin{itemize}\small
+        \item \textbf{S} : chaque router = 1 domaine fonctionnel
+        \item \textbf{O} : CrudBase extensible sans modification
+        \item \textbf{D} : injection de dépendances via \texttt{Depends()}
+        \item Validation des entrées : schémas \textbf{Pydantic}
+        \item Endpoint \texttt{/health} pour le monitoring
+      \end{itemize}
+    \end{block}
+    \vspace{4pt}
+    \begin{exampleblock}{\small Décision d'architecture}
+      \small Première version avec Express.js abandonnée au profit de FastAPI pour la validation automatique Pydantic et le Swagger natif.
+    \end{exampleblock}
+  \end{columns}
+\end{frame}
+
+% ─────────────────────────────────────────
+%  SLIDE 14 — UI/UX MOCKUP
+% ─────────────────────────────────────────
+\begin{frame}{Interface utilisateur --- Conception UI/UX}
+  \begin{columns}[T]
+    \column{0.48\textwidth}
+    \begin{center}
+    % Mockup navigateur — page catalogue
+    \begin{tikzpicture}
+      % Fenêtre navigateur
+      \fill[gray!20] (0,5.4) rectangle (6,6.0);
+      \fill[white!90!gray] (0.1,5.45) circle (0.08);
+      \fill[white!90!gray] (0.3,5.45) circle (0.08);
+      \fill[white!90!gray] (0.5,5.45) circle (0.08);
+      \fill[white] (0.8,5.35) rectangle (5.2,5.6);
+      \node[font=\tiny,text=mygray] at (3,5.475) {caribooks.vercel.app/catalogue};
+      \draw[myblue,thick] (0,0) rectangle (6,5.4);
+      % Header
+      \fill[myblue] (0,4.9) rectangle (6,5.4);
+      \node[font=\tiny\bfseries,text=white] at (1,5.15) {CARIBOOKS};
+      \node[font=\tiny,text=white] at (3,5.15) {Catalogue \quad Connexion};
+      % Search bar
+      \fill[gray!15] (0.3,4.5) rectangle (5.7,4.8);
+      \node[font=\tiny,text=mygray] at (3,4.65) {Rechercher un livre...};
+      % Filtres
+      \fill[mybluepale] (0.3,4.1) rectangle (1.6,4.35);
+      \fill[mybluepale] (1.7,4.1) rectangle (3.0,4.35);
+      \fill[mybluepale] (3.1,4.1) rectangle (4.4,4.35);
+      \node[font=\tiny] at (0.95,4.225) {Catégorie};
+      \node[font=\tiny] at (2.35,4.225) {État};
+      \node[font=\tiny] at (3.75,4.225) {Prix CHF};
+      % Livres
+      \foreach \x/\ti/\p in {0.3/Camus/12.50, 2.3/Orwell/15.00, 4.3/St-Exupery/8.50} {
+        \fill[gray!10] (\x,2.4) rectangle ({\x+1.7},{3.9});
+        \fill[mybluepale!80] (\x,2.4) rectangle ({\x+1.7},{3.3});
+        \node[font=\tiny\bfseries,align=center,text width=14mm] at ({\x+0.85},2.85) {\ti};
+        \fill[mysuccess] (\x,2.1) rectangle ({\x+1.7},{2.4});
+        \node[font=\tiny,text=white] at ({\x+0.85},2.25) {\p\,CHF};
+      }
+      % Footer
+      \fill[myblue!80] (0,0) rectangle (6,0.5);
+      \node[font=\tiny,text=white] at (3,0.25) {Livraison Suisse uniquement \textbullet{} Paiement CHF};
+    \end{tikzpicture}\\[2pt]
+    \scriptsize\textit{Maquette --- Page catalogue}
+    \end{center}
+    \column{0.48\textwidth}
+    \begin{center}
+    % Mockup mobile — scan ISBN
+    \begin{tikzpicture}
+      % Téléphone
+      \fill[gray!30] (0.8,0) rectangle (4.4,7.5);
+      \fill[gray!30,rounded corners=6pt] (0.8,0) rectangle (4.4,7.5);
+      \fill[white] (1.0,0.5) rectangle (4.2,7.0);
+      % Camera area / scanner
+      \fill[black!85] (1.0,5.2) rectangle (4.2,7.0);
+      \draw[myaccent,line width=1.2pt]
+        (1.4,5.5) -- (1.4,5.2) -- (1.7,5.2);
+      \draw[myaccent,line width=1.2pt]
+        (3.8,5.5) -- (3.8,5.2) -- (3.5,5.2);
+      \draw[myaccent,line width=1.2pt]
+        (1.4,6.7) -- (1.4,7.0) -- (1.7,7.0);
+      \draw[myaccent,line width=1.2pt]
+        (3.8,6.7) -- (3.8,7.0) -- (3.5,7.0);
+      \draw[myaccent!80,line width=0.8pt] (1.1,6.1) -- (4.1,6.1);
+      \node[font=\tiny,text=white] at (2.6,6.4) {Scan ISBN};
+      % Formulaire en dessous
+      \fill[mybluepale] (1.1,4.6) rectangle (4.1,5.1);
+      \node[font=\tiny] at (2.6,4.85) {Titre : \textit{prérempli automatiquement}};
+      \fill[mybluepale] (1.1,4.0) rectangle (4.1,4.5);
+      \node[font=\tiny] at (2.6,4.25) {Auteur : \textit{prérempli automatiquement}};
+      \fill[gray!15] (1.1,3.4) rectangle (4.1,3.9);
+      \node[font=\tiny] at (2.6,3.65) {État : Bon état \quad Prix : 12.50 CHF};
+      % Bouton publier
+      \fill[mysuccess] (1.3,2.7) rectangle (3.9,3.2);
+      \node[font=\tiny\bfseries,text=white] at (2.6,2.95) {Publier l'annonce};
+      % Home bar
+      \fill[gray!50,rounded corners=2pt] (2.1,0.2) rectangle (3.1,0.35);
+    \end{tikzpicture}\\[2pt]
+    \scriptsize\textit{Maquette --- Scan ISBN (mobile)}
+    \end{center}
+  \end{columns}
+\end{frame}
+
+% ══════════════════════════════════════════════════════════════════════
+\section{Cybersécurité et qualité}
+% ══════════════════════════════════════════════════════════════════════
+
+% ─────────────────────────────────────────
+%  SLIDE 15 — SÉCURITÉ
+% ─────────────────────────────────────────
+\begin{frame}{Cybersécurité --- Mesures implémentées (OWASP Top 10)}
+  \begin{center}
+  \small
+  \renewcommand{\arraystretch}{1.35}
+  \begin{tabular}{@{}p{3.8cm}p{3.4cm}p{4.2cm}@{}}
+    \toprule
+    \textbf{Menace / Risque} & \textbf{Mesure implémentée} & \textbf{Technologie} \\
+    \midrule
+    Injection SQL               & Requêtes paramétrées       & SQLAlchemy ORM \\
+    Mots de passe compromis     & Hashage adaptatif (cost=12) & bcrypt / passlib \\
+    Accès non autorisé          & Auth obligatoire routes     & JWT + HTTPBearer \\
+    Élévation de privilèges     & Contrôle rôles strict       & \texttt{require\_admin} FastAPI \\
+    Données invalides           & Validation schémas          & Pydantic + HTTPException \\
+    Token intercepté            & Expiration + TLS prod       & JWT \texttt{exp}, HTTPS \\
+    Secrets en clair            & Variables d'environnement   & \texttt{.env} + python-dotenv \\
+    Race condition stock        & Verrou SQL transactionnel   & \texttt{with\_for\_update()} \\
+    \bottomrule
+  \end{tabular}
+  \end{center}
+  \vspace{4pt}
+  \begin{columns}[T]
+    \column{0.48\textwidth}
+    \begin{block}{Veille sécurité menée}
+      \begin{itemize}\small
+        \item \textbf{OWASP Top 10} : référentiel principal
+        \item \textbf{GitHub Dependabot} : alertes CVE automatiques
+        \item \textbf{Documentation FastAPI sécurité} (OAuth2, JWT)
+        \item \textbf{Daily.dev} / bytes : newsletter tech hebdo
+      \end{itemize}
+    \end{block}
+    \column{0.48\textwidth}
+    \begin{block}{Mesures complémentaires}
+      \begin{itemize}\small
+        \item CORS : origines autorisées (Vercel + localhost)
+        \item Endpoint \texttt{/health} pour les sondes
+        \item \texttt{/static} monté pour les images (pas d'URL tiers)
+        \item Refus de démarrage si clé secrète par défaut en prod
+      \end{itemize}
+    \end{block}
+  \end{columns}
+\end{frame}
+
+% ══════════════════════════════════════════════════════════════════════
+\section{Tests et déploiement}
+% ══════════════════════════════════════════════════════════════════════
+
+% ─────────────────────────────────────────
+%  SLIDE 16 — TESTS
+% ─────────────────────────────────────────
+\begin{frame}{Tests et couverture --- 20/20, 70\,\%}
+  \begin{columns}[T]
+    \column{0.48\textwidth}
+    \begin{block}{Stratégie de test à 3 niveaux}
+      \begin{itemize}\small
+        \item \textbf{Tests unitaires} : JWT, bcrypt, ISBN, calculs CHF
+        \item \textbf{Tests d'intégration} : \texttt{TestClient} FastAPI + MySQL
+        \item \textbf{Test fonctionnel E2E} : parcours achat complet
+        \item \textbf{Sandbox PostFinance} : scénarios succès / échec
+        \item Tests manuels : \textbf{Swagger UI} + \textbf{Thunder Client}
+      \end{itemize}
+    \end{block}
+    \vspace{5pt}
+    \badgegreen{20 / 20 tests passants (pytest)}
+    \vspace{5pt}
+    \begin{alertblock}{\small Axes de renforcement (Phase 2)}
+      \texttt{order\_router} (17\,\%) et \texttt{image\_service} (23\,\%) identifiés comme prioritaires.
+    \end{alertblock}
+    \column{0.50\textwidth}
+    \begin{center}
+    \small
+    \renewcommand{\arraystretch}{1.25}
+    \begin{tabular}{@{}p{4.2cm}r@{}}
+      \toprule
+      \textbf{Module} & \textbf{Couverture} \\
+      \midrule
+      \texttt{infrastructure/models.py}    & 100\,\% \\
+      \texttt{presentation/schemas.py}     & 96\,\% \\
+      \texttt{scan\_router.py}             & 91\,\% \\
+      \texttt{catalog\_router.py}          & 89\,\% \\
+      \texttt{services/jwt\_service.py}    & 86\,\% \\
+      \texttt{presentation/auth\_router.py}& 83\,\% \\
+      \texttt{services/book\_service.py}   & 77\,\% \\
+      \texttt{presentation/book\_router.py}& 68\,\% \\
+      \texttt{postfinance\_service.py}     & 64\,\% \\
+      \texttt{services/image\_service.py}  & 23\,\% \\
+      \rowcolor{myaccent!20}
+      \texttt{presentation/order\_router.py}&17\,\% \\
+      \midrule
+      \textbf{TOTAL (2\,326 instructions)} & \textbf{70\,\%} \\
+      \bottomrule
+    \end{tabular}
+    \end{center}
+  \end{columns}
+\end{frame}
+
+% ─────────────────────────────────────────
+%  SLIDE 17 — DÉPLOIEMENT
+% ─────────────────────────────────────────
+\begin{frame}{Déploiement --- Infrastructure cloud hybride + CI/CD}
+  \begin{columns}[T]
+    \column{0.52\textwidth}
+    \begin{center}
+    \begin{tikzpicture}[
+      device/.style={rectangle,draw=myblue,thick,fill=mybluepale!50,align=center,font=\small},
+      artifact/.style={rectangle,draw=myblue,fill=mybluepale,align=center,font=\scriptsize,inner sep=3pt}]
+      \node[device,minimum width=28mm,minimum height=14mm,
+            label=above:{\tiny\guillemotleft device\guillemotright}] (client) at (0,0)
+            {\textbf{Client}\\\tiny Navigateur};
+      \node[device,minimum width=36mm,minimum height=14mm,
+            label=above:{\tiny\guillemotleft cloud --- Vercel\guillemotright}] (vercel) at (5,2.8) {};
+      \node[artifact,minimum width=28mm] (fe) at (5,2.8)
+            {Frontend Next.js\\\tiny SSR / CDN global};
+      \node[device,minimum width=42mm,minimum height=32mm,
+            label=above:{\tiny\guillemotleft serveur --- Oracle Cloud\guillemotright}] (host) at (5,-1.8) {};
+      \node[artifact,minimum width=34mm] (api) at (5,-1.0)
+            {API FastAPI (Uvicorn)\\\tiny Docker container};
+      \node[artifact,minimum width=34mm] (db) at (5,-2.8)
+            {Base MySQL\\\tiny Oracle Cloud};
+      \node[device,minimum width=28mm,minimum height=22mm,
+            label=above:{\tiny\guillemotleft services tiers\guillemotright}] (ext) at (10,0.3)
+            {\tiny PostFinance\\\tiny OpenLibrary\\\tiny Poste Suisse};
+      \draw[flow] (client)  -- node[flowlab]{HTTPS}      (vercel);
+      \draw[flow] (client)  -- node[flowlab]{HTTPS/REST} (api);
+      \draw[flow] (api)     -- node[flowlab]{TCP 3306}   (db);
+      \draw[flow] (api)     -- node[flowlab]{HTTPS}      (ext);
+    \end{tikzpicture}
+    \end{center}
+    \column{0.45\textwidth}
+    \begin{block}{Pipeline CI/CD --- GitHub Actions}
+      \begin{enumerate}\small
+        \item Push sur branche \texttt{main}
+        \item Exécution \textbf{pytest} (20/20 requis)
+        \item Build image \textbf{Docker}
+        \item Deploy sur \textbf{Oracle Cloud} (VM Linux)
+        \item \textbf{Vercel} auto-deploy frontend
+      \end{enumerate}
+    \end{block}
+    \vspace{5pt}
+    \begin{block}{Infrastructure}
+      \begin{itemize}\small
+        \item \textbf{Vercel} : CDN global, auto-scaling, gratuit
+        \item \textbf{Oracle Cloud} : VM Linux + docker-compose
+        \item \textbf{MySQL} : instance dédiée Oracle Cloud
+        \item CORS configuré pour les 2 environnements
+      \end{itemize}
+    \end{block}
+    \vspace{4pt}
+    \badge{caribooks.vercel.app}
+  \end{columns}
+\end{frame}
+
+% ══════════════════════════════════════════════════════════════════════
+\section{Compétences CDA}
+% ══════════════════════════════════════════════════════════════════════
+
+% ─────────────────────────────────────────
+%  SLIDE 18 — BLOCS CDA
+% ─────────────────────────────────────────
+\begin{frame}{Couverture des 3 blocs de compétences CDA}
+  \begin{block}{Bloc 1 --- Développer une application sécurisée}
+    \begin{itemize}\small
+      \item Auth \textbf{JWT HS256} + \textbf{bcrypt rounds=12} + rôles admin/user + middleware FastAPI
+      \item \textbf{SQLAlchemy ORM} : requêtes paramétrées, protection injections SQL
+      \item Validation \textbf{Pydantic}, gestion des sessions, variables d'environnement
+    \end{itemize}
+  \end{block}
+  \vspace{3pt}
+  \begin{block}{Bloc 2 --- Concevoir et développer une application multicouche}
+    \begin{itemize}\small
+      \item Modélisation \textbf{MCD/MLD} MySQL (13 tables) + architecture hexagonale (4 couches)
+      \item \textbf{REST API} FastAPI + frontend découplé \textbf{Next.js}/TypeScript
+      \item Intégration APIs tierces : \textbf{OpenLibrary} (ISBN), \textbf{PostFinance} (CHF)
+      \item UML complet : contexte, cas d'utilisation, activités, séquence, classes, composants, déploiement
+    \end{itemize}
+  \end{block}
+  \vspace{3pt}
+  \begin{block}{Bloc 3 --- Préparer le déploiement}
+    \begin{itemize}\small
+      \item Conteneurisation \textbf{Docker} + \textbf{docker-compose} (API + BDD + frontend)
+      \item Pipeline \textbf{CI/CD GitHub Actions} : 20/20 tests $\rightarrow$ build $\rightarrow$ deploy
+      \item Déploiement hybride \textbf{Vercel} + \textbf{Oracle Cloud}, Swagger/OpenAPI auto-généré
+    \end{itemize}
+  \end{block}
+\end{frame}
+
+% ══════════════════════════════════════════════════════════════════════
+\section{Conclusion \& perspectives}
+% ══════════════════════════════════════════════════════════════════════
+
+% ─────────────────────────────────────────
+%  SLIDE 19 — CONCLUSION
+% ─────────────────────────────────────────
+\begin{frame}{Conclusion --- Bilan et perspectives}
+  \begin{columns}[T]
+    \column{0.48\textwidth}
+    \begin{exampleblock}{Objectifs MVP atteints}
+      \begin{itemize}\small
+        \item Ajout livre par scan ISBN en \textbf{$<$ 2 min}
+        \item Paiement \textbf{CHF} via PostFinance (TWINT + carte)
+        \item Livraison restreinte à la \textbf{Suisse}
+        \item Back-office bénévole opérationnel
+        \item \textbf{20/20 tests}, 70\,\% couverture
+        \item Déployé sur \texttt{caribooks.vercel.app}
+      \end{itemize}
+    \end{exampleblock}
+    \vspace{4pt}
+    \begin{alertblock}{Limites identifiées}
+      \begin{itemize}\small
+        \item Tunnel de paiement à fiabiliser (17\,\% couv.)
+        \item Interface mobile à affiner (responsive)
+        \item Suivi des commandes admin à compléter
+      \end{itemize}
+    \end{alertblock}
+    \column{0.48\textwidth}
+    \begin{block}{Perspectives d\textquotesingle{}évolution}
+      \begin{itemize}\small
+        \item \textbf{Phase 2} : messagerie acheteur-vendeur, système d'avis et de notation
+        \item \textbf{Phase 3} : estimation de prix IA, étiquettes PostPac, recommandations personnalisées
+        \item \textbf{Évolutions tech} : Redis (cache catalogue), CDN images, tests de charge (Locust/k6)
+      \end{itemize}
+    \end{block}
+    \vspace{4pt}
+    \begin{block}{Apprentissages clés}
+      \begin{itemize}\small
+        \item Migration technique motivée (Express.js $\rightarrow$ FastAPI)
+        \item Gestion Product Owner non technique
+        \item Développement solo discipliné en alternance
+      \end{itemize}
+    \end{block}
+  \end{columns}
+\end{frame}
+
+% ─────────────────────────────────────────
+%  SLIDE 20 — QUESTIONS
+% ─────────────────────────────────────────
+\begin{frame}[plain]
+  \begin{tikzpicture}[remember picture,overlay]
+    \fill[myblue] (current page.north west) rectangle (current page.south east);
+    \fill[mybluelight!40,opacity=0.4]
+      (current page.south west) rectangle ++(\paperwidth,0.20\paperheight);
+    \fill[white,opacity=0.03] (current page.center) ++(2,1) circle (4.5);
+  \end{tikzpicture}
+  \vspace{0.8cm}
+  \begin{center}
+    {\color{white}\fontsize{28}{34}\selectfont\bfseries Merci de votre attention}\\[18pt]
+    \begin{tikzpicture}
+      \draw[white!50,line width=0.8pt] (0,0) -- (8,0);
+    \end{tikzpicture}\\[14pt]
+    {\color{white!80}\Large Questions ?}\\[24pt]
+    {\color{white}\textbf{Alexandre REY}}\\[5pt]
+    {\color{white!70}\small alexandre.rey@qiminfo.ch}\\[8pt]
+    {\color{white!70}\small caribooks.vercel.app}\\[4pt]
+    {\color{white!70}\small github.com/Visualstudiocodetest/plobooks}
+  \end{center}
+\end{frame}
+
+\end{document}
