@@ -58,17 +58,24 @@ def _get_auth_header(request_path: str, request_method: str = "POST") -> Dict[st
 
 
 def _signed_request(path_suffix: str, method: str, extra_params: Optional[Dict[str, str]] = None) -> tuple[str, Dict[str, str]]:
-    """Return (full_url_with_params, headers) with spaceId as query param and JWT signed over the full path."""
+    """Return (url, headers) for a PostFinance v2.0 API call.
+
+    Space is passed as the 'Space' header (capital S) per the official SDK.
+    The JWT requestPath is the bare /api/v2.0/... path without spaceId in query.
+    Extra query params (e.g. integrationMode) are appended to the URL only,
+    not to the JWT requestPath, as they are not part of auth signing.
+    """
     from urllib.parse import urlencode
-    params: Dict[str, str] = {"spaceId": str(POSTFINANCE_SPACE_ID)}
+    api_path = f"/api/v2.0{path_suffix}"
     if extra_params:
-        params.update(extra_params)
-    query = urlencode(params)
-    api_path = f"/api/v2.0{path_suffix}?{query}"
-    full_url = f"https://checkout.postfinance.ch{api_path}"
+        api_path_with_qs = f"{api_path}?{urlencode(extra_params)}"
+    else:
+        api_path_with_qs = api_path
+    full_url = f"https://checkout.postfinance.ch{api_path_with_qs}"
     headers = _get_auth_header(api_path, method)
     headers["Content-Type"] = "application/json"
     headers["Accept"] = "application/json"
+    headers["Space"] = str(POSTFINANCE_SPACE_ID)
     return full_url, headers
 
 
@@ -115,11 +122,11 @@ def build_postfinance_line_items(
             {
                 "uniqueId": f"ligne-{ligne_id}",
                 "sku": sku or f"article-{article_id}",
-                "name": titre or f"Article {article_id}",
-                "quantity": str(qty),
+                "name": (titre or f"Article {article_id}")[:150],
+                "quantity": qty,
                 "amountIncludingTax": round(unit_price * qty, 2),
                 "type": "PRODUCT",
-                "shippingRequired": "true",
+                "shippingRequired": True,
             }
         )
 
@@ -128,11 +135,11 @@ def build_postfinance_line_items(
             {
                 "uniqueId": f"shipping-{commande_id}",
                 "sku": f"shipping-{commande_id}",
-                "name": shipping_label,
-                "quantity": "1",
+                "name": shipping_label[:150],
+                "quantity": 1,
                 "amountIncludingTax": round(frais_port_chf, 2),
                 "type": "SHIPPING",
-                "shippingRequired": "false",
+                "shippingRequired": False,
             }
         )
     return items
@@ -180,8 +187,7 @@ def create_postfinance_transaction(
         "shippingAddress": shipping_address or billing_address,
         "successUrl": success_url,
         "failedUrl": failed_url,
-        "autoConfirmationEnabled": False,
-        "customersPresence": "VIRTUAL_PRESENT",
+        "autoConfirmationEnabled": True,
     }
     if merchant_reference:
         payload["merchantReference"] = merchant_reference
