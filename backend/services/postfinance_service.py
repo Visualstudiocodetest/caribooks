@@ -127,20 +127,6 @@ def create_postfinance_transaction(
             "local": True,
         }
 
-    payload: Dict[str, Any] = {
-        "currency": "CHF",
-        "language": "fr-CH",
-        "lineItems": line_items,
-        "billingAddress": billing_address,
-        "shippingAddress": shipping_address or billing_address,
-        "successUrl": success_url,
-        "failedUrl": failed_url,
-    }
-    if merchant_reference:
-        payload["merchantReference"] = merchant_reference
-
-    url, headers = _signed_request("/payment/transactions", "POST")
-
     try:
         tx_create = TransactionCreate.from_dict(
             {
