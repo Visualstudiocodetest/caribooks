@@ -244,15 +244,22 @@ def get_postfinance_javascript_url(transaction_id: str) -> Dict[str, Any]:
 
     path = f"/api/v2.0/payment/transactions/{transaction_id}/iframe-javascript-url"
     url = _api_url(f"/v2.0/payment/transactions/{transaction_id}/iframe-javascript-url")
+    # This endpoint returns text/plain (a bare URL string), not JSON.
+    # Sending Accept: application/json causes a 406.
     headers = _space_headers(path, "GET")
+    headers["Accept"] = "text/plain, application/json"
 
     try:
         with httpx.Client(timeout=15.0) as client:
             response = client.get(url, headers=headers)
             response.raise_for_status()
-            data = response.json()
-            javascript_url = _decode_string_response(data)
-            return {"javascript_url": javascript_url, "raw": data}
+            content_type = response.headers.get("content-type", "")
+            if "application/json" in content_type:
+                data = response.json()
+                javascript_url = _decode_string_response(data)
+            else:
+                javascript_url = response.text.strip() or None
+            return {"javascript_url": javascript_url}
     except Exception as exc:
         return {"javascript_url": None, "error": str(exc)}
 
