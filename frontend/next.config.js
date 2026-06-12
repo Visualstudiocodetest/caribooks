@@ -48,12 +48,20 @@ const nextConfig = {
         headers: [{ key: 'Cross-Origin-Opener-Policy', value: 'same-origin-allow-popups' }],
       },
       {
+        // PostFinance iframe communicates via postMessage — COOP must be unsafe-none
+        // to allow cross-origin iframes (not just popups) to reach the parent window.
         source: '/payment',
-        headers: [{ key: 'Content-Security-Policy', value: postFinanceCsp }],
+        headers: [
+          { key: 'Content-Security-Policy', value: postFinanceCsp },
+          { key: 'Cross-Origin-Opener-Policy', value: 'unsafe-none' },
+        ],
       },
       {
         source: '/payment/:path*',
-        headers: [{ key: 'Content-Security-Policy', value: postFinanceCsp }],
+        headers: [
+          { key: 'Content-Security-Policy', value: postFinanceCsp },
+          { key: 'Cross-Origin-Opener-Policy', value: 'unsafe-none' },
+        ],
       },
     ]
   },
