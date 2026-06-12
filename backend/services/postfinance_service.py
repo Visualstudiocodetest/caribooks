@@ -57,17 +57,19 @@ def _get_auth_header(request_path: str, request_method: str = "POST") -> Dict[st
     return {"Authorization": f"Bearer {token}"}
 
 
-def _space_headers(path: str, method: str) -> Dict[str, str]:
-    headers = _get_auth_header(path, method)
+def _signed_request(path_suffix: str, method: str, extra_params: Optional[Dict[str, str]] = None) -> tuple[str, Dict[str, str]]:
+    """Return (full_url_with_params, headers) with spaceId as query param and JWT signed over the full path."""
+    from urllib.parse import urlencode
+    params: Dict[str, str] = {"spaceId": str(POSTFINANCE_SPACE_ID)}
+    if extra_params:
+        params.update(extra_params)
+    query = urlencode(params)
+    api_path = f"/api/v2.0{path_suffix}?{query}"
+    full_url = f"https://checkout.postfinance.ch{api_path}"
+    headers = _get_auth_header(api_path, method)
     headers["Content-Type"] = "application/json"
     headers["Accept"] = "application/json"
-    headers["space"] = str(POSTFINANCE_SPACE_ID)
-    headers["X-Space-Id"] = str(POSTFINANCE_SPACE_ID)
-    return headers
-
-
-def _api_url(suffix: str) -> str:
-    return POSTFINANCE_BASE.rstrip("/") + suffix
+    return full_url, headers
 
 
 def _decode_string_response(data: Any) -> Optional[str]:
@@ -184,9 +186,7 @@ def create_postfinance_transaction(
     if merchant_reference:
         payload["merchantReference"] = merchant_reference
 
-    path = "/api/v2.0/payment/transactions"
-    url = _api_url("/v2.0/payment/transactions")
-    headers = _space_headers(path, "POST")
+    url, headers = _signed_request("/payment/transactions", "POST")
 
     try:
         with httpx.Client(timeout=15.0) as client:
@@ -221,14 +221,15 @@ def get_postfinance_payment_methods(transaction_id: str) -> Dict[str, Any]:
             "local": True,
         }
 
-    path = f"/api/v2.0/payment/transactions/{transaction_id}/payment-method-configurations"
-    url = _api_url(f"/v2.0/payment/transactions/{transaction_id}/payment-method-configurations")
-    headers = _space_headers(path, "GET")
-    params = {"integrationMode": "IFRAME"}
+    url, headers = _signed_request(
+        f"/payment/transactions/{transaction_id}/payment-method-configurations",
+        "GET",
+        {"integrationMode": "IFRAME"},
+    )
 
     try:
         with httpx.Client(timeout=15.0) as client:
-            response = client.get(url, headers=headers, params=params)
+            response = client.get(url, headers=headers)
             response.raise_for_status()
             data = response.json()
             methods = _extract_list_payload(data)
@@ -242,11 +243,11 @@ def get_postfinance_javascript_url(transaction_id: str) -> Dict[str, Any]:
     if not _credentials_configured():
         return {"javascript_url": None, "local": True}
 
-    path = f"/api/v2.0/payment/transactions/{transaction_id}/iframe-javascript-url"
-    url = _api_url(f"/v2.0/payment/transactions/{transaction_id}/iframe-javascript-url")
+    url, headers = _signed_request(
+        f"/payment/transactions/{transaction_id}/iframe-javascript-url",
+        "GET",
+    )
     # This endpoint returns text/plain (a bare URL string), not JSON.
-    # Sending Accept: application/json causes a 406.
-    headers = _space_headers(path, "GET")
     headers["Accept"] = "text/plain, application/json"
 
     try:
@@ -255,8 +256,7 @@ def get_postfinance_javascript_url(transaction_id: str) -> Dict[str, Any]:
             response.raise_for_status()
             content_type = response.headers.get("content-type", "")
             if "application/json" in content_type:
-                data = response.json()
-                javascript_url = _decode_string_response(data)
+                javascript_url = _decode_string_response(response.json())
             else:
                 javascript_url = response.text.strip() or None
             return {"javascript_url": javascript_url}
@@ -275,9 +275,7 @@ def get_postfinance_transaction(transaction_id: str) -> Dict[str, Any]:
             "local": True,
         }
 
-    path = f"/api/v2.0/payment/transactions/{transaction_id}"
-    url = _api_url(f"/v2.0/payment/transactions/{transaction_id}")
-    headers = _space_headers(path, "GET")
+    url, headers = _signed_request(f"/payment/transactions/{transaction_id}", "GET")
 
     try:
         with httpx.Client(timeout=15.0) as client:
@@ -326,9 +324,7 @@ def confirm_postfinance_transaction(
         "shippingAddress": shipping_address or billing_address,
     }
 
-    path = f"/api/v2.0/payment/transactions/{transaction_id}/confirm"
-    url = _api_url(f"/v2.0/payment/transactions/{transaction_id}/confirm")
-    headers = _space_headers(path, "POST")
+    url, headers = _signed_request(f"/payment/transactions/{transaction_id}/confirm", "POST")
 
     try:
         with httpx.Client(timeout=15.0) as client:
