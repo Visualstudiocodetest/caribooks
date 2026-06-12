@@ -43,6 +43,11 @@ const nextConfig = {
   async headers() {
     return [
       {
+        // Allow Google Sign-In popup to postMessage back to the opener.
+        source: '/(.*)',
+        headers: [{ key: 'Cross-Origin-Opener-Policy', value: 'same-origin-allow-popups' }],
+      },
+      {
         source: '/payment',
         headers: [{ key: 'Content-Security-Policy', value: postFinanceCsp }],
       },

@@ -22,7 +22,7 @@ export function Header() {
       <div className="container header-inner">
         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
           <Link href="/" className="brand" style={{ display: 'flex', alignItems: 'center', gap: 8 }} onClick={closeMenu}>
-            <Image src="/Logo-caritas.svg" alt="Caribooks" width={140} height={36} priority />
+            <Image src="/logo-caritas.svg" alt="Caribooks" width={140} height={36} priority />
           </Link>
           <nav className="main-nav">
             <Link className="muted" href="/catalog">Catalogue</Link>

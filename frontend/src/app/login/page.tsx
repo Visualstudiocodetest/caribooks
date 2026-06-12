@@ -1,6 +1,7 @@
 'use client'
 
-import { Suspense, useCallback, useState } from 'react'
+import { Suspense, useCallback, useEffect, useState } from 'react'
+
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useAuth } from '@/components/auth/AuthProvider'
@@ -12,7 +13,11 @@ function LoginForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const returnTo = searchParams.get('returnTo') || '/'
-  const { setToken } = useAuth()
+  const { isLoggedIn, setToken } = useAuth()
+
+  useEffect(() => {
+    if (isLoggedIn) router.replace(returnTo)
+  }, [isLoggedIn, router, returnTo])
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -85,12 +90,6 @@ function LoginForm() {
           <hr style={{ flex: 1, border: 'none', borderTop: '1px solid var(--color-border)' }} />
         </div>
         <GoogleSignInButton onCredential={handleGoogleCredential} text="signin_with" />
-        <div className="muted" style={{ textAlign: 'center' }}>
-          Pas de compte ?{' '}
-          <Link href={`/register${returnTo !== '/' ? `?returnTo=${encodeURIComponent(returnTo)}` : ''}`}>
-            Créer un compte
-          </Link>
-        </div>
       </form>
     </div>
   )

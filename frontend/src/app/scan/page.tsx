@@ -269,17 +269,14 @@ export default function ScanPage() {
       </div>
 
       <div className="card cardPadding">
-      <div className="form-row three">
+        <div className="form-row two">
           <input
             className="input"
             value={isbn}
             onChange={(e) => setIsbn(e.target.value)}
-            placeholder="ISBN (manuel ou scanné)"
+            placeholder={lookupLoading ? 'Recherche…' : 'ISBN (manuel ou scanné)'}
             inputMode="numeric"
           />
-          <button className="btn" type="button" onClick={() => lookup(isbn)} disabled={lookupLoading}>
-            {lookupLoading ? 'Recherche…' : 'Rechercher'}
-          </button>
           <button className="btn btnPrimary" type="button" onClick={running ? stopCamera : startCamera}>
             {running ? 'Stop' : 'Caméra'}
           </button>
