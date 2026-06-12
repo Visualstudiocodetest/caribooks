@@ -406,23 +406,56 @@ def parse_postfinance_signature_header(signature_header: str) -> Dict[str, str]:
     return parts
 
 
-def verify_postfinance_webhook_signature(raw_body: bytes, signature_header: str) -> bool:
-    """Verify a PostFinance webhook signature using the documented x-signature header."""
-    if not POSTFINANCE_WEBHOOK_PUBLIC_KEY_PEM:
-        return False
+# In-process cache: keyId -> PEM string (avoids repeated HTTP calls per restart)
+_key_pem_cache: Dict[str, str] = {}
 
+
+def _fetch_encryption_key_pem(key_id: str) -> Optional[str]:
+    """Fetch the PEM public key from PostFinance's public API using a keyId.
+    No authentication required — the endpoint is publicly accessible."""
+    cached = _key_pem_cache.get(key_id)
+    if cached:
+        return cached
+    try:
+        url = f"https://checkout.postfinance.ch/api/v2.0/webhooks/encryption-keys/{key_id}"
+        r = httpx.get(url, timeout=10)
+        r.raise_for_status()
+        pem = r.text.strip()
+        if pem:
+            _key_pem_cache[key_id] = pem
+            return pem
+    except Exception:
+        pass
+    return None
+
+
+def verify_postfinance_webhook_signature(raw_body: bytes, signature_header: str) -> bool:
+    """Verify a PostFinance webhook signature using the documented x-signature header.
+    The public key is resolved from env (POSTFINANCE_WEBHOOK_PUBLIC_KEY_PEM) or fetched
+    automatically from PostFinance's public API using the keyId in the header."""
     parts = parse_postfinance_signature_header(signature_header)
     if parts.get("algorithm") != "SHA256withECDSA":
-        return False
-    if POSTFINANCE_WEBHOOK_KEY_ID and parts.get("keyId") and parts.get("keyId") != POSTFINANCE_WEBHOOK_KEY_ID:
         return False
 
     signature_value = parts.get("signature")
     if not signature_value:
         return False
 
+    key_id = parts.get("keyId", "")
+
+    # Resolve PEM: prefer env var, fall back to live API fetch
+    pem: Optional[str] = None
+    if POSTFINANCE_WEBHOOK_PUBLIC_KEY_PEM:
+        if not POSTFINANCE_WEBHOOK_KEY_ID or key_id == POSTFINANCE_WEBHOOK_KEY_ID:
+            pem = POSTFINANCE_WEBHOOK_PUBLIC_KEY_PEM.replace("\\n", "\n")
+    if pem is None and key_id:
+        pem = _fetch_encryption_key_pem(key_id)
+
+    if not pem:
+        return False
+
     try:
-        public_key = serialization.load_pem_public_key(POSTFINANCE_WEBHOOK_PUBLIC_KEY_PEM.encode("utf-8"))
+        public_key = serialization.load_pem_public_key(pem.encode("utf-8"))
         if not isinstance(public_key, ec.EllipticCurvePublicKey):
             return False
         public_key.verify(base64.b64decode(signature_value), raw_body, ec.ECDSA(hashes.SHA256()))

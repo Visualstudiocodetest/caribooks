@@ -84,7 +84,35 @@ jobs:
             /app/venv/bin/python -m pip install --upgrade pip --quiet
             /app/venv/bin/pip install --no-cache-dir -r /app/backend/requirements.txt --quiet
 
-            # ── Step 8: Create systemd service if missing ──
+            # ── Step 8: Run database migrations ──
+            echo "🗄️ Running database migrations..."
+            if [ -f /app/backend/.env ]; then
+              set -a
+              source /app/backend/.env
+              set +a
+            fi
+            # Install mysql client if missing
+            if ! command -v mysql &>/dev/null; then
+              sudo apt-get install -y -q default-mysql-client
+            fi
+            # Create tracking table
+            mysql -u"${MYSQL_USER}" -p"${MYSQL_PASSWORD}" -h"${MYSQL_HOST}" "${MYSQL_DB}" -e "CREATE TABLE IF NOT EXISTS migration_log (name VARCHAR(255) NOT NULL PRIMARY KEY, applied_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP);"
+            # Apply any unapplied migration files
+            shopt -s nullglob
+            for f in /app/backend/migrations/*.sql; do
+              name=$(basename "$f")
+              count=$(mysql -u"${MYSQL_USER}" -p"${MYSQL_PASSWORD}" -h"${MYSQL_HOST}" "${MYSQL_DB}" -s -N -e "SELECT COUNT(*) FROM migration_log WHERE name='${name}'" 2>/dev/null || echo "0")
+              if [ "$count" = "0" ]; then
+                echo "  ▶ Applying ${name}..."
+                mysql -u"${MYSQL_USER}" -p"${MYSQL_PASSWORD}" -h"${MYSQL_HOST}" "${MYSQL_DB}" < "$f"
+                mysql -u"${MYSQL_USER}" -p"${MYSQL_PASSWORD}" -h"${MYSQL_HOST}" "${MYSQL_DB}" -e "INSERT IGNORE INTO migration_log (name) VALUES ('${name}')"
+                echo "  ✅ ${name} applied"
+              else
+                echo "  ⏭  ${name} already applied"
+              fi
+            done
+
+            # ── Step 9: Create systemd service if missing ──
             if [ ! -f /etc/systemd/system/fastapi.service ]; then
               echo "⚙️ Creating fastapi.service..."
               sudo tee /etc/systemd/system/fastapi.service > /dev/null <<'EOF'
