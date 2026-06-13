@@ -85,7 +85,7 @@ def test_create_postfinance_iframe_session(mock_svc):
     mock_svc.post_payment_transactions.return_value = _mock_tx()
 
     method = MagicMock()
-    method.to_dict.return_value = {"id": 510, "name": "Credit / Debit Card"}
+    method.model_dump.return_value = {"id": 510, "name": "Credit / Debit Card"}
     mock_svc.get_payment_transactions_id_payment_method_configurations.return_value = MagicMock(data=[method])
 
     mock_svc.get_payment_transactions_id_iframe_javascript_url.return_value = (
