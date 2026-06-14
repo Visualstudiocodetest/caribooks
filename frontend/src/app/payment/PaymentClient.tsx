@@ -218,11 +218,9 @@ export function PaymentClient() {
         setLocalMode(Boolean(session.local_mode))
 
         const methods = session.payment_methods || []
-        if (methods.length > 0) {
-          setSelectedMethodId(methods[0].id)
-        }
 
         if (session.local_mode) {
+          if (methods.length > 0) setSelectedMethodId(methods[0].id)
           return
         }
 
@@ -231,9 +229,13 @@ export function PaymentClient() {
           return
         }
 
+        // Load the script first — setSelectedMethodId would trigger the
+        // selectedMethodId effect which calls mountIframe before IframeCheckoutHandler
+        // is available on window, causing "Le script PostFinance n'est pas chargé".
         await loadPostFinanceScript(session.javascript_url)
         if (!mounted) return
         if (methods.length > 0) {
+          setSelectedMethodId(methods[0].id)
           mountIframe(methods[0].id)
         }
       } catch (e: unknown) {
