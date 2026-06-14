@@ -77,6 +77,7 @@ export type CommandeRead = CommandeCreate & {
   date_commande: string
   date_creation?: string  // alias for date_commande
   cart_expires_at?: string | null
+  cart_seconds_left?: number | null  // timezone-proof countdown (seconds)
 }
 
 export type LigneCommandeCreate = {

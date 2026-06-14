@@ -9,8 +9,9 @@ export function getBook(id_article: number): Promise<BookRead> {
   return apiFetch<BookRead>(`/books/${id_article}`)
 }
 
-export function getBookByIsbn(isbn: string): Promise<BookRead> {
-  return apiFetch<BookRead>(`/books/by-isbn/${encodeURIComponent(isbn)}`)
+// Returns null when the ISBN is not in the catalogue (backend replies 200 + null).
+export function getBookByIsbn(isbn: string): Promise<BookRead | null> {
+  return apiFetch<BookRead | null>(`/books/by-isbn/${encodeURIComponent(isbn)}`)
 }
 
 export function createBook(payload: BookCreate): Promise<BookRead> {
