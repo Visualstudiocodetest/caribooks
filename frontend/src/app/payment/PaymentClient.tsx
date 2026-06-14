@@ -23,7 +23,7 @@ function makeReference() {
   return `local-${Date.now()}`
 }
 
-function paymentMethodLabel(method: PostFinancePaymentMethod): string {
+export function paymentMethodLabel(method: PostFinancePaymentMethod): string {
   const resolved = method.resolvedTitle
   if (resolved) {
     return resolved['fr-CH'] || resolved['fr'] || resolved['en-US'] || method.name || `Méthode ${method.id}`
@@ -98,6 +98,16 @@ export function PaymentClient() {
 
     if (handlerRef.current && handlerMethodRef.current === methodId) {
       return
+    }
+
+    // Destroy the previous handler before mounting a new one — otherwise
+    // PostFinance appends a second iframe inside the existing container.
+    if (handlerRef.current) {
+      handlerRef.current.destroy?.()
+      handlerRef.current = null
+      handlerMethodRef.current = null
+      const container = document.getElementById('postfinance-payment-form')
+      if (container) container.innerHTML = ''
     }
 
     factory.configure?.('replacePrimaryAction', true)
@@ -240,6 +250,7 @@ export function PaymentClient() {
 
     return () => {
       mounted = false
+      handlerRef.current?.destroy?.()
       handlerRef.current = null
       handlerMethodRef.current = null
     }

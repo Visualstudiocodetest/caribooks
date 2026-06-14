@@ -35,6 +35,7 @@ export type PostFinanceIframeHandler = {
   validate: () => void
   submit: () => void
   trigger: () => void
+  destroy?: () => void
 }
 
 export type PostFinanceIframeCheckoutHandlerFactory = {
