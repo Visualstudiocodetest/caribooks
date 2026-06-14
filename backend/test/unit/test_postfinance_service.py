@@ -81,6 +81,43 @@ def test_create_postfinance_transaction(mock_svc):
     assert len(tx_create.line_items) == 1
 
 
+def test_get_postfinance_payment_methods_returns_full_fields(mock_svc):
+    """model_dump(by_alias=True) must be used — not to_dict(), which strips id/name/resolvedTitle."""
+    method = MagicMock()
+    method.model_dump.return_value = {
+        "id": 510,
+        "name": "Credit / Debit Card",
+        "resolvedTitle": {"fr-CH": "Carte de crédit / débit", "en-US": "Credit / Debit Card"},
+        "resolvedImageUrl": "https://checkout.postfinance.ch/images/card.svg",
+    }
+    mock_svc.get_payment_transactions_id_payment_method_configurations.return_value = MagicMock(
+        data=[method]
+    )
+
+    result = get_postfinance_payment_methods("109472")
+
+    # model_dump must be called with by_alias=True so camelCase keys are preserved
+    method.model_dump.assert_called_once_with(by_alias=True)
+    # to_dict() must NOT be called — it silently excludes id, name, resolvedTitle
+    method.to_dict.assert_not_called()
+
+    methods = result["data"]
+    assert len(methods) == 1
+    assert methods[0]["id"] == 510
+    assert methods[0]["name"] == "Credit / Debit Card"
+    assert methods[0]["resolvedTitle"]["fr-CH"] == "Carte de crédit / débit"
+    assert methods[0]["resolvedImageUrl"] == "https://checkout.postfinance.ch/images/card.svg"
+
+
+def test_get_postfinance_payment_methods_empty_on_error(mock_svc):
+    mock_svc.get_payment_transactions_id_payment_method_configurations.side_effect = RuntimeError("network error")
+
+    result = get_postfinance_payment_methods("109472")
+
+    assert result["data"] == []
+    assert "network error" in result["error"]
+
+
 def test_create_postfinance_iframe_session(mock_svc):
     mock_svc.post_payment_transactions.return_value = _mock_tx()
 
