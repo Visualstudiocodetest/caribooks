@@ -203,6 +203,9 @@ class CommandeRead(CommandeBase, ORMBase):
     id_utilisateur: int
     date_commande: datetime
     cart_expires_at: Optional[datetime] = None
+    # Seconds until the cart reservation expires, computed with the DB clock
+    # (timezone-proof). None when there is no active reservation.
+    cart_seconds_left: Optional[int] = None
 
 
 class LigneCommandeBase(BaseModel):

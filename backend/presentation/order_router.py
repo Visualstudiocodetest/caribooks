@@ -3,6 +3,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from sqlalchemy.sql import func
+from sqlalchemy import text
 
 from  infrastructure import models
 from  infrastructure.crud_base import CrudBase
@@ -87,14 +88,18 @@ def _release_cart_reservation(db: Session, id_commande: int) -> None:
 
 
 def _cleanup_expired_carts(db: Session) -> None:
-    """Cancel CREATED/PENDING commandes whose cart reservation window has passed."""
-    now = datetime.now(timezone.utc)
+    """Cancel CREATED/PENDING commandes whose cart reservation window has passed.
+
+    The comparison uses the database clock (func.now()) so it is consistent with
+    how cart_expires_at is set (also via the DB clock) — no Python/MySQL timezone
+    drift.
+    """
     expired = (
         db.query(models.Commande)
         .filter(
             models.Commande.statut.in_(["CREATED", "PENDING"]),
             models.Commande.cart_expires_at.isnot(None),
-            models.Commande.cart_expires_at < now,
+            models.Commande.cart_expires_at < func.now(),
         )
         .all()
     )
@@ -103,6 +108,24 @@ def _cleanup_expired_carts(db: Session) -> None:
         c.statut = "CANCELLED"
     if expired:
         db.commit()
+
+
+def _attach_seconds_left(db: Session, commande: models.Commande) -> models.Commande:
+    """Attach `cart_seconds_left` (computed with the DB clock) for a timezone-proof
+    client-side countdown. Negative/None values mean expired or no reservation."""
+    secs = None
+    try:
+        secs = db.execute(
+            text(
+                "SELECT TIMESTAMPDIFF(SECOND, NOW(), cart_expires_at) "
+                "FROM commande WHERE id_commande = :id"
+            ),
+            {"id": int(commande.id_commande)},
+        ).scalar()
+    except Exception:
+        secs = None
+    commande.cart_seconds_left = int(secs) if secs is not None else None  # type: ignore[attr-defined]
+    return commande
 
 
 def _finalize_commande(db: Session, id_commande: int):
@@ -196,18 +219,28 @@ def list_commandes(db: Session = Depends(get_db), current_user=Depends(get_curre
 
 @router.get("/commandes/{id_commande}", response_model=CommandeRead)
 def get_commande(id_commande: int, db: Session = Depends(get_db), current_user=Depends(get_current_user)):
+    _cleanup_expired_carts(db)
     obj = _get_commande_owned(db, id_commande, int(current_user.id_utilisateur))
     if obj is None:
         raise HTTPException(status_code=404, detail="Commande not found")
-    return obj
+    return _attach_seconds_left(db, obj)
 
 
 @router.post("/commandes", response_model=CommandeRead, status_code=status.HTTP_201_CREATED)
 def create_commande(payload: CommandeCreate, db: Session = Depends(get_db), current_user=Depends(get_current_user)):
     _cleanup_expired_carts(db)
     obj = models.Commande(id_utilisateur=current_user.id_utilisateur, **payload.model_dump())
-    obj.cart_expires_at = datetime.now(timezone.utc) + timedelta(minutes=15)  # type: ignore[assignment]
-    return commande_crud.create(db, obj)
+    created = commande_crud.create(db, obj)
+    # Set expiry with the DB clock so it is always exactly 20 minutes AFTER
+    # creation (avoids timezone drift between MySQL NOW() and Python UTC, which
+    # previously could place the expiry before the creation timestamp).
+    db.execute(
+        text("UPDATE commande SET cart_expires_at = (NOW() + INTERVAL 20 MINUTE) WHERE id_commande = :id"),
+        {"id": int(created.id_commande)},
+    )
+    db.commit()
+    db.refresh(created)
+    return _attach_seconds_left(db, created)
 
 
 @router.put("/commandes/{id_commande}", response_model=CommandeRead)

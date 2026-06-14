@@ -266,16 +266,23 @@ export function PaymentClient() {
   }, [selectedMethodId, localMode, mountIframe])
 
   useEffect(() => {
-    if (!commande?.cart_expires_at) return
-    const expiresAt = new Date(commande.cart_expires_at).getTime()
+    // Use the server-computed remaining seconds (timezone-proof) and count down
+    // locally from there. Falls back to parsing cart_expires_at if absent.
+    const initial =
+      commande?.cart_seconds_left ??
+      (commande?.cart_expires_at
+        ? Math.floor((new Date(commande.cart_expires_at).getTime() - Date.now()) / 1000)
+        : null)
+    if (initial === null || initial === undefined) return
+    const startedAt = Date.now()
     function tick() {
-      const left = Math.floor((expiresAt - Date.now()) / 1000)
+      const left = Math.floor((initial as number) - (Date.now() - startedAt) / 1000)
       setCartSecondsLeft(left > 0 ? left : 0)
     }
     tick()
     const id = setInterval(tick, 1000)
     return () => clearInterval(id)
-  }, [commande?.cart_expires_at])
+  }, [commande?.cart_seconds_left, commande?.cart_expires_at])
 
   async function onPayClick() {
     setPaying(true)
@@ -338,11 +345,14 @@ export function PaymentClient() {
 
       {loading ? <div className="muted">Chargement du formulaire de paiement…</div> : null}
       {error ? <div className="banner-error">{error}</div> : null}
-      {cartSecondsLeft !== null && cartSecondsLeft <= 300 ? (
-        <div className={cartSecondsLeft === 0 ? 'banner-error' : 'banner-warning'} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+      {cartSecondsLeft !== null ? (
+        <div
+          className={cartSecondsLeft === 0 ? 'banner-error' : cartSecondsLeft <= 300 ? 'banner-warning' : 'card cardPadding'}
+          style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 700 }}
+        >
           {cartSecondsLeft === 0
             ? 'Votre réservation a expiré. Les articles ont été remis en vente.'
-            : `Réservation expire dans ${Math.floor(cartSecondsLeft / 60)}:${String(cartSecondsLeft % 60).padStart(2, '0')}`}
+            : `⏱ Réservation valable encore ${Math.floor(cartSecondsLeft / 60)}:${String(cartSecondsLeft % 60).padStart(2, '0')}`}
         </div>
       ) : null}
 
