@@ -31,6 +31,22 @@ Le projet suit les principes **SOLID**, **Clean Architecture** et **KISS**, et e
 
 ---
 
+## 🌐 Déploiement (production)
+
+Architecture cloud hybride à coût nul (offres gratuites) :
+
+- **Frontend (Next.js)** : hébergé sur **Vercel** (CDN global, auto-deploy).
+- **Backend / API (FastAPI)** : **une VM Oracle Cloud** (AMD Micro, *Always Free*, Ubuntu 22.04).
+  - Servi par **Uvicorn** derrière **Nginx** (reverse proxy + terminaison TLS).
+  - Exposé en **HTTPS** sur **https://caribooks.duckdns.org** (DNS dynamique + certificat Let's Encrypt).
+  - Lancé en service **systemd** (redémarrage automatique) et conteneurisé avec **Docker**.
+- **Base de données (MySQL)** : sur **Oracle Cloud**, accessible uniquement depuis la VM via le réseau privé (VCN, port `3306` fermé à l'extérieur).
+- **CI/CD** : **GitHub Actions** (tests `pytest` → build Docker → déploiement).
+
+> ℹ️ Pas de load balancer ni de seconde VM : une seule instance backend. Une configuration redondante (plusieurs VMs + répartiteur de charge) reste une évolution possible en cas de montée en charge.
+
+---
+
 ## 🚀 Installation et Lancement en local
 
 ### Prérequis

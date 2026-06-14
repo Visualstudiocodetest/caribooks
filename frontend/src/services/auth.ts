@@ -17,6 +17,16 @@ export function updateCurrentUser(payload: Partial<UserCreate & { mot_de_passe?:
   return apiFetch<UserRead>('/users/me', { method: 'PUT', auth: true, body: JSON.stringify(payload) })
 }
 
+// RGPD / nLPD — droit à la portabilité : export des données personnelles
+export function exportMyData(): Promise<unknown> {
+  return apiFetch<unknown>('/users/me/export', { auth: true })
+}
+
+// RGPD / nLPD — droit à l'effacement : suppression (anonymisation) du compte
+export function deleteMyAccount(): Promise<void> {
+  return apiFetch<void>('/users/me', { method: 'DELETE', auth: true })
+}
+
 export async function googleLogin(credential: string): Promise<Token> {
   return apiFetch<Token>('/auth/google', { method: 'POST', body: JSON.stringify({ credential }) })
 }

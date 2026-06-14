@@ -15,11 +15,12 @@ export default function ConfidentialitePage() {
       <h2>1. Responsable du traitement</h2>
       <p>
         Le responsable du traitement des données personnelles est{' '}
-        <strong>[NOM_ENTITE_LEGALE]</strong>, [FORME_JURIDIQUE], [ADRESSE_COMPLETE], Suisse.
+        <strong>Caribooks</strong>, entreprise individuelle (personne physique), adresse complète
+        communiquée sur demande par e-mail, Suisse.
       </p>
       <p>
         Contact délégué à la protection des données (DPD) :{' '}
-        <a href="mailto:[EMAIL_DPO]">[EMAIL_DPO]</a>
+        <a href="mailto:alexandre.rey@estiam.com">alexandre.rey@estiam.com</a>
       </p>
 
       <h2>2. Données collectées</h2>
@@ -127,7 +128,7 @@ export default function ConfidentialitePage() {
       </ul>
       <p>
         Pour exercer ces droits, contactez notre DPD à{' '}
-        <a href="mailto:[EMAIL_DPO]">[EMAIL_DPO]</a>. Nous répondrons dans un délai de 30 jours.
+        <a href="mailto:alexandre.rey@estiam.com">alexandre.rey@estiam.com</a>. Nous répondrons dans un délai de 30 jours.
       </p>
       <p>
         Vous pouvez également déposer une réclamation auprès du{' '}
@@ -158,11 +159,11 @@ export default function ConfidentialitePage() {
 
       <h2>10. Contact</h2>
       <p>
-        <strong>[NOM_ENTITE_LEGALE]</strong>
+        <strong>Caribooks</strong> — entreprise individuelle (personne physique)
         <br />
-        [ADRESSE_COMPLETE]
+        Adresse complète communiquée sur demande par e-mail
         <br />
-        <a href="mailto:[EMAIL_DPO]">[EMAIL_DPO]</a>
+        <a href="mailto:alexandre.rey@estiam.com">alexandre.rey@estiam.com</a>
       </p>
 
       <hr style={{ margin: '32px 0', border: 'none', borderTop: '1px solid var(--color-border)' }} />
