@@ -69,24 +69,34 @@ function RegisterForm() {
       <h1 style={{ margin: 0 }}>Créer un compte</h1>
       <form className="card cardPadding" onSubmit={onSubmit}>
         <div className="two-up">
-          <input
-            className="input"
-            value={prenom}
-            onChange={(e) => setPrenom(e.target.value)}
-            placeholder="Prénom"
-            autoComplete="given-name"
-            required
-          />
-          <input
-            className="input"
-            value={nom}
-            onChange={(e) => setNom(e.target.value)}
-            placeholder="Nom"
-            autoComplete="family-name"
-            required
-          />
+          <div>
+            <label className="sr-only" htmlFor="reg-prenom">Prénom</label>
+            <input
+              id="reg-prenom"
+              className="input"
+              value={prenom}
+              onChange={(e) => setPrenom(e.target.value)}
+              placeholder="Prénom"
+              autoComplete="given-name"
+              required
+            />
+          </div>
+          <div>
+            <label className="sr-only" htmlFor="reg-nom">Nom</label>
+            <input
+              id="reg-nom"
+              className="input"
+              value={nom}
+              onChange={(e) => setNom(e.target.value)}
+              placeholder="Nom"
+              autoComplete="family-name"
+              required
+            />
+          </div>
         </div>
+        <label className="sr-only" htmlFor="reg-email">Email</label>
         <input
+          id="reg-email"
           className="input"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
@@ -94,8 +104,11 @@ function RegisterForm() {
           type="email"
           autoComplete="email"
           required
+          aria-describedby={error ? 'reg-error' : undefined}
         />
+        <label className="sr-only" htmlFor="reg-password">Mot de passe</label>
         <input
+          id="reg-password"
           className="input"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
@@ -104,8 +117,9 @@ function RegisterForm() {
           autoComplete="new-password"
           minLength={6}
           required
+          aria-describedby={error ? 'reg-error' : undefined}
         />
-        {error ? <div className="banner-error">{error}</div> : null}
+        {error ? <div id="reg-error" className="banner-error" role="alert">{error}</div> : null}
         <button className="btn btnPrimary" type="submit" disabled={loading} style={{ width: '100%' }}>
           {loading ? 'Création…' : 'Créer le compte'}
         </button>

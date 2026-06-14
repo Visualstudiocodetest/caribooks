@@ -193,6 +193,22 @@ Les plateformes de revente existantes fonctionnant principalement en euros et sa
 \textbf{Objectif et résultats attendus :} \\
 L'objectif principal est de concevoir et déployer une plateforme e-commerce solidaire (nommée CARIBOOKS), facile d'utilisation pour les bénévoles de Caritas. Elle doit offrir une gestion simplifiée des ventes — de l'ajout rapide de produits grâce à l'API ISBN jusqu'au suivi des commandes — le tout en respectant les contraintes locales (devise CHF, livraison suisse, et paiement via PostFinance, prestataire suisse intégré au service de livraison de la Poste Suisse).
 
+\vspace{20pt}
+
+\noindent\rule{\linewidth}{0.4pt}
+
+\vspace{10pt}
+
+\textbf{Abstract (English version):} \\
+This project was carried out as part of the French CDA professional qualification (Application Designer-Developer). It originates from a real request by a volunteer of the Caritas charity recycling shop, a non-profit supporting professional reintegration through the sale of second-hand goods. Facing a stock of unsold books, the need was to build a dedicated online sales platform tailored to Swiss local constraints.
+
+\textbf{Objective and expected results:} \\
+The main goal is to design and deploy a solidarity-driven e-commerce platform (CARIBOOKS), easy to use for Caritas volunteers. It provides simplified sales management — from quick product creation via the ISBN API to order tracking — while enforcing local constraints (CHF currency, Swiss-only delivery, and payment through PostFinance, a Swiss provider integrated with Swiss Post delivery services). The application is built on a layered architecture (FastAPI, Next.js, MySQL), secured with JWT authentication, containerised with Docker and deployed through a GitHub Actions CI/CD pipeline.
+
+\vspace{6pt}
+
+\noindent\textit{Keywords: e-commerce, FastAPI, Next.js, MySQL, JWT, ISBN scanning, PostFinance, Switzerland, GDPR/nLPD, Docker, CI/CD.}
+
 \newpage
 
 % ==========================================
@@ -212,8 +228,6 @@ L'objectif principal est de concevoir et déployer une plateforme e-commerce sol
 % ==========================================
 \chapter*{Introduction générale}
 \addcontentsline{toc}{chapter}{Introduction générale}
-
-\textit{[À rédiger une fois le mémoire totalement terminé.]}
 
 \noindent Dans le cadre du titre CDA (Concepteur Développeur d'Applications), ce projet représente une opportunité de répondre à une demande utilisateur réelle : créer une plateforme e-commerce solidaire pour la recyclerie de l'association Caritas. Ce projet est né d'un constat simple — de nombreux livres d'occasion finissent invendus, alors qu'une mise en ligne adaptée au marché suisse pourrait leur donner une seconde vie tout en soutenant la réinsertion professionnelle.
 
@@ -242,10 +256,10 @@ Ce projet couvre l'intégralité des trois blocs de compétences du référentie
 \textbf{Bloc} & \textbf{Intitulé} & \textbf{Compétences mobilisées dans CARIBOOKS} \\
 \midrule
 1 & Développer une application sécurisée &
-  Authentification JWT avec \texttt{python-jose} et hashage \texttt{bcrypt}, validation des données avec Pydantic, contrôle des permissions par rôle (admin / user), requêtes SQL préparées via SQLAlchemy (ORM), gestion des sessions sécurisées, protection des routes FastAPI avec middleware d'autorisation. \\
+  Authentification JWT avec \texttt{python-jose} et hashage \texttt{bcrypt}, validation des données avec Pydantic, contrôle des permissions par rôle (admin / user), requêtes SQL préparées via SQLAlchemy (ORM), gestion des sessions sécurisées, protection des routes FastAPI avec middleware d'autorisation, conformité \textbf{RGPD / nLPD} (export et effacement des données personnelles), interfaces \textbf{accessibles} (WCAG / RGAA). \\
 \midrule
 2 & Concevoir et développer une application multicouche &
-  Modélisation de la base de données (MCD/MLD MySQL), architecture REST API (FastAPI), frontend découplé (Next.js / React / TypeScript), séparation stricte des couches métier, données et présentation, intégration d'APIs tierces (OpenLibrary, PostFinance), conteneurisation Docker avec \texttt{docker-compose}. \\
+  Modélisation de la base de données (MCD/MLD MySQL), architecture REST API (FastAPI), frontend découplé (Next.js / React / TypeScript), séparation stricte des couches métier, données et présentation, accès aux données via SQLAlchemy (composant générique \texttt{CrudBase}), choix relationnel justifié (cf. absence de NoSQL), intégration d'APIs tierces (OpenLibrary, PostFinance), conteneurisation Docker avec \texttt{docker-compose}. \\
 \midrule
 3 & Préparer le déploiement d'une application &
   Conteneurisation complète de l'application (API + frontend + BDD), pipeline CI/CD via GitHub Actions, déploiement sur environnement cloud (frontend sur Vercel, backend et base MySQL sur Oracle Cloud), gestion des variables d'environnement, documentation API Swagger générée automatiquement par FastAPI. \\
@@ -541,21 +555,7 @@ Sprint 6 & Semaines 11–12 &
 
 \begin{figure}[h]
     \centering
-    \begin{tikzpicture}[node distance=15mm and 30mm]
-        \node[syst] (sys) {Plateforme\\\textbf{CARIBOOKS}};
-        \node[box, above left=of sys]  (ach)   {Acheteur};
-        \node[box, left=of sys]        (vend)  {Vendeur\\(bénévole)};
-        \node[box, below left=of sys]  (admin) {Administrateur};
-        \node[extbox, above right=of sys] (ol)   {API OpenLibrary\\/ Google Books};
-        \node[extbox, right=of sys]       (pf)   {PostFinance\\(paiement CHF)};
-        \node[extbox, below right=of sys] (post) {Poste Suisse\\(livraison)};
-        \draw[flow] (ach)   -- node[flowlab]{recherche, achat} (sys);
-        \draw[flow] (vend)  -- node[flowlab]{dépôt d'annonce} (sys);
-        \draw[flow] (admin) -- node[flowlab]{modération} (sys);
-        \draw[flow] (sys) -- node[flowlab]{lookup ISBN} (ol);
-        \draw[flow] (sys) -- node[flowlab]{paiement} (pf);
-        \draw[flow] (sys) -- node[flowlab]{expédition} (post);
-    \end{tikzpicture}
+    \includegraphics[width=\linewidth,height=0.82\textheight,keepaspectratio]{diagrams/contexte.pdf}
     \caption{Diagramme de contexte — CARIBOOKS et ses acteurs externes}
     \label{fig:contexte}
 \end{figure}
@@ -566,80 +566,21 @@ Sprint 6 & Semaines 11–12 &
 
 \begin{figure}[h]
     \centering
-    \begin{tikzpicture}
-        \node[align=center] (vend) at (0,0) {\umlactor{Vendeur\\(bénévole)}};
-        \node[ucsystem, minimum width=66mm, minimum height=72mm,
-              label=above:{\textbf{Ajout d'un livre}}] (sysbox) at (5.6,0) {};
-        \node[usecase] (u1) at (5.6,2.6)  {Scanner le\\code-barres ISBN};
-        \node[usecase] (u2) at (5.6,0.9)  {Récupérer les\\métadonnées};
-        \node[usecase] (u3) at (5.6,-0.8) {Saisir manuellement\\les informations};
-        \node[usecase] (u4) at (5.6,-2.5) {Compléter état \& prix,\\publier l'annonce};
-        \node[align=center] (ol) at (11.2,0.9) {\umlactor{API\\OpenLibrary}};
-        \draw (vend) -- (u1);
-        \draw (vend) -- (u3);
-        \draw (vend) -- (u4);
-        \draw[dep] (u1) -- node[flowlab]{\guillemotleft include\guillemotright} (u2);
-        \draw[dep] (u3) -- node[flowlab, sloped]{\guillemotleft extend\guillemotright} (u1);
-        \draw (u2) -- (ol);
-    \end{tikzpicture}
+    \includegraphics[width=\linewidth,height=0.82\textheight,keepaspectratio]{diagrams/use_case_isbn.pdf}
     \caption{Diagramme des cas d'utilisation — Flux Scan ISBN}
     \label{fig:use_case_isbn}
 \end{figure}
 
 \begin{figure}[h]
     \centering
-    \begin{tikzpicture}
-        \node[align=center] (ach) at (0,0) {\umlactor{Acheteur}};
-        \node[ucsystem, minimum width=66mm, minimum height=72mm,
-              label=above:{\textbf{Tunnel de paiement}}] (sysbox) at (5.6,0) {};
-        \node[usecase] (p1) at (5.6,2.6)  {Valider le panier};
-        \node[usecase] (p2) at (5.6,0.9)  {Choisir le moyen\\(TWINT / carte)};
-        \node[usecase] (p3) at (5.6,-0.8) {Initier le\\paiement};
-        \node[usecase] (p4) at (5.6,-2.5) {Recevoir la confirmation\\(webhook)};
-        \node[align=center] (pf) at (11.2,0.05) {\umlactor{PostFinance}};
-        \draw (ach) -- (p1);
-        \draw (ach) -- (p2);
-        \draw (ach) -- (p3);
-        \draw[dep] (p3) -- node[flowlab]{\guillemotleft include\guillemotright} (p4);
-        \draw (p3) -- (pf);
-        \draw (p4) -- (pf);
-    \end{tikzpicture}
+    \includegraphics[width=\linewidth,height=0.82\textheight,keepaspectratio]{diagrams/use_case_payment.pdf}
     \caption{Diagramme des cas d'utilisation — Flux de paiement PostFinance}
     \label{fig:use_case_payment}
 \end{figure}
 
 \begin{figure}[h]
     \centering
-    \resizebox{\textwidth}{!}{%
-    \begin{tikzpicture}
-        % Acteurs
-        \node[align=center] (ach)   at (0,2.4)  {\umlactor{Acheteur}};
-        \node[align=center] (vend)  at (0,-1.2) {\umlactor{Vendeur}};
-        \node[align=center] (admin) at (0,-4.2) {\umlactor{Administrateur}};
-        \node[align=center] (ol) at (13,3.5)  {\umlactor{OpenLibrary}};
-        \node[align=center] (pf) at (13,-3)   {\umlactor{PostFinance}};
-        % Système
-        \node[ucsystem, minimum width=86mm, minimum height=104mm,
-              label=above:{\textbf{Système CARIBOOKS}}] at (6.5,-0.6) {};
-        \node[usecase] (uc1) at (6.5,4.0)  {S'inscrire /\\se connecter};
-        \node[usecase] (uc2) at (6.5,2.5)  {Parcourir le\\catalogue};
-        \node[usecase] (uc3) at (6.5,1.0)  {Rechercher /\\filtrer};
-        \node[usecase] (uc4) at (6.5,-0.5) {Gérer ses\\favoris};
-        \node[usecase] (uc5) at (6.5,-2.0) {Passer commande\\\& payer};
-        \node[usecase] (uc6) at (6.5,-3.5) {Ajouter un livre\\(scan ISBN)};
-        \node[usecase] (uc7) at (6.5,-5.0) {Gérer ses\\annonces};
-        \node[usecase] (uc8) at (6.5,-6.5) {Modérer / gérer\\les utilisateurs};
-        % Liens acheteur
-        \draw (ach) -- (uc1); \draw (ach) -- (uc2); \draw (ach) -- (uc3);
-        \draw (ach) -- (uc4); \draw (ach) -- (uc5);
-        % Liens vendeur
-        \draw (vend) -- (uc1); \draw (vend) -- (uc6); \draw (vend) -- (uc7);
-        % Liens admin
-        \draw (admin) -- (uc8); \draw (admin) -- (uc7);
-        % Acteurs externes
-        \draw (uc6) -- (ol);
-        \draw (uc5) -- (pf);
-    \end{tikzpicture}}
+    \includegraphics[width=\linewidth,height=0.82\textheight,keepaspectratio]{diagrams/use_case_global.pdf}
     \caption{Diagramme des cas d'utilisation — Vue globale du système}
     \label{fig:use_case_global}
 \end{figure}
@@ -648,66 +589,14 @@ Sprint 6 & Semaines 11–12 &
 
 \begin{figure}[h]
     \centering
-    \begin{tikzpicture}[node distance=8mm]
-        \node[init] (start) {};
-        \node[act, below=of start] (a1) {Parcourir le catalogue};
-        \node[act, below=of a1] (a2) {Rechercher / filtrer\\(titre, auteur, prix, état)};
-        \node[act, below=of a2] (a3) {Consulter la fiche du livre};
-        \node[act, below=of a3] (a4) {Ajouter au panier};
-        \node[decision, below=of a4] (d1) {Connecté ?};
-        \node[act, left=18mm of d1] (a5) {Se connecter /\\s'inscrire};
-        \node[act, below=14mm of d1] (a6) {Valider le panier};
-        \node[act, below=of a6] (a7) {Paiement PostFinance\\(TWINT / carte, CHF)};
-        \node[decision, below=of a7] (d2) {Paiement\\réussi ?};
-        \node[act, right=16mm of d2] (a8) {Afficher l'erreur};
-        \node[act, below=14mm of d2] (a9) {Commande confirmée\\(statut PAYÉE)};
-        \node[final, below=of a9] (end) {};
-        \draw[flow] (start) -- (a1);
-        \draw[flow] (a1) -- (a2);
-        \draw[flow] (a2) -- (a3);
-        \draw[flow] (a3) -- (a4);
-        \draw[flow] (a4) -- (d1);
-        \draw[flow] (d1) -- node[flowlab]{non} (a5);
-        \draw[flow] (a5) |- (a6);
-        \draw[flow] (d1) -- node[flowlab]{oui} (a6);
-        \draw[flow] (a6) -- (a7);
-        \draw[flow] (a7) -- (d2);
-        \draw[flow] (d2) -- node[flowlab]{non} (a8);
-        \draw[flow] (a8) |- (a6);
-        \draw[flow] (d2) -- node[flowlab]{oui} (a9);
-        \draw[flow] (a9) -- (end);
-    \end{tikzpicture}
+    \includegraphics[width=\linewidth,height=0.82\textheight,keepaspectratio]{diagrams/activites_achat.pdf}
     \caption{Diagramme d'activités — Parcours d'achat complet}
     \label{fig:activites_achat}
 \end{figure}
 
 \begin{figure}[h]
     \centering
-    \begin{tikzpicture}[node distance=8mm]
-        \node[init] (start) {};
-        \node[act, below=of start] (a1) {Scanner le code-barres ISBN};
-        \node[decision, below=of a1] (d1) {Code\\reconnu ?};
-        \node[act, below=14mm of d1] (a2) {Appel API OpenLibrary\\(GET /isbn/\{isbn\})};
-        \node[decision, below=of a2] (d2) {Métadonnées\\trouvées ?};
-        \node[act, right=18mm of d2] (a3) {Saisie manuelle\\des informations};
-        \node[act, below=14mm of d2] (a4) {Préremplir le formulaire\\(titre, auteur, éditeur)};
-        \node[act, below=of a4] (a5) {Compléter état \& prix (CHF)};
-        \node[act, below=of a5] (a6) {Publier l'annonce};
-        \node[act, below=of a6] (a7) {Enregistrer le scan\\(table scan\_isbn)};
-        \node[final, below=of a7] (end) {};
-        \draw[flow] (start) -- (a1);
-        \draw[flow] (a1) -- (d1);
-        \draw[flow] (d1) -- node[flowlab]{oui} (a2);
-        \draw[flow] (d1) -| node[flowlab,pos=0.25]{non} (a3);
-        \draw[flow] (a2) -- (d2);
-        \draw[flow] (d2) -- node[flowlab]{non} (a3);
-        \draw[flow] (a3) |- (a5);
-        \draw[flow] (d2) -- node[flowlab]{oui} (a4);
-        \draw[flow] (a4) -- (a5);
-        \draw[flow] (a5) -- (a6);
-        \draw[flow] (a6) -- (a7);
-        \draw[flow] (a7) -- (end);
-    \end{tikzpicture}
+    \includegraphics[width=\linewidth,height=0.82\textheight,keepaspectratio]{diagrams/activites_isbn.pdf}
     \caption{Diagramme d'activités — Flux d'ajout d'un livre via scan ISBN}
     \label{fig:activites_isbn}
 \end{figure}
@@ -716,28 +605,7 @@ Sprint 6 & Semaines 11–12 &
 
 \begin{figure}[h]
     \centering
-    \resizebox{\textwidth}{!}{%
-    \begin{tikzpicture}
-        % En-têtes des participants
-        \node[actorbox] (ben) at (0,0)    {Bénévole};
-        \node[actorbox] (nav) at (3.6,0)  {Navigateur\\(scanner JS)};
-        \node[actorbox] (api) at (7.6,0)  {API FastAPI};
-        \node[actorbox] (ol)  at (11,0)   {OpenLibrary\\/ Google Books};
-        \node[actorbox] (bd)  at (14.2,0) {BD MySQL};
-        % Lignes de vie
-        \foreach \p in {ben,nav,api,ol,bd} \draw[lifeline] (\p.south) -- ++(0,-8.6);
-        % Messages
-        \draw[msg] ($(ben)+(0,-1)$) -- node[above]{scanne le code-barres} ($(nav)+(0,-1)$);
-        \draw[msg] ($(nav)+(0,-1.8)$) -- ++(0.9,0) -- ++(0,-0.4) -- ++(-0.9,0)
-            node[pos=0.5, right=9mm, font=\scriptsize]{décode l'ISBN};
-        \draw[msg] ($(nav)+(0,-3)$) -- node[above]{GET /isbn/\{isbn\}} ($(api)+(0,-3)$);
-        \draw[msg] ($(api)+(0,-3.8)$) -- node[above]{requête métadonnées} ($(ol)+(0,-3.8)$);
-        \draw[retmsg] ($(ol)+(0,-4.8)$) -- node[above]{titre, auteur, éditeur} ($(api)+(0,-4.8)$);
-        \draw[retmsg] ($(api)+(0,-5.6)$) -- node[above]{JSON métadonnées} ($(nav)+(0,-5.6)$);
-        \draw[msg] ($(ben)+(0,-6.4)$) -- node[above]{complète état + prix} ($(nav)+(0,-6.4)$);
-        \draw[msg] ($(nav)+(0,-7.2)$) -- node[above]{POST /articles + /scans} ($(api)+(0,-7.2)$);
-        \draw[msg] ($(api)+(0,-8)$) -- node[above]{INSERT livre / scan\_isbn} ($(bd)+(0,-8)$);
-    \end{tikzpicture}}
+    \includegraphics[width=\linewidth,height=0.82\textheight,keepaspectratio]{diagrams/sequence_isbn.pdf}
     \caption{Diagramme de séquence — Scan ISBN et préremplissage des métadonnées}
     \label{fig:sequence_isbn}
 \end{figure}
@@ -746,49 +614,14 @@ Sprint 6 & Semaines 11–12 &
 
 \begin{figure}[h]
     \centering
-    \resizebox{\textwidth}{!}{%
-    \begin{tikzpicture}
-        \node[actorbox] (ach) at (0,0)    {Acheteur};
-        \node[actorbox] (fro) at (3.4,0)  {Frontend\\Next.js};
-        \node[actorbox] (api) at (7.2,0)  {API FastAPI};
-        \node[actorbox] (pf)  at (11,0)   {PostFinance};
-        \node[actorbox] (bd)  at (14.2,0) {BD MySQL};
-        \foreach \p in {ach,fro,api,pf,bd} \draw[lifeline] (\p.south) -- ++(0,-9.4);
-        \draw[msg] ($(ach)+(0,-1)$) -- node[above]{valide le panier} ($(fro)+(0,-1)$);
-        \draw[msg] ($(fro)+(0,-1.8)$) -- node[above]{POST /orders} ($(api)+(0,-1.8)$);
-        \draw[msg] ($(api)+(0,-2.6)$) -- node[above]{INSERT commande (EN\_ATTENTE)} ($(bd)+(0,-2.6)$);
-        \draw[msg] ($(api)+(0,-3.6)$) -- node[above]{crée la transaction} ($(pf)+(0,-3.6)$);
-        \draw[retmsg] ($(pf)+(0,-4.4)$) -- node[above]{URL de paiement} ($(api)+(0,-4.4)$);
-        \draw[retmsg] ($(api)+(0,-5.2)$) -- node[above]{redirection} ($(fro)+(0,-5.2)$);
-        \draw[msg] ($(fro)+(0,-6)$) -- node[above, font=\scriptsize]{paye (TWINT / carte)} ($(pf)+(0,-6)$);
-        \draw[msg] ($(pf)+(0,-6.8)$) -- node[above]{webhook succès / échec} ($(api)+(0,-6.8)$);
-        \draw[msg] ($(api)+(0,-7.6)$) -- node[above]{UPDATE statut (PAYÉE)} ($(bd)+(0,-7.6)$);
-        \draw[retmsg] ($(api)+(0,-8.6)$) -- node[above]{confirmation} ($(fro)+(0,-8.6)$);
-        \draw[retmsg] ($(fro)+(0,-9.2)$) -- node[above]{page de confirmation} ($(ach)+(0,-9.2)$);
-    \end{tikzpicture}}
+    \includegraphics[width=\linewidth,height=0.82\textheight,keepaspectratio]{diagrams/sequence_paiement.pdf}
     \caption{Diagramme de séquence — Tunnel de paiement PostFinance}
     \label{fig:sequence_paiement}
 \end{figure}
 
 \begin{figure}[h]
     \centering
-    \resizebox{0.92\textwidth}{!}{%
-    \begin{tikzpicture}
-        \node[actorbox] (usr) at (0,0)   {Utilisateur};
-        \node[actorbox] (fro) at (4,0)   {Frontend\\Next.js};
-        \node[actorbox] (api) at (8.5,0) {API FastAPI};
-        \node[actorbox] (bd)  at (12.5,0){BD MySQL};
-        \foreach \p in {usr,fro,api,bd} \draw[lifeline] (\p.south) -- ++(0,-7.6);
-        \draw[msg] ($(usr)+(0,-1)$) -- node[above]{saisit email + mot de passe} ($(fro)+(0,-1)$);
-        \draw[msg] ($(fro)+(0,-1.8)$) -- node[above]{POST /auth/token} ($(api)+(0,-1.8)$);
-        \draw[msg] ($(api)+(0,-2.6)$) -- node[above]{SELECT utilisateur} ($(bd)+(0,-2.6)$);
-        \draw[retmsg] ($(bd)+(0,-3.4)$) -- node[above]{hash bcrypt} ($(api)+(0,-3.4)$);
-        \draw[msg] ($(api)+(0,-4.2)$) -- ++(1,0) -- ++(0,-0.4) -- ++(-1,0)
-            node[pos=0.5, right=10mm, font=\scriptsize]{vérifie (passlib) + signe JWT (HS256)};
-        \draw[retmsg] ($(api)+(0,-5.4)$) -- node[above]{access\_token (JWT)} ($(fro)+(0,-5.4)$);
-        \draw[retmsg] ($(fro)+(0,-6.2)$) -- node[above]{connexion établie} ($(usr)+(0,-6.2)$);
-        \draw[msg] ($(fro)+(0,-7)$) -- node[above]{requêtes : Authorization: Bearer} ($(api)+(0,-7)$);
-    \end{tikzpicture}}
+    \includegraphics[width=\linewidth,height=0.82\textheight,keepaspectratio]{diagrams/sequence_auth.pdf}
     \caption{Diagramme de séquence — Authentification JWT}
     \label{fig:sequence_auth}
 \end{figure}
@@ -799,40 +632,7 @@ Sprint 6 & Semaines 11–12 &
 
 \begin{figure}[h]
     \centering
-    \resizebox{\textwidth}{!}{%
-    \begin{tikzpicture}
-    \begin{scope}[every node/.append style={umlclass, rectangle split parts=2, text width=33mm}]
-        % Colonne gauche
-        \node (typeobjet) at (0,4.6)  {\textbf{TypeObjet}\nodepart{second}- id\_type\_objet\\- libelle\\- code};
-        \node (etat)      at (0,1.6)  {\textbf{EtatUsure}\nodepart{second}- id\_etat\_usure\\- libelle};
-        \node (cat)       at (0,-1.4) {\textbf{Categorie}\nodepart{second}- id\_categorie\\- libelle};
-        \node (source)    at (0,-4.4) {\textbf{SourceStock}\nodepart{second}- id\_source\_stock\\- libelle\\- type\_source};
-        % Colonne centrale
-        \node (article) at (5.2,3.2)  {\textbf{Article}\nodepart{second}- id\_article\\- sku\\- titre\\- prix\_chf\\- actif};
-        \node (livre)   at (5.2,-0.6) {\textbf{Livre}\nodepart{second}- isbn\\- auteur\\- editeur\\- date\_publication\\- langue};
-        \node (stock)   at (5.2,-4.4) {\textbf{Stock}\nodepart{second}- id\_stock\\- quantite\_disponible\\- quantite\_reservee};
-        \node (scan)    at (5.2,-7.6) {\textbf{ScanISBN}\nodepart{second}- id\_scan\_isbn\\- isbn\_lu\\- valide};
-        % Colonne droite
-        \node (user)  at (10.6,4.4)  {\textbf{Utilisateur}\nodepart{second}- id\_utilisateur\\- email\\- mot\_de\_passe\_hash\\- role};
-        \node (cmd)   at (10.6,1.2)  {\textbf{Commande}\nodepart{second}- id\_commande\\- numero\_commande\\- montant\_total\_chf\\- statut};
-        \node (ligne) at (10.6,-2.2) {\textbf{LigneCommande}\nodepart{second}- id\_ligne\_commande\\- quantite\\- prix\_unitaire\_chf};
-        \node (paie)  at (10.6,-5.4) {\textbf{Paiement}\nodepart{second}- id\_paiement\\- reference\_externe\\- montant\_chf\\- statut};
-    \end{scope}
-        % Héritage Livre -> Article
-        \draw[-{Triangle[open, length=3.5mm, width=4mm]}, thick] (livre) -- (article);
-        % Associations
-        \draw (article) -- node[card, near start]{*} node[card, near end]{1} (typeobjet);
-        \draw (article) -- node[card, near start]{*} node[card, near end]{1} (etat);
-        \draw (article) -- node[card, midway, above, font=\scriptsize]{* \quad article\_categorie \quad *} (cat);
-        \draw (stock) -- node[card, near start]{*} node[card, near end]{1} (article);
-        \draw (stock) -- node[card, near start]{*} node[card, near end]{1} (source);
-        \draw (cmd) -- node[card, near start]{*} node[card, near end]{1} (user);
-        \draw (ligne) -- node[card, near start]{*} node[card, near end]{1} (cmd);
-        \draw (ligne) -- node[card, near start]{*} node[card, near end]{1} (article);
-        \draw (paie) -- node[card, near start]{1} node[card, near end]{1} (cmd);
-        \draw (scan) -- node[card, near start]{*} node[card, near end]{1} (user);
-        \draw (scan) -- node[card, near start]{*} node[card, near end]{1} (livre);
-    \end{tikzpicture}}
+    \includegraphics[width=\linewidth,height=0.82\textheight,keepaspectratio]{diagrams/classes.pdf}
     \caption{Diagramme de classes — Modèle objet CARIBOOKS}
     \label{fig:classes}
 \end{figure}
@@ -843,22 +643,7 @@ Sprint 6 & Semaines 11–12 &
 
 \begin{figure}[h]
     \centering
-    \resizebox{\textwidth}{!}{%
-    \begin{tikzpicture}[every node/.append style={umlobject, text width=44mm}]
-        \node (u) at (0,0) {\underline{\textbf{marie : Utilisateur}}\nodepart{second}email = marie@example.ch\\role = "user"};
-        \node (c) at (6,0) {\underline{\textbf{cmd1024 : Commande}}\nodepart{second}numero = "CMD-2026-1024"\\montant\_total\_chf = 27.50\\statut = "PAYÉE"};
-        \node (p) at (12,0) {\underline{\textbf{paie1 : Paiement}}\nodepart{second}fournisseur = "POSTFINANCE"\\montant\_chf = 27.50\\statut = "RÉUSSI"};
-        \node (l1) at (3,-4) {\underline{\textbf{l1 : LigneCommande}}\nodepart{second}quantite = 1\\prix\_unitaire\_chf = 12.50};
-        \node (l2) at (9,-4) {\underline{\textbf{l2 : LigneCommande}}\nodepart{second}quantite = 1\\prix\_unitaire\_chf = 15.00};
-        \node (a1) at (3,-8) {\underline{\textbf{a1 : Livre}}\nodepart{second}titre = "L'Étranger"\\isbn = "9782070360024"\\prix\_chf = 12.50};
-        \node (a2) at (9,-8) {\underline{\textbf{a2 : Livre}}\nodepart{second}titre = "1984"\\isbn = "9780451524935"\\prix\_chf = 15.00};
-        \draw (u) -- (c);
-        \draw (c) -- (p);
-        \draw (c) -- (l1);
-        \draw (c) -- (l2);
-        \draw (l1) -- (a1);
-        \draw (l2) -- (a2);
-    \end{tikzpicture}}
+    \includegraphics[width=\linewidth,height=0.82\textheight,keepaspectratio]{diagrams/objets.pdf}
     \caption{Diagramme d'objets — Exemple d'une commande en cours}
     \label{fig:objets}
 \end{figure}
@@ -867,23 +652,7 @@ Sprint 6 & Semaines 11–12 &
 
 \begin{figure}[h]
     \centering
-    \begin{tikzpicture}[node distance=10mm]
-        % Frontend
-        \node[comp, fill=cyan!10, minimum width=44mm, minimum height=20mm] (front)
-            {\textbf{Frontend Next.js}\\\scriptsize Pages, composants React,\\\scriptsize services API, scan ISBN (JS)};
-        % API
-        \node[comp, fill=blue!10, below=18mm of front, minimum width=70mm, minimum height=26mm] (api)
-            {\textbf{API FastAPI}\\[2pt]\scriptsize presentation (routers, schemas Pydantic)\\\scriptsize services (JWT, paiement, books)\\\scriptsize infrastructure (SQLAlchemy, CRUD)};
-        % BD
-        \node[comp, fill=orange!12, below=14mm of api, minimum width=44mm] (db)
-            {\textbf{Base de données MySQL}};
-        % Services externes
-        \node[extbox, right=24mm of api, minimum width=34mm, minimum height=26mm, align=center] (ext)
-            {\textbf{Services externes}\\[3pt]\scriptsize OpenLibrary\\\scriptsize PostFinance\\\scriptsize Poste Suisse};
-        \draw[dep] (front) -- node[flowlab]{HTTP / REST (JSON)} (api);
-        \draw[dep] (api) -- node[flowlab]{ORM SQLAlchemy} (db);
-        \draw[dep] (api) -- node[flowlab]{HTTPS} (ext);
-    \end{tikzpicture}
+    \includegraphics[width=\linewidth,height=0.82\textheight,keepaspectratio]{diagrams/composants.pdf}
     \caption{Diagramme de composants — Architecture logicielle CARIBOOKS}
     \label{fig:composants}
 \end{figure}
@@ -894,78 +663,14 @@ Sprint 6 & Semaines 11–12 &
 
 \begin{figure}[h]
     \centering
-    \resizebox{\textwidth}{!}{%
-    \begin{tikzpicture}
-        % Entités
-        \node[entite] (type)   at (0,1.8)   {\textbf{TYPE\_OBJET}\nodepart{second}\underline{id\_type\_objet}\\libelle, code};
-        \node[entite] (article)at (4.5,0)    {\textbf{ARTICLE}\nodepart{second}\underline{id\_article}\\sku, titre, prix\_chf};
-        \node[entite] (etat)   at (9,1.8)    {\textbf{ETAT\_USURE}\nodepart{second}\underline{id\_etat\_usure}\\libelle};
-        \node[entite] (cat)    at (9,-1.8)   {\textbf{CATEGORIE}\nodepart{second}\underline{id\_categorie}\\libelle};
-        \node[entite] (source) at (0,-1.8)   {\textbf{SOURCE\_STOCK}\nodepart{second}\underline{id\_source\_stock}\\libelle, type\_source};
-        \node[entite] (livre)  at (4.5,-4)    {\textbf{LIVRE}\nodepart{second}isbn, auteur,\\editeur, langue};
-        \node[entite] (user)   at (0,-7)     {\textbf{UTILISATEUR}\nodepart{second}\underline{id\_utilisateur}\\email, role};
-        \node[entite] (cmd)    at (5,-7)      {\textbf{COMMANDE}\nodepart{second}\underline{id\_commande}\\numero, montant, statut};
-        \node[entite] (paie)   at (10,-7)     {\textbf{PAIEMENT}\nodepart{second}\underline{id\_paiement}\\reference, montant};
-        % Associations
-        \node[assoc] (estt) at (2.1,1)   {est de type};
-        \node[assoc] (aet)  at (6.7,1)   {a pour état};
-        \node[assoc] (cla)  at (6.7,-1)  {classé dans};
-        \node[assoc] (sto)  at (2.1,-1)  {stocké\\(quantité)};
-        \node[assoc] (estu) at (4.5,-2)  {est un};
-        \node[assoc] (pas)  at (2.5,-7)  {passe};
-        \node[assoc] (reg)  at (7.5,-7)  {réglée par};
-        \node[assoc] (con)  at (5,-3.4)  {contient\\(qté, prix)};
-        \node[assoc] (sca)  at (1.6,-4.6){scanne};
-        % Liens + cardinalités
-        \draw (article) -- node[card,near start]{(1,1)} node[card,near end]{(0,n)} (estt) -- (type);
-        \draw (article) -- node[card,near start]{(1,1)} node[card,near end]{(0,n)} (aet) -- (etat);
-        \draw (article) -- node[card,near start]{(0,n)} node[card,near end]{(0,n)} (cla) -- (cat);
-        \draw (article) -- node[card,near start]{(1,n)} node[card,near end]{(0,n)} (sto) -- (source);
-        \draw (article) -- node[card,near start]{(0,1)} node[card,near end]{(1,1)} (estu) -- (livre);
-        \draw (user) -- node[card,near start]{(0,n)} node[card,near end]{(1,1)} (pas) -- (cmd);
-        \draw (cmd)  -- node[card,near start]{(1,1)} node[card,near end]{(1,1)} (reg) -- (paie);
-        \draw (cmd)  -- node[card,near start]{(1,n)} node[card,near end]{(0,n)} (con) -- (article);
-        \draw (user) -- node[card,near start]{(0,n)} node[card,near end]{(0,n)} (sca) -- (livre);
-    \end{tikzpicture}}
+    \includegraphics[width=\linewidth,height=0.82\textheight,keepaspectratio]{diagrams/mcd.pdf}
     \caption{Modèle Conceptuel de Données (MCD) — MySQL}
     \label{fig:mcd}
 \end{figure}
 
 \begin{figure}[h]
     \centering
-    \resizebox{\textwidth}{!}{%
-    \begin{tikzpicture}[every node/.append style={table, text width=40mm}]
-        % Colonne 1 : référentiels
-        \node (type)   at (0,0)   {\textbf{type\_objet}\nodepart{second}\underline{id\_type\_objet}\\libelle, code, description};
-        \node (etat)   at (0,-4)  {\textbf{etat\_usure}\nodepart{second}\underline{id\_etat\_usure}\\libelle, description};
-        \node (cat)    at (0,-8)  {\textbf{categorie}\nodepart{second}\underline{id\_categorie}\\libelle, description};
-        \node (source) at (0,-12) {\textbf{source\_stock}\nodepart{second}\underline{id\_source\_stock}\\libelle, type\_source};
-        % Colonne 2 : articles
-        \node (article) at (6,-1)  {\textbf{article}\nodepart{second}\underline{id\_article}\\\# id\_type\_objet\\\# id\_etat\_usure\\sku, titre, prix\_chf, actif};
-        \node (livre)   at (6,-5)  {\textbf{livre}\nodepart{second}\underline{\# id\_article}\\isbn, auteur, editeur\\date\_publication, langue};
-        \node (artcat)  at (6,-9)  {\textbf{article\_categorie}\nodepart{second}\underline{\# id\_article}\\\underline{\# id\_categorie}};
-        \node (stock)   at (6,-13) {\textbf{stock}\nodepart{second}\underline{id\_stock}\\\# id\_article\\\# id\_source\_stock\\quantite\_disponible, reservee};
-        % Colonne 3 : commandes
-        \node (user)  at (12,0)   {\textbf{utilisateur}\nodepart{second}\underline{id\_utilisateur}\\nom, prenom, email\\mot\_de\_passe\_hash, role};
-        \node (cmd)   at (12,-4)  {\textbf{commande}\nodepart{second}\underline{id\_commande}\\\# id\_utilisateur\\numero, montant\_total\_chf, statut};
-        \node (ligne) at (12,-8)  {\textbf{ligne\_commande}\nodepart{second}\underline{id\_ligne\_commande}\\\# id\_commande\\\# id\_article\\quantite, prix\_unitaire\_chf};
-        \node (scan)  at (12,-12) {\textbf{scan\_isbn}\nodepart{second}\underline{id\_scan\_isbn}\\\# id\_utilisateur\\\# id\_article\_livre\\isbn\_lu, valide};
-        % Colonne 4 : paiement
-        \node (paie)  at (18,-4)  {\textbf{paiement}\nodepart{second}\underline{id\_paiement}\\\# id\_commande\\reference\_externe, montant\_chf, statut};
-        % Clés étrangères
-        \draw[flow] (article.west) -- (type.east);
-        \draw[flow] (article.west) -- (etat.east);
-        \draw[flow] (livre.north) -- (article.south);
-        \draw[flow] (artcat.west) -- (cat.east);
-        \draw[flow] (artcat.north) -- (article.south);
-        \draw[flow] (stock.west) -- (source.east);
-        \draw[flow] (stock.north) -- (article.south);
-        \draw[flow] (cmd.north) -- (user.south);
-        \draw[flow] (ligne.north) -- (cmd.south);
-        \draw[flow] (ligne.west) -- (article.east);
-        \draw[flow] (scan.west) -- (livre.east);
-        \draw[flow] (paie.north) to[out=90,in=0] (cmd.east);
-    \end{tikzpicture}}
+    \includegraphics[width=\linewidth,height=0.82\textheight,keepaspectratio]{diagrams/mld.pdf}
     \caption{Modèle Logique de Données (MLD)}
     \label{fig:mld}
 \end{figure}
@@ -983,29 +688,23 @@ Sprint 6 & Semaines 11–12 &
     \item \texttt{utilisateur} $\leftrightarrow$ \texttt{scan\_isbn} $\leftrightarrow$ \texttt{livre} : traçabilité des scans
 \end{itemize}
 
+\subsection{Choix d'un modèle relationnel (et absence de NoSQL)}
+
+Le référentiel CDA mentionne le développement de composants d'accès aux données \textbf{SQL et NoSQL}. Pour CARIBOOKS, le choix s'est porté sur un modèle \textbf{100\,\% relationnel (MySQL)}, sans composant NoSQL, pour des raisons assumées :
+
+\begin{itemize}
+    \item \textbf{Nature des données :} le domaine (catalogue, stock, commandes, paiements) est fortement structuré et fortement relié, avec des contraintes d'intégrité (clés étrangères, unicité du SKU/ISBN) et un besoin de \textbf{transactions ACID} — notamment pour la réservation de stock concurrente (\texttt{with\_for\_update()}) et la finalisation atomique d'une commande. C'est précisément le terrain d'un SGBD relationnel.
+    \item \textbf{KISS / coût :} introduire un moteur NoSQL supplémentaire pour une association à budget contraint aurait complexifié l'exploitation sans bénéfice fonctionnel à l'échelle du MVP.
+    \item \textbf{Évolutivité prévue :} le besoin typiquement NoSQL (cache clé-valeur, documents) est identifié pour une phase ultérieure. Un cache \textbf{Redis} (catalogue, sessions) est envisagé dans les perspectives, ce qui introduirait alors un accès aux données de type NoSQL si la charge le justifie.
+\end{itemize}
+
+\noindent L'accès aux données relationnelles est isolé dans la couche infrastructure via \textbf{SQLAlchemy} et un composant générique \texttt{CrudBase}, garantissant des requêtes paramétrées (anti-injection) et un point d'extension unique.
+
 \subsection{Architecture technique}
 
 \begin{figure}[h]
     \centering
-    \begin{tikzpicture}[node distance=12mm]
-        \node[layer, fill=gray!12] (client) {\textbf{Client}\\\scriptsize Navigateur web / mobile};
-        \node[layer, fill=cyan!12, below=of client] (front)
-            {\textbf{Frontend — Next.js (React / TypeScript)}\\\scriptsize SSR/SSG · scan ISBN · déployé sur Vercel};
-        \node[layer, fill=blue!12, below=of front] (api)
-            {\textbf{Backend — API FastAPI (Python)}\\\scriptsize Pydantic · JWT · SQLAlchemy · Swagger};
-        \node[layer, fill=orange!14, below=of api] (db)
-            {\textbf{Base de données — MySQL}};
-        % Services externes à droite
-        \node[extbox, right=22mm of api, minimum width=34mm, minimum height=22mm, align=center] (ext)
-            {\textbf{Services externes}\\[3pt]\scriptsize OpenLibrary / Google Books\\\scriptsize PostFinance (CHF)\\\scriptsize Poste Suisse};
-        % Conteneurisation
-        \node[draw, dashed, rounded corners, fit=(api)(db), inner sep=7mm,
-              label=below:{\scriptsize Docker / docker-compose · CI-CD GitHub Actions}] (docker) {};
-        \draw[flow] (client) -- node[flowlab]{HTTPS} (front);
-        \draw[flow] (front) -- node[flowlab]{REST / JSON} (api);
-        \draw[flow] (api) -- node[flowlab]{ORM} (db);
-        \draw[flow] (api) -- node[flowlab]{HTTPS} (ext);
-    \end{tikzpicture}
+    \includegraphics[width=\linewidth,height=0.82\textheight,keepaspectratio]{diagrams/architecture.pdf}
     \caption{Architecture technique — FastAPI / Next.js / MySQL / PostFinance / Docker}
     \label{fig:architecture}
 \end{figure}
@@ -1025,30 +724,37 @@ Le diagramme de déploiement décrit la répartition physique des composants log
 
 \begin{figure}[h]
     \centering
-    \begin{tikzpicture}[
-        device/.style={rectangle, draw=black, thick, fill=gray!12, align=center, font=\small},
-        artifact/.style={rectangle, draw=black, fill=blue!8, align=center, font=\scriptsize, inner sep=3pt}]
-        \node[device, minimum width=32mm, minimum height=15mm,
-              label=above:{\scriptsize\guillemotleft device\guillemotright}] (client) at (0,0)
-              {\textbf{Poste client}\\\scriptsize Navigateur\\\scriptsize web / mobile};
-        \node[device, minimum width=42mm, minimum height=16mm,
-              label=above:{\scriptsize\guillemotleft cloud — Vercel\guillemotright}] (vercel) at (6,3.2) {};
-        \node[artifact, minimum width=34mm] (fe) at (6,3.2) {Frontend Next.js\\\scriptsize SSR / SSG};
-        \node[device, minimum width=48mm, minimum height=34mm,
-              label=above:{\scriptsize\guillemotleft serveur — Oracle Cloud\guillemotright}] (host) at (6,-2) {};
-        \node[artifact, minimum width=38mm] (api) at (6,-1.1) {API FastAPI (Uvicorn)\\\scriptsize VM Docker};
-        \node[artifact, minimum width=38mm] (db) at (6,-3) {Base MySQL\\\scriptsize Oracle Cloud};
-        \node[device, minimum width=34mm, minimum height=22mm,
-              label=above:{\scriptsize\guillemotleft services externes\guillemotright}] (ext) at (12,0.6)
-              {\scriptsize PostFinance\\[2pt]OpenLibrary /\\Google Books\\[2pt]Poste Suisse};
-        \draw[flow] (client) -- node[flowlab]{HTTPS} (vercel);
-        \draw[flow] (client) -- node[flowlab]{HTTPS / REST} (api);
-        \draw[flow] (api) -- node[flowlab]{TCP 3306} (db);
-        \draw[flow] (api) -- node[flowlab]{HTTPS} (ext);
-    \end{tikzpicture}
+    \includegraphics[width=\linewidth,height=0.82\textheight,keepaspectratio]{diagrams/deploiement.pdf}
     \caption{Diagramme de déploiement — infrastructure physique de CARIBOOKS}
     \label{fig:deploiement}
 \end{figure}
+
+\subsection{Hébergement du backend et de l'API sur Oracle Cloud}
+
+Le backend (API FastAPI) et la base de données sont hébergés sur l'offre \textbf{Oracle Cloud Free Tier}, retenue pour son socle « Always Free » qui permet d'exploiter une infrastructure de production sans coût récurrent — un critère décisif pour une association.
+
+\vspace{4pt}
+\noindent\textbf{Couche de calcul (API) :}
+\begin{itemize}
+    \item \textbf{Deux machines virtuelles} \texttt{VM.Standard.E2.1.Micro} (AMD, Always Free, Ubuntu 22.04), exécutant chacune l'API FastAPI servie par \textbf{Uvicorn} derrière \textbf{Nginx} sur le port \texttt{8000}.
+    \item Chaque instance est gérée comme un service \textbf{systemd}, garantissant le redémarrage automatique de l'API en cas de panne ou de redémarrage de la VM.
+    \item La redondance sur deux VMs assure une \textbf{haute disponibilité} basique : si une instance tombe, l'autre continue de répondre.
+\end{itemize}
+
+\noindent\textbf{Répartition de charge :}
+\begin{itemize}
+    \item Un \textbf{OCI Flexible Load Balancer} (Always Free) expose un point d'entrée HTTPS unique et répartit le trafic entre les deux VMs.
+    \item Une \textbf{sonde de santé} interroge l'endpoint \texttt{/health} (port 8000, intervalle 10\,s) pour retirer automatiquement du pool toute instance défaillante.
+\end{itemize}
+
+\noindent\textbf{Couche de données et réseau :}
+\begin{itemize}
+    \item Base \textbf{MySQL HeatWave} (Oracle Free), accessible uniquement depuis le \textbf{sous-réseau privé} des VMs (port \texttt{3306} fermé à l'extérieur) au sein du même \textbf{VCN}.
+    \item Les VMs sont conteneurisées avec \textbf{Docker} ; les secrets (clé JWT, identifiants base et PostFinance) sont injectés via variables d'environnement, jamais versionnés.
+    \item Les communications client $\rightarrow$ API et API $\rightarrow$ services tiers se font en \textbf{HTTPS/TLS}.
+\end{itemize}
+
+\noindent Cette topologie (frontend Vercel + API répartie sur deux VMs Oracle derrière un load balancer + base MySQL privée) illustre une architecture \textbf{multicouche, scalable et sécurisée}, déployable à coût nul tout en restant proche d'une mise en production réelle.
 
 \subsection{Conception UI/UX}
 
@@ -1326,9 +1032,41 @@ Dans le cadre du développement de CARIBOOKS, une veille régulière a été men
     \item \textbf{Documentation officielle FastAPI} (sécurité) : bonnes pratiques pour OAuth2, JWT, hashage.
     \item \textbf{Fireship} (YouTube) : veille technique sur les tendances web et les pratiques de développement modernes.
     \item \textbf{GitHub Security Advisories} : alertes automatiques sur les dépendances Python du projet via Dependabot.
-    \item \textbf{Daily.DEV et bytes} : 
+    \item \textbf{Daily.DEV et bytes} :
     Newsletter email sur les dernière nouveautées informatique
 \end{itemize}
+
+\section{Accessibilité de l'interface}
+
+La compétence « Développer des interfaces utilisateur » du référentiel CDA inclut le respect des normes d'accessibilité (WCAG / RGAA). Plusieurs mesures ont été mises en œuvre dans le frontend Next.js :
+
+\begin{itemize}
+    \item \textbf{Structure sémantique :} utilisation des balises HTML5 \texttt{header}, \texttt{nav}, \texttt{main}, \texttt{footer} et \texttt{section}, et de vrais \texttt{button} (plutôt que des \texttt{div} cliquables).
+    \item \textbf{Images :} texte alternatif (\texttt{alt}) sur les couvertures de livres et le logo ; icônes décoratives marquées \texttt{aria-hidden}.
+    \item \textbf{Formulaires :} chaque champ (connexion, inscription, profil) est désormais associé à un \texttt{label} (lié par \texttt{htmlFor}, masqué visuellement via une classe \texttt{.sr-only} pour préserver le design) ; les messages d'erreur sont reliés aux champs par \texttt{aria-describedby} et annoncés via \texttt{role="alert"}.
+    \item \textbf{Composants interactifs :} attributs \texttt{aria-label} et \texttt{aria-expanded} sur le panier et le menu mobile, \texttt{role="dialog"} sur la bannière de consentement aux cookies.
+    \item \textbf{Navigation et confort :} focus clavier visible (\texttt{outline} personnalisé), prise en charge de \texttt{prefers-reduced-motion} pour limiter les animations.
+    \item \textbf{Contrastes :} la palette respecte le niveau \textbf{WCAG AA} sur les textes principaux (ratios $>$ 4{,}5:1).
+\end{itemize}
+
+\noindent \textbf{Limites assumées :} l'application n'a pas fait l'objet d'un audit RGAA complet ; le piège de focus (\textit{focus trap}) du menu mobile et la couverture exhaustive des messages d'erreur restent des axes d'amélioration pour une phase ultérieure.
+
+\section{Protection des données personnelles (RGPD / nLPD)}
+
+CARIBOOKS traite des données à caractère personnel (nom, prénom, e-mail, adresse de livraison, téléphone, identifiant Google, historique de commandes). La plateforme étant destinée au marché suisse avec une possible clientèle européenne, la conformité vise à la fois la \textbf{nLPD} suisse et le \textbf{RGPD} européen.
+
+\begin{itemize}
+    \item \textbf{Information et transparence :} une \textbf{politique de confidentialité} et des \textbf{conditions d'utilisation} sont accessibles depuis le pied de page, détaillant les données collectées, les finalités, les bases légales (art.~6 RGPD), les durées de conservation et les sous-traitants (PostFinance en Suisse ; Google et Vercel aux États-Unis, encadrés par les clauses contractuelles types).
+    \item \textbf{Consentement aux cookies :} une bannière distingue les cookies strictement nécessaires (jeton JWT) des cookies analytiques (Vercel Speed Insights), soumis au consentement, conservé côté client.
+    \item \textbf{Droit à la portabilité :} un endpoint \texttt{GET /users/me/export} permet à l'utilisateur de télécharger l'ensemble de ses données (profil, commandes, scans) au format JSON, via un bouton dédié dans son espace compte.
+    \item \textbf{Droit à l'effacement :} un endpoint \texttt{DELETE /users/me} \textbf{anonymise} le compte (effacement des données personnelles et du mot de passe) tout en conservant les commandes de façon anonyme, afin de respecter l'obligation légale de conservation des justificatifs comptables. L'action est déclenchée par l'utilisateur après confirmation explicite.
+    \item \textbf{Minimisation :} la connexion Google ne récupère que l'identifiant, l'e-mail et le nom ; aucune donnée n'est revendue à des tiers.
+    \item \textbf{Sécurité des données :} chiffrement des échanges (HTTPS/TLS), hashage des mots de passe (bcrypt), tokens JWT à durée de vie limitée, et accès aux données d'administration restreint par rôle.
+\end{itemize}
+
+\noindent Le responsable du traitement est \textbf{Caribooks} (entreprise individuelle, personne physique, Suisse), joignable à l'adresse \texttt{alexandre.rey@estiam.com} ; l'adresse postale complète est communiquée sur demande par e-mail.
+
+\noindent \textbf{Limites assumées :} l'hébergement de la base hors de Suisse/UE (Oracle Cloud) devra être documenté dans le registre des traitements avant une mise en production réelle.
 
 % ==========================================
 % CHAPITRE H — COMMUNICATION ET COLLABORATION
@@ -1419,7 +1157,12 @@ Plusieurs axes d'évolution sont envisagés pour les phases suivantes du projet 
     \item \textbf{DPD} — \textit{Sondage sur la seconde main en Europe}, 2024 — \url{https://www.20min.ch/fr/story/economie-circulaire-les-suisses-champions-d-europe-de-la-seconde-main-103192492}
     \item \textbf{pytest documentation} — \url{https://docs.pytest.org/}
     \item \textbf{Docker documentation} — \url{https://docs.docker.com/}
-    \item \textit{[Ajouter les IA utilisées (ChatGPT, Copilot, Perplexity) et toute autre source consultée]}
+    \item \textbf{Outils d'intelligence artificielle utilisés} (assistance au développement et à la rédaction, sous supervision et relecture de l'auteur) :
+    \begin{itemize}
+        \item \textbf{GitHub Copilot} — complétion de code dans l'IDE.
+        \item \textbf{Claude (Anthropic)} — assistance au code et à la documentation.
+        \item \textbf{Perplexity} — recherche et veille technique.
+    \end{itemize}
 \end{itemize}
 
 % ==========================================

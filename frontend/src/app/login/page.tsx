@@ -62,7 +62,9 @@ function LoginForm() {
     <div className="content-center" style={{ maxWidth: 440 }}>
       <h1 style={{ margin: 0 }}>Connexion</h1>
       <form className="card cardPadding" onSubmit={onSubmit}>
+        <label className="sr-only" htmlFor="login-email">Email</label>
         <input
+          id="login-email"
           className="input"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
@@ -70,8 +72,11 @@ function LoginForm() {
           type="email"
           autoComplete="email"
           required
+          aria-describedby={error ? 'login-error' : undefined}
         />
+        <label className="sr-only" htmlFor="login-password">Mot de passe</label>
         <input
+          id="login-password"
           className="input"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
@@ -79,8 +84,9 @@ function LoginForm() {
           type="password"
           autoComplete="current-password"
           required
+          aria-describedby={error ? 'login-error' : undefined}
         />
-        {error ? <div className="banner-error">{error}</div> : null}
+        {error ? <div id="login-error" className="banner-error" role="alert">{error}</div> : null}
         <button className="btn btnPrimary" type="submit" disabled={loading} style={{ width: '100%' }}>
           {loading ? 'Connexion…' : 'Se connecter'}
         </button>
