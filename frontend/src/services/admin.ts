@@ -1,12 +1,12 @@
 import { apiFetch } from './api'
-import type { CommandeRead, LigneCommandeRead } from '@/types/api'
+import type { CommandeAdminRead, CommandeRead, LigneCommandeAdminRead } from '@/types/api'
 
-export async function adminGetLignes(id_commande: number): Promise<LigneCommandeRead[]> {
-  return apiFetch<LigneCommandeRead[]>(`/orders/admin/commandes/${id_commande}/lignes`, { auth: true })
+export async function adminGetLignes(id_commande: number): Promise<LigneCommandeAdminRead[]> {
+  return apiFetch<LigneCommandeAdminRead[]>(`/orders/admin/commandes/${id_commande}/lignes`, { auth: true })
 }
 
-export async function listAdminCommandes(): Promise<CommandeRead[]> {
-  return apiFetch<CommandeRead[]>('/orders/admin/commandes', { auth: true })
+export async function listAdminCommandes(): Promise<CommandeAdminRead[]> {
+  return apiFetch<CommandeAdminRead[]>('/orders/admin/commandes', { auth: true })
 }
 
 export async function adminSetCommandeStatus(id_commande: number, payload: Partial<CommandeRead>) {
@@ -19,6 +19,27 @@ export async function adminSetCommandeStatus(id_commande: number, payload: Parti
 
 export async function adminAdvanceCommande(id_commande: number) {
   return apiFetch<CommandeRead>(`/orders/admin/commandes/${id_commande}/advance`, {
+    method: 'POST',
+    auth: true,
+  })
+}
+
+export async function adminCancelCommande(id_commande: number) {
+  return apiFetch<CommandeAdminRead>(`/orders/admin/commandes/${id_commande}/cancel`, {
+    method: 'POST',
+    auth: true,
+  })
+}
+
+export async function adminSetSent(id_commande: number) {
+  return apiFetch<CommandeAdminRead>(`/orders/admin/commandes/${id_commande}/sent`, {
+    method: 'POST',
+    auth: true,
+  })
+}
+
+export async function adminSetAtReception(id_commande: number) {
+  return apiFetch<CommandeAdminRead>(`/orders/admin/commandes/${id_commande}/at-reception`, {
     method: 'POST',
     auth: true,
   })

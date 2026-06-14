@@ -202,6 +202,7 @@ class CommandeRead(CommandeBase, ORMBase):
     id_commande: int
     id_utilisateur: int
     date_commande: datetime
+    cart_expires_at: Optional[datetime] = None
 
 
 class LigneCommandeBase(BaseModel):
@@ -222,6 +223,18 @@ class LigneCommandeUpdate(BaseModel):
 
 class LigneCommandeRead(LigneCommandeBase, ORMBase):
     id_ligne_commande: int
+
+
+class LigneCommandeAdminRead(LigneCommandeRead):
+    titre_article: Optional[str] = None
+    sku_article: Optional[str] = None
+
+
+class CommandeAdminRead(CommandeRead):
+    client_nom: Optional[str] = None
+    client_prenom: Optional[str] = None
+    client_email: Optional[str] = None
+    client_adresse: Optional[str] = None
 
 
 class PaiementBase(BaseModel):

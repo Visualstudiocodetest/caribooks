@@ -9,9 +9,11 @@ from  infrastructure.crud_base import CrudBase
 from  presentation.deps import get_current_user, get_db
 from  presentation.deps import require_admin
 from  presentation.schemas import (
+    CommandeAdminRead,
     CommandeCreate,
     CommandeRead,
     CommandeUpdate,
+    LigneCommandeAdminRead,
     LigneCommandeCreate,
     LigneCommandeRead,
     LigneCommandeUpdate,
@@ -34,7 +36,7 @@ from fastapi import Request
 import os
 import hmac
 import hashlib
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 
 router = APIRouter(prefix="/orders", tags=["orders"])
 
@@ -49,6 +51,58 @@ def _get_commande_owned(db: Session, id_commande: int, id_utilisateur: int) -> m
         .filter(models.Commande.id_commande == id_commande, models.Commande.id_utilisateur == id_utilisateur)
         .first()
     )
+
+
+def _release_cart_reservation(db: Session, id_commande: int) -> None:
+    """Reverse quantite_reservee increments made when lignes were added to a cart."""
+    lignes = db.query(models.LigneCommande).filter(models.LigneCommande.id_commande == id_commande).all()
+    article_ids = set()
+    for l in lignes:
+        stocks = (
+            db.query(models.Stock)
+            .filter(models.Stock.id_article == l.id_article)
+            .order_by(models.Stock.id_stock.asc())
+            .with_for_update()
+            .all()
+        )
+        remaining = int(l.quantite)
+        for s in stocks:
+            if remaining <= 0:
+                break
+            release = min(int(s.quantite_reservee or 0), remaining)
+            if release > 0:
+                s.quantite_reservee = int(s.quantite_reservee or 0) - release
+                remaining -= release
+        article_ids.add(l.id_article)
+    for aid in article_ids:
+        avail = (
+            db.query(func.sum(models.Stock.quantite_disponible - models.Stock.quantite_reservee))
+            .filter(models.Stock.id_article == aid)
+            .scalar() or 0
+        )
+        if avail > 0:
+            art = db.query(models.Article).filter(models.Article.id_article == aid).first()
+            if art and not art.actif:
+                art.actif = True
+
+
+def _cleanup_expired_carts(db: Session) -> None:
+    """Cancel CREATED/PENDING commandes whose cart reservation window has passed."""
+    now = datetime.now(timezone.utc)
+    expired = (
+        db.query(models.Commande)
+        .filter(
+            models.Commande.statut.in_(["CREATED", "PENDING"]),
+            models.Commande.cart_expires_at.isnot(None),
+            models.Commande.cart_expires_at < now,
+        )
+        .all()
+    )
+    for c in expired:
+        _release_cart_reservation(db, int(c.id_commande))
+        c.statut = "CANCELLED"
+    if expired:
+        db.commit()
 
 
 def _finalize_commande(db: Session, id_commande: int):
@@ -150,7 +204,9 @@ def get_commande(id_commande: int, db: Session = Depends(get_db), current_user=D
 
 @router.post("/commandes", response_model=CommandeRead, status_code=status.HTTP_201_CREATED)
 def create_commande(payload: CommandeCreate, db: Session = Depends(get_db), current_user=Depends(get_current_user)):
+    _cleanup_expired_carts(db)
     obj = models.Commande(id_utilisateur=current_user.id_utilisateur, **payload.model_dump())
+    obj.cart_expires_at = datetime.now(timezone.utc) + timedelta(minutes=15)  # type: ignore[assignment]
     return commande_crud.create(db, obj)
 
 
@@ -211,8 +267,12 @@ def get_ligne(id_ligne_commande: int, db: Session = Depends(get_db), current_use
 
 @router.post("/lignes", response_model=LigneCommandeRead, status_code=status.HTTP_201_CREATED)
 def create_ligne(payload: LigneCommandeCreate, db: Session = Depends(get_db), current_user=Depends(get_current_user)):
-    if _get_commande_owned(db, payload.id_commande, int(current_user.id_utilisateur)) is None:
+    _cleanup_expired_carts(db)
+    c = _get_commande_owned(db, payload.id_commande, int(current_user.id_utilisateur))
+    if c is None:
         raise HTTPException(status_code=404, detail="Commande not found")
+    if (c.statut or "").upper() in ("CANCELLED", "FAILED"):
+        raise HTTPException(status_code=409, detail="Votre réservation a expiré. Retournez au panier.")
     try:
         # Lock stock rows for this article to prevent concurrent reservations
         stocks = (
@@ -697,14 +757,23 @@ def delete_paiement(id_paiement: int, db: Session = Depends(get_db), current_use
     return None
 
 
-@router.get("/admin/commandes", response_model=list[CommandeRead])
+@router.get("/admin/commandes", response_model=list[CommandeAdminRead])
 def admin_list_commandes(db: Session = Depends(get_db), _admin=Depends(require_admin)):
-    return db.query(models.Commande).order_by(models.Commande.date_commande.desc()).all()
+    commandes = db.query(models.Commande).order_by(models.Commande.date_commande.desc()).all()
+    return [_build_commande_admin_read(c) for c in commandes]
 
 
-@router.get("/admin/commandes/{id_commande}/lignes", response_model=list[LigneCommandeRead])
+@router.get("/admin/commandes/{id_commande}/lignes", response_model=list[LigneCommandeAdminRead])
 def admin_get_lignes(id_commande: int, db: Session = Depends(get_db), _admin=Depends(require_admin)):
-    return db.query(models.LigneCommande).filter(models.LigneCommande.id_commande == id_commande).all()
+    lignes = db.query(models.LigneCommande).filter(models.LigneCommande.id_commande == id_commande).all()
+    return [
+        LigneCommandeAdminRead(
+            **LigneCommandeRead.model_validate(l).model_dump(),
+            titre_article=l.article.titre if l.article else None,
+            sku_article=l.article.sku if l.article else None,
+        )
+        for l in lignes
+    ]
 
 
 @router.put("/admin/commandes/{id_commande}/status", response_model=CommandeRead)
@@ -746,4 +815,63 @@ def admin_advance(id_commande: int, db: Session = Depends(get_db), _admin=Depend
     db.commit()
     db.refresh(obj)
     return obj
+
+
+def _build_commande_admin_read(obj: models.Commande) -> CommandeAdminRead:
+    u = obj.utilisateur
+    adresse = None
+    if u and (u.billing_address_line1 or u.billing_city):
+        parts = [u.billing_address_line1, f"{u.billing_postal_code or ''} {u.billing_city or ''}".strip()]
+        adresse = ", ".join(p for p in parts if p)
+    return CommandeAdminRead(
+        **CommandeRead.model_validate(obj).model_dump(),
+        client_nom=u.nom if u else None,
+        client_prenom=u.prenom if u else None,
+        client_email=u.email if u else None,
+        client_adresse=adresse,
+    )
+
+
+@router.post("/admin/commandes/{id_commande}/cancel", response_model=CommandeAdminRead)
+def admin_cancel_commande(id_commande: int, db: Session = Depends(get_db), _admin=Depends(require_admin)):
+    obj = db.query(models.Commande).filter(models.Commande.id_commande == id_commande).first()
+    if obj is None:
+        raise HTTPException(status_code=404, detail="Commande not found")
+    cur = (obj.statut or "").upper()
+    if cur in ("FINISHED", "CANCELLED", "REFUNDED"):
+        raise HTTPException(status_code=400, detail="Commande already in terminal state")
+    if cur in ("CREATED", "PENDING"):
+        _release_cart_reservation(db, id_commande)
+    obj.statut = "CANCELLED"  # type: ignore[assignment]
+    db.commit()
+    db.refresh(obj)
+    return _build_commande_admin_read(obj)
+
+
+@router.post("/admin/commandes/{id_commande}/sent", response_model=CommandeAdminRead)
+def admin_set_sent(id_commande: int, db: Session = Depends(get_db), _admin=Depends(require_admin)):
+    obj = db.query(models.Commande).filter(models.Commande.id_commande == id_commande).first()
+    if obj is None:
+        raise HTTPException(status_code=404, detail="Commande not found")
+    cur = (obj.statut or "").upper()
+    if cur not in ("PAID", "CAPTURED", "COMPLETED"):
+        raise HTTPException(status_code=400, detail=f"Cannot mark SENT from status {cur}")
+    obj.statut = "SENT"  # type: ignore[assignment]
+    db.commit()
+    db.refresh(obj)
+    return _build_commande_admin_read(obj)
+
+
+@router.post("/admin/commandes/{id_commande}/at-reception", response_model=CommandeAdminRead)
+def admin_set_at_reception(id_commande: int, db: Session = Depends(get_db), _admin=Depends(require_admin)):
+    obj = db.query(models.Commande).filter(models.Commande.id_commande == id_commande).first()
+    if obj is None:
+        raise HTTPException(status_code=404, detail="Commande not found")
+    cur = (obj.statut or "").upper()
+    if cur not in ("PAID", "CAPTURED", "COMPLETED"):
+        raise HTTPException(status_code=400, detail=f"Cannot mark AT_RECEPTION from status {cur}")
+    obj.statut = "AT_RECEPTION"  # type: ignore[assignment]
+    db.commit()
+    db.refresh(obj)
+    return _build_commande_admin_read(obj)
 
