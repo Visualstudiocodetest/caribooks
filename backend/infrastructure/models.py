@@ -177,6 +177,7 @@ class Commande(Base):
     shipping_method = Column(String(50), nullable=False, server_default="POST")
     frais_port_chf = Column(DECIMAL(10, 2), nullable=False, server_default="0.00")
     statut = Column(String(50), nullable=False)
+    cart_expires_at = Column(TIMESTAMP, nullable=True)
 
     __table_args__ = (CheckConstraint("montant_total_chf >= 0", name="ck_commande_total_nonneg"),)
 

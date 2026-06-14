@@ -23,3 +23,24 @@ export async function adminAdvanceCommande(id_commande: number) {
     auth: true,
   })
 }
+
+export async function adminCancelCommande(id_commande: number) {
+  return apiFetch<CommandeAdminRead>(`/orders/admin/commandes/${id_commande}/cancel`, {
+    method: 'POST',
+    auth: true,
+  })
+}
+
+export async function adminSetSent(id_commande: number) {
+  return apiFetch<CommandeAdminRead>(`/orders/admin/commandes/${id_commande}/sent`, {
+    method: 'POST',
+    auth: true,
+  })
+}
+
+export async function adminSetAtReception(id_commande: number) {
+  return apiFetch<CommandeAdminRead>(`/orders/admin/commandes/${id_commande}/at-reception`, {
+    method: 'POST',
+    auth: true,
+  })
+}

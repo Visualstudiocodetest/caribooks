@@ -78,6 +78,8 @@ export function PaymentClient() {
   const [payButtonLabel, setPayButtonLabel] = useState('Valider et payer')
   const [usePrimaryTrigger, setUsePrimaryTrigger] = useState(false)
 
+  const [cartSecondsLeft, setCartSecondsLeft] = useState<number | null>(null)
+
   const handlerRef = useRef<PostFinanceIframeHandler | null>(null)
   const handlerMethodRef = useRef<number | null>(null)
   const paiementIdRef = useRef<number | null>(null)
@@ -263,6 +265,18 @@ export function PaymentClient() {
     mountIframe(selectedMethodId)
   }, [selectedMethodId, localMode, mountIframe])
 
+  useEffect(() => {
+    if (!commande?.cart_expires_at) return
+    const expiresAt = new Date(commande.cart_expires_at).getTime()
+    function tick() {
+      const left = Math.floor((expiresAt - Date.now()) / 1000)
+      setCartSecondsLeft(left > 0 ? left : 0)
+    }
+    tick()
+    const id = setInterval(tick, 1000)
+    return () => clearInterval(id)
+  }, [commande?.cart_expires_at])
+
   async function onPayClick() {
     setPaying(true)
     setValidationErrors([])
@@ -324,6 +338,13 @@ export function PaymentClient() {
 
       {loading ? <div className="muted">Chargement du formulaire de paiement…</div> : null}
       {error ? <div className="banner-error">{error}</div> : null}
+      {cartSecondsLeft !== null && cartSecondsLeft <= 300 ? (
+        <div className={cartSecondsLeft === 0 ? 'banner-error' : 'banner-warning'} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          {cartSecondsLeft === 0
+            ? 'Votre réservation a expiré. Les articles ont été remis en vente.'
+            : `Réservation expire dans ${Math.floor(cartSecondsLeft / 60)}:${String(cartSecondsLeft % 60).padStart(2, '0')}`}
+        </div>
+      ) : null}
 
       {commande ? (
         <div className="card" style={{ padding: 16, display: 'grid', gap: 12 }}>

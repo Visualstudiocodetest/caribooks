@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { listAdminCommandes, adminAdvanceCommande, adminGetLignes } from '@/services/admin'
+import { listAdminCommandes, adminAdvanceCommande, adminGetLignes, adminCancelCommande, adminSetSent, adminSetAtReception } from '@/services/admin'
 import { Money } from '@/components/ui/Money'
 import type { CommandeAdminRead, LigneCommandeAdminRead } from '@/types/api'
 
@@ -35,15 +35,7 @@ const STATUS_COLORS: Record<string, string> = {
   CANCELLED: '#6b7280',
 }
 
-const NEXT_STATUS_LABEL: Record<string, string> = {
-  CREATED: 'Confirmer paiement',
-  PENDING: 'Confirmer paiement',
-  PAID: 'Préparer →',
-  CAPTURED: 'Préparer →',
-  COMPLETED: 'Préparer →',
-  SENT: 'Marquer livrée',
-  AT_RECEPTION: 'Terminer',
-}
+const TERMINAL_STATUSES = new Set(['FINISHED', 'CANCELLED', 'REFUNDED'])
 
 const STATUS_FILTER_OPTIONS = [
   { value: 'prepare', label: 'À préparer' },
@@ -75,33 +67,25 @@ function ShippingBadge({ method }: { method?: string | null }) {
 }
 
 function OrderRow({ commande, onAdvanced, defaultExpanded }: { commande: CommandeAdminRead; onAdvanced: (c: CommandeAdminRead) => void; defaultExpanded?: boolean }) {
-  const [advancing, setAdvancing] = useState(false)
+  const [busy, setBusy] = useState(false)
   const [expanded, setExpanded] = useState(defaultExpanded ?? false)
   const [lignes, setLignes] = useState<LigneCommandeAdminRead[] | null>(null)
   const [loadingLignes, setLoadingLignes] = useState(false)
   const key = (commande.statut || '').toUpperCase()
-  const canAdvance = key in NEXT_STATUS_LABEL
   const isPaid = PAID_STATUSES.has(key)
+  const isPost = (commande.shipping_method || 'POST').toUpperCase() === 'POST'
+  const isTerminal = TERMINAL_STATUSES.has(key)
 
-  async function onAdvance() {
-    setAdvancing(true)
-    try {
-      const updated = await adminAdvanceCommande(commande.id_commande)
-      onAdvanced(updated as CommandeAdminRead)
-    } finally {
-      setAdvancing(false)
-    }
+  async function runAction(fn: () => Promise<CommandeAdminRead>) {
+    setBusy(true)
+    try { onAdvanced(await fn()) } finally { setBusy(false) }
   }
 
   async function toggleExpand() {
     setExpanded((s) => !s)
     if (!lignes && !loadingLignes) {
       setLoadingLignes(true)
-      try {
-        setLignes(await adminGetLignes(commande.id_commande))
-      } finally {
-        setLoadingLignes(false)
-      }
+      try { setLignes(await adminGetLignes(commande.id_commande)) } finally { setLoadingLignes(false) }
     }
   }
 
@@ -127,9 +111,28 @@ function OrderRow({ commande, onAdvanced, defaultExpanded }: { commande: Command
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
           <Money amount={commande.montant_total_chf} />
           <StatusBadge statut={commande.statut || ''} />
-          {canAdvance ? (
-            <button className="btn btnPrimary" style={{ fontSize: 12, padding: '4px 10px' }} disabled={advancing} onClick={onAdvance}>
-              {advancing ? '…' : NEXT_STATUS_LABEL[key]}
+          {isPaid && isPost ? (
+            <button className="btn btnPrimary" style={{ fontSize: 12, padding: '4px 10px' }} disabled={busy}
+              onClick={() => runAction(() => adminSetSent(commande.id_commande))}>
+              {busy ? '…' : 'Expédier'}
+            </button>
+          ) : null}
+          {isPaid && !isPost ? (
+            <button className="btn btnPrimary" style={{ fontSize: 12, padding: '4px 10px' }} disabled={busy}
+              onClick={() => runAction(() => adminSetAtReception(commande.id_commande))}>
+              {busy ? '…' : 'Prêt au retrait'}
+            </button>
+          ) : null}
+          {(key === 'SENT' || key === 'AT_RECEPTION') ? (
+            <button className="btn btnPrimary" style={{ fontSize: 12, padding: '4px 10px' }} disabled={busy}
+              onClick={() => runAction(() => adminAdvanceCommande(commande.id_commande) as Promise<CommandeAdminRead>)}>
+              {busy ? '…' : 'Terminer'}
+            </button>
+          ) : null}
+          {!isTerminal ? (
+            <button className="btn" style={{ fontSize: 12, padding: '4px 10px', color: '#dc2626', borderColor: '#dc262640' }} disabled={busy}
+              onClick={() => { if (confirm('Annuler cette commande ?')) runAction(() => adminCancelCommande(commande.id_commande)) }}>
+              {busy ? '…' : 'Annuler'}
             </button>
           ) : null}
           <button className="btn" style={{ fontSize: 12, padding: '4px 10px' }} onClick={toggleExpand}>

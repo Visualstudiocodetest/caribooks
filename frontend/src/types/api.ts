@@ -76,6 +76,7 @@ export type CommandeRead = CommandeCreate & {
   id_utilisateur: number
   date_commande: string
   date_creation?: string  // alias for date_commande
+  cart_expires_at?: string | null
 }
 
 export type LigneCommandeCreate = {
