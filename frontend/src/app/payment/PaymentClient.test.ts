@@ -69,6 +69,44 @@ function makeHandler(overrides: Partial<PostFinanceIframeHandler> = {}): PostFin
   }
 }
 
+// ---------------------------------------------------------------------------
+// Script-load / mountIframe ordering (race condition guard)
+//
+// setSelectedMethodId must only be called AFTER the PostFinance script has
+// loaded.  Calling it before the await means the selectedMethodId effect fires
+// and invokes mountIframe while window.IframeCheckoutHandler is still undefined,
+// producing "Le script PostFinance n'est pas chargé" even though the script
+// eventually loads successfully.
+// ---------------------------------------------------------------------------
+
+describe('PostFinance script-load ordering', () => {
+  it('does not invoke the factory before the script resolves', async () => {
+    let resolveScript!: () => void
+    const scriptPromise = new Promise<void>((res) => { resolveScript = res })
+
+    const factory = vi.fn().mockReturnValue(makeHandler())
+    const container = document.createElement('div')
+    container.id = 'postfinance-payment-form'
+    const state: { handler: PostFinanceIframeHandler | null; methodId: number | null } = {
+      handler: null,
+      methodId: null,
+    }
+
+    // Simulate: script starts loading, mountIframe should NOT be called yet
+    const mountAfterLoad = scriptPromise.then(() => {
+      simulateMountIframe(state, 510, container, factory)
+    })
+
+    expect(factory).not.toHaveBeenCalled()
+
+    resolveScript()
+    await mountAfterLoad
+
+    expect(factory).toHaveBeenCalledOnce()
+    expect(factory).toHaveBeenCalledWith(510)
+  })
+})
+
 /**
  * Pure reimplementation of the guard/destroy block from mountIframe so we can
  * unit-test it without rendering the React component.
