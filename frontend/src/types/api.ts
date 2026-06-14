@@ -89,6 +89,18 @@ export type LigneCommandeRead = LigneCommandeCreate & {
   id_ligne_commande: number
 }
 
+export type LigneCommandeAdminRead = LigneCommandeRead & {
+  titre_article?: string | null
+  sku_article?: string | null
+}
+
+export type CommandeAdminRead = CommandeRead & {
+  client_nom?: string | null
+  client_prenom?: string | null
+  client_email?: string | null
+  client_adresse?: string | null
+}
+
 export type PaiementCreate = {
   id_commande: number
   fournisseur_paiement?: string

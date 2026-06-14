@@ -9,9 +9,11 @@ from  infrastructure.crud_base import CrudBase
 from  presentation.deps import get_current_user, get_db
 from  presentation.deps import require_admin
 from  presentation.schemas import (
+    CommandeAdminRead,
     CommandeCreate,
     CommandeRead,
     CommandeUpdate,
+    LigneCommandeAdminRead,
     LigneCommandeCreate,
     LigneCommandeRead,
     LigneCommandeUpdate,
@@ -697,14 +699,37 @@ def delete_paiement(id_paiement: int, db: Session = Depends(get_db), current_use
     return None
 
 
-@router.get("/admin/commandes", response_model=list[CommandeRead])
+@router.get("/admin/commandes", response_model=list[CommandeAdminRead])
 def admin_list_commandes(db: Session = Depends(get_db), _admin=Depends(require_admin)):
-    return db.query(models.Commande).order_by(models.Commande.date_commande.desc()).all()
+    commandes = db.query(models.Commande).order_by(models.Commande.date_commande.desc()).all()
+    result = []
+    for c in commandes:
+        u = c.utilisateur
+        adresse = None
+        if u and (u.billing_address_line1 or u.billing_city):
+            parts = [u.billing_address_line1, f"{u.billing_postal_code or ''} {u.billing_city or ''}".strip()]
+            adresse = ", ".join(p for p in parts if p)
+        result.append(CommandeAdminRead(
+            **CommandeRead.model_validate(c).model_dump(),
+            client_nom=u.nom if u else None,
+            client_prenom=u.prenom if u else None,
+            client_email=u.email if u else None,
+            client_adresse=adresse,
+        ))
+    return result
 
 
-@router.get("/admin/commandes/{id_commande}/lignes", response_model=list[LigneCommandeRead])
+@router.get("/admin/commandes/{id_commande}/lignes", response_model=list[LigneCommandeAdminRead])
 def admin_get_lignes(id_commande: int, db: Session = Depends(get_db), _admin=Depends(require_admin)):
-    return db.query(models.LigneCommande).filter(models.LigneCommande.id_commande == id_commande).all()
+    lignes = db.query(models.LigneCommande).filter(models.LigneCommande.id_commande == id_commande).all()
+    return [
+        LigneCommandeAdminRead(
+            **LigneCommandeRead.model_validate(l).model_dump(),
+            titre_article=l.article.titre if l.article else None,
+            sku_article=l.article.sku if l.article else None,
+        )
+        for l in lignes
+    ]
 
 
 @router.put("/admin/commandes/{id_commande}/status", response_model=CommandeRead)

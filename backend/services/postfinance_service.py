@@ -160,7 +160,6 @@ def create_postfinance_transaction(
 def get_postfinance_payment_methods(transaction_id: str) -> Dict[str, Any]:
     """Fetch payment method configurations available for iframe integration."""
     if not _credentials_configured():
-        logger.info("postfinance: credentials not configured, returning local simulation method")
         return {
             "data": [
                 {
@@ -180,8 +179,6 @@ def get_postfinance_payment_methods(transaction_id: str) -> Dict[str, Any]:
         # to_dict() excludes read-only fields (id, name, resolvedTitle, resolvedImageUrl).
         # Use model_dump so all fields are included.
         methods = [m.model_dump(by_alias=True) for m in (resp.data or [])]
-        logger.info("postfinance: got %d payment method(s) for transaction %s: %s",
-                    len(methods), transaction_id, [m.get("id") for m in methods])
         return {"data": methods}
     except Exception as exc:
         logger.error("postfinance: get_payment_methods failed for tx %s: %s", transaction_id, exc, exc_info=True)

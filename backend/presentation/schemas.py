@@ -224,6 +224,18 @@ class LigneCommandeRead(LigneCommandeBase, ORMBase):
     id_ligne_commande: int
 
 
+class LigneCommandeAdminRead(LigneCommandeRead):
+    titre_article: Optional[str] = None
+    sku_article: Optional[str] = None
+
+
+class CommandeAdminRead(CommandeRead):
+    client_nom: Optional[str] = None
+    client_prenom: Optional[str] = None
+    client_email: Optional[str] = None
+    client_adresse: Optional[str] = None
+
+
 class PaiementBase(BaseModel):
     id_commande: int
     fournisseur_paiement: str = "POSTFINANCE"
