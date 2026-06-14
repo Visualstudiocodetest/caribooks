@@ -7,7 +7,9 @@ export function Footer() {
         className="container"
         style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', gap: 8 }}
       >
-        <div className="muted">© {new Date().getFullYear()} Caribooks — Devise: CHF · Livraison: Suisse</div>
+        <div className="muted" suppressHydrationWarning>
+          © {new Date().getFullYear()} Caribooks — Devise: CHF · Livraison: Suisse
+        </div>
         <div style={{ display: 'flex', gap: 16 }}>
           <Link href="/conditions-utilisation" className="muted" style={{ fontSize: '0.85rem' }}>
             Conditions d&apos;utilisation

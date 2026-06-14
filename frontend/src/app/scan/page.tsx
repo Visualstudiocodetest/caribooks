@@ -162,14 +162,10 @@ export default function ScanPage() {
 
     try {
       for (const c of candidates) {
-        try {
-          const found = await getBookByIsbn(c)
+        const found = await getBookByIsbn(c)
+        if (found) {
           setBook(found)
           return
-        } catch (e) {
-          const err = e as unknown
-          if (err instanceof ApiError && err.status === 404) continue
-          throw err
         }
       }
 

@@ -305,13 +305,11 @@ def create_ligne(payload: LigneCommandeCreate, db: Session = Depends(get_db), cu
         obj = models.LigneCommande(**payload.model_dump())
         db.add(obj)
 
-        # If article now out of stock, mark inactive
-        if stocks:  # type: ignore
-            total_left = sum((s.quantite_disponible or 0) - (s.quantite_reservee or 0) for s in stocks)  # type: ignore
-            if total_left <= 0:  # type: ignore
-                art = db.query(models.Article).filter(models.Article.id_article == payload.id_article).first()
-                if art:
-                    art.actif = False  # type: ignore
+        # NOTE: we intentionally do NOT set article.actif = False here.
+        # Reserving stock for a cart (which may be abandoned) must not delist the
+        # book from the catalogue. The article is only marked inactive when the
+        # order is actually paid (see _finalize_commande). Over-reservation is
+        # still prevented by the "Not enough stock" check above.
 
         db.commit()
         db.refresh(obj)

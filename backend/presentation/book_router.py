@@ -16,23 +16,27 @@ router = APIRouter(prefix="/books", tags=["books"])
 
 @router.get("/", response_model=List[BookRead])
 def list_books(db: Session = Depends(get_db)):
+    # Release stock from expired carts so delisted books reappear once available.
+    from presentation.order_router import _cleanup_expired_carts
+    _cleanup_expired_carts(db)
     service = BookService(db)
     return service.list_books()
 
 
 @router.get("", response_model=List[BookRead], include_in_schema=False)
 def list_books_no_slash(db: Session = Depends(get_db)):
+    from presentation.order_router import _cleanup_expired_carts
+    _cleanup_expired_carts(db)
     service = BookService(db)
     return service.list_books()
 
 
-@router.get("/by-isbn/{isbn}", response_model=BookRead)
+@router.get("/by-isbn/{isbn}", response_model=Optional[BookRead])
 def get_book_by_isbn(isbn: str, db: Session = Depends(get_db)):
+    # Returns null (HTTP 200) when the ISBN is not in the catalogue. This is an
+    # expected case during scanning, so it must not surface as a 404 error.
     service = BookService(db)
-    book = service.get_book_by_isbn(isbn)
-    if not book:
-        raise HTTPException(status_code=404, detail="Book not found")
-    return book
+    return service.get_book_by_isbn(isbn)
 
 @router.get("/isbn-metadata/{isbn}")
 def get_isbn_metadata(isbn: str) -> Dict[str, Any]:
