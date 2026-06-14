@@ -737,7 +737,7 @@ Le backend (API FastAPI) et la base de données sont hébergés sur l'offre \tex
 \noindent\textbf{Couche de calcul (API) :}
 \begin{itemize}
     \item Une \textbf{machine virtuelle} AMD Micro (Always Free, Ubuntu~22.04) exécute l'API FastAPI servie par \textbf{Uvicorn}, derrière \textbf{Nginx} utilisé comme reverse proxy.
-    \item Nginx assure la \textbf{terminaison TLS} : l'API est exposée en \textbf{HTTPS} sur le domaine \texttt{https://caribooks.duckns.org} (DNS dynamique, certificat Let's Encrypt).
+    \item Nginx assure la \textbf{terminaison TLS} : l'API est exposée en \textbf{HTTPS} sur le domaine \texttt{https://caribooks.duckdns.org} (DNS dynamique, certificat Let's Encrypt).
     \item L'API est gérée comme un service \textbf{systemd} (redémarrage automatique au boot ou après incident) et conteneurisée avec \textbf{Docker}.
 \end{itemize}
 

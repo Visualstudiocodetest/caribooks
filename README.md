@@ -38,7 +38,7 @@ Architecture cloud hybride à coût nul (offres gratuites) :
 - **Frontend (Next.js)** : hébergé sur **Vercel** (CDN global, auto-deploy).
 - **Backend / API (FastAPI)** : **une VM Oracle Cloud** (AMD Micro, *Always Free*, Ubuntu 22.04).
   - Servi par **Uvicorn** derrière **Nginx** (reverse proxy + terminaison TLS).
-  - Exposé en **HTTPS** sur **https://caribooks.duckns.org** (DNS dynamique + certificat Let's Encrypt).
+  - Exposé en **HTTPS** sur **https://caribooks.duckdns.org** (DNS dynamique + certificat Let's Encrypt).
   - Lancé en service **systemd** (redémarrage automatique) et conteneurisé avec **Docker**.
 - **Base de données (MySQL)** : sur **Oracle Cloud**, accessible uniquement depuis la VM via le réseau privé (VCN, port `3306` fermé à l'extérieur).
 - **CI/CD** : **GitHub Actions** (tests `pytest` → build Docker → déploiement).
