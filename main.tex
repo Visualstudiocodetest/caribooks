@@ -736,25 +736,19 @@ Le backend (API FastAPI) et la base de données sont hébergés sur l'offre \tex
 \vspace{4pt}
 \noindent\textbf{Couche de calcul (API) :}
 \begin{itemize}
-    \item \textbf{Deux machines virtuelles} \texttt{VM.Standard.E2.1.Micro} (AMD, Always Free, Ubuntu 22.04), exécutant chacune l'API FastAPI servie par \textbf{Uvicorn} derrière \textbf{Nginx} sur le port \texttt{8000}.
-    \item Chaque instance est gérée comme un service \textbf{systemd}, garantissant le redémarrage automatique de l'API en cas de panne ou de redémarrage de la VM.
-    \item La redondance sur deux VMs assure une \textbf{haute disponibilité} basique : si une instance tombe, l'autre continue de répondre.
-\end{itemize}
-
-\noindent\textbf{Répartition de charge :}
-\begin{itemize}
-    \item Un \textbf{OCI Flexible Load Balancer} (Always Free) expose un point d'entrée HTTPS unique et répartit le trafic entre les deux VMs.
-    \item Une \textbf{sonde de santé} interroge l'endpoint \texttt{/health} (port 8000, intervalle 10\,s) pour retirer automatiquement du pool toute instance défaillante.
+    \item Une \textbf{machine virtuelle} AMD Micro (Always Free, Ubuntu~22.04) exécute l'API FastAPI servie par \textbf{Uvicorn}, derrière \textbf{Nginx} utilisé comme reverse proxy.
+    \item Nginx assure la \textbf{terminaison TLS} : l'API est exposée en \textbf{HTTPS} sur le domaine \texttt{https://caribooks.duckns.org} (DNS dynamique, certificat Let's Encrypt).
+    \item L'API est gérée comme un service \textbf{systemd} (redémarrage automatique au boot ou après incident) et conteneurisée avec \textbf{Docker}.
 \end{itemize}
 
 \noindent\textbf{Couche de données et réseau :}
 \begin{itemize}
-    \item Base \textbf{MySQL HeatWave} (Oracle Free), accessible uniquement depuis le \textbf{sous-réseau privé} des VMs (port \texttt{3306} fermé à l'extérieur) au sein du même \textbf{VCN}.
-    \item Les VMs sont conteneurisées avec \textbf{Docker} ; les secrets (clé JWT, identifiants base et PostFinance) sont injectés via variables d'environnement, jamais versionnés.
+    \item Base \textbf{MySQL} (Oracle Cloud), accessible uniquement depuis la VM via le réseau privé du \textbf{VCN} (port \texttt{3306} fermé à l'extérieur).
+    \item Les secrets (clé JWT, identifiants base et PostFinance) sont injectés via variables d'environnement, jamais versionnés.
     \item Les communications client $\rightarrow$ API et API $\rightarrow$ services tiers se font en \textbf{HTTPS/TLS}.
 \end{itemize}
 
-\noindent Cette topologie (frontend Vercel + API répartie sur deux VMs Oracle derrière un load balancer + base MySQL privée) illustre une architecture \textbf{multicouche, scalable et sécurisée}, déployable à coût nul tout en restant proche d'une mise en production réelle.
+\noindent Cette topologie (frontend sur \textbf{Vercel} + API sur une VM \textbf{Oracle Cloud} en HTTPS + base MySQL privée) illustre une architecture \textbf{multicouche et sécurisée}, déployable à coût nul. Le passage à une configuration redondante (plusieurs VMs derrière un répartiteur de charge) constitue une évolution naturelle en cas de montée en charge.
 
 \subsection{Conception UI/UX}
 
@@ -804,7 +798,7 @@ Le backend suit une \textbf{architecture en couches} inspirée des principes de 
     \item \texttt{domain/} — entités métier (\texttt{book.py}).
 \end{itemize}
 
-\noindent Le point d'entrée \texttt{main.py} instancie l'application FastAPI, enregistre l'ensemble des routers, configure le middleware \textbf{CORS} (origines autorisées : domaine Vercel de production et \texttt{localhost} en développement) et monte le service de fichiers statiques (\texttt{/static}) pour les images. Un endpoint \texttt{/health} est exposé pour les sondes de disponibilité (monitoring, load balancer). Le frontend Next.js est structuré classiquement en \texttt{pages}, \texttt{components}, \texttt{hooks} et services d'appel à l'API.
+\noindent Le point d'entrée \texttt{main.py} instancie l'application FastAPI, enregistre l'ensemble des routers, configure le middleware \textbf{CORS} (origines autorisées : domaine Vercel de production et \texttt{localhost} en développement) et monte le service de fichiers statiques (\texttt{/static}) pour les images. Un endpoint \texttt{/health} est exposé pour les sondes de disponibilité (monitoring). Le frontend Next.js est structuré classiquement en \texttt{pages}, \texttt{components}, \texttt{hooks} et services d'appel à l'API.
 
 \subsection{Module authentification}
 

@@ -895,22 +895,22 @@ async def lookup_isbn(isbn: str):
         \item Push sur branche \texttt{main}
         \item Exécution \textbf{pytest} (20/20 requis)
         \item Build image \textbf{Docker}
-        \item Deploy sur \textbf{Oracle Cloud} (2 VMs AMD)
+        \item Deploy sur \textbf{Oracle Cloud} (VM AMD)
         \item \textbf{Vercel} auto-deploy frontend
       \end{enumerate}
     \end{block}
     \column{0.48\textwidth}
     \begin{block}{Backend \& API --- Oracle Cloud (Always Free)}
       \begin{itemize}\small
-        \item \textbf{2× VM AMD Micro} (Ubuntu 22.04) : API \textbf{FastAPI} via \textbf{Uvicorn + Nginx} (\texttt{:8000})
-        \item \textbf{OCI Load Balancer} + sonde \texttt{/health} $\Rightarrow$ haute dispo
-        \item Service \textbf{systemd} (redémarrage auto), conteneurs \textbf{Docker}
-        \item \textbf{MySQL HeatWave} en sous-réseau \textbf{privé} (VCN, port 3306 fermé)
+        \item \textbf{1 VM AMD Micro} (Ubuntu 22.04) : API \textbf{FastAPI} via \textbf{Uvicorn} derrière \textbf{Nginx}
+        \item \textbf{HTTPS} (TLS Let's Encrypt) sur \texttt{caribooks.duckns.org}
+        \item Service \textbf{systemd} (redémarrage auto), conteneur \textbf{Docker}
+        \item \textbf{MySQL} en sous-réseau \textbf{privé} (VCN, port 3306 fermé)
         \item \textbf{Vercel} : frontend Next.js, CDN global, gratuit
       \end{itemize}
     \end{block}
     \vspace{4pt}
-    \badge{caribooks.vercel.app}
+    \badge{caribooks.vercel.app}\quad\badge{caribooks.duckns.org}
   \end{columns}
 \end{frame}
 
