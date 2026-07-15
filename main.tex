@@ -810,7 +810,7 @@ Le catalogue s'appuie sur une classe CRUD générique typée (\texttt{CrudBase})
 
 \subsection{Module scan ISBN}
 
-Côté frontend, le code-barres est décodé directement dans le navigateur, puis l'ISBN est envoyé à l'API qui interroge \textbf{OpenLibrary} avec repli automatique sur \textbf{Google Books} (\texttt{GET /isbn/\{isbn\}}, cf. annexe~\ref{lst:isbn}) ; un \texttt{404} déclenche la saisie manuelle. Les images de couverture distantes sont rapatriées via \texttt{image\_service.download\_image} et re-servies depuis \texttt{/static} afin de ne pas dépendre d'URL tierces. Le \texttt{scan\_router} assure la traçabilité : chaque scan est enregistré dans la table \texttt{scan\_isbn} (rattaché à l'utilisateur courant et au livre concerné), avec vérification préalable de l'existence du livre.
+Côté frontend, le code-barres est décodé directement dans le navigateur, puis l'ISBN est envoyé à l'API qui interroge \textbf{OpenLibrary} (\texttt{GET /books/isbn-metadata/\{isbn\}}, cf. annexe~\ref{lst:isbn}) ; un \texttt{404} déclenche la saisie manuelle. Les images de couverture distantes sont rapatriées via \texttt{image\_service.download\_image} et re-servies depuis \texttt{/static} afin de ne pas dépendre d'URL tierces. Le \texttt{scan\_router} assure la traçabilité : chaque scan est enregistré dans la table \texttt{scan\_isbn} (rattaché à l'utilisateur courant et au livre concerné), avec vérification préalable de l'existence du livre.
 
 \subsection{Module commande et paiement PostFinance}
 
@@ -1411,58 +1411,32 @@ def login_for_access_token(payload: LoginRequest,
 
 \subsection*{C.2 — Endpoint scan ISBN (lookup API externe)}
 
-\begin{lstlisting}[style=pythonstyle, caption={Endpoint GET /isbn/\{isbn\} — Lookup Open Library}, label={lst:isbn}]
+\begin{lstlisting}[style=pythonstyle, caption={Endpoint GET /isbn-metadata/\{isbn\} — Lookup Open Library}, label={lst:isbn}]
 import httpx
 from fastapi import APIRouter, HTTPException
 
-router = APIRouter(prefix="/isbn", tags=["isbn"])
+router = APIRouter(prefix="/books", tags=["books"])
 
-OPENLIBRARY_URL = "https://openlibrary.org/api/books"
-GOOGLE_BOOKS_URL = "https://www.googleapis.com/books/v1/volumes"
+@router.get("/isbn-metadata/{isbn}")
+def get_isbn_metadata(isbn: str):
+    """Proxy ISBN metadata lookup via OpenLibrary (single external source)."""
+    clean = isbn.strip().upper().replace("-", "")
 
-@router.get("/{isbn}")
-async def lookup_isbn(isbn: str):
-    # Tentative Open Library
-    async with httpx.AsyncClient() as client:
-        resp = await client.get(
-            OPENLIBRARY_URL,
-            params={"bibkeys": f"ISBN:{isbn}", "format": "json",
-                    "jscmd": "data"}
+    try:
+        r = httpx.get(
+            f"https://openlibrary.org/api/books?bibkeys=ISBN:{clean}"
+            "&format=json&jscmd=data",
+            timeout=8,
         )
-        data = resp.json()
-        key = f"ISBN:{isbn}"
-        if key in data:
-            book = data[key]
-            return {
-                "isbn": isbn,
-                "titre": book.get("title"),
-                "auteur": book.get("authors", [{}])[0].get("name"),
-                "editeur": book.get("publishers", [{}])[0].get("name"),
-                "couverture": book.get("cover", {}).get("medium"),
-                "source": "openlibrary"
-            }
+        if r.status_code == 200:
+            data = r.json()
+            book = data.get(f"ISBN:{clean}")
+            if book and book.get("title"):
+                return book
+    except Exception:
+        pass
 
-        # Fallback Google Books
-        resp2 = await client.get(
-            GOOGLE_BOOKS_URL,
-            params={"q": f"isbn:{isbn}"}
-        )
-        gdata = resp2.json()
-        if gdata.get("totalItems", 0) > 0:
-            info = gdata["items"][0]["volumeInfo"]
-            return {
-                "isbn": isbn,
-                "titre": info.get("title"),
-                "auteur": ", ".join(info.get("authors", [])),
-                "editeur": info.get("publisher"),
-                "couverture": info.get("imageLinks", {}).get("thumbnail"),
-                "source": "google_books"
-            }
-
-    raise HTTPException(
-        status_code=404,
-        detail="ISBN non trouvé. Veuillez saisir les informations manuellement."
-    )
+    raise HTTPException(status_code=404, detail="ISBN introuvable")
 \end{lstlisting}
 
 

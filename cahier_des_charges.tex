@@ -1,0 +1,215 @@
+\documentclass[10pt, a4paper]{article}
+
+% ==========================================
+% PRÉAMBULE
+% ==========================================
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[french]{babel}
+\usepackage{geometry}
+\usepackage{hyperref}
+\usepackage{fancyhdr}
+\usepackage{xcolor}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{longtable}
+\usepackage{enumitem}
+\usepackage{titlesec}
+
+\geometry{top=2cm, bottom=2cm, left=2cm, right=2cm}
+\setlist{nosep, leftmargin=1.2em}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=black,
+    filecolor=magenta,
+    urlcolor=blue,
+    pdftitle={Cahier des Charges CARIBOOKS - Alexandre REY},
+}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{Cahier des Charges — CARIBOOKS}
+\fancyhead[R]{Alexandre REY - ESTIAM}
+\fancyfoot[C]{\thepage}
+
+\titlespacing*{\section}{0pt}{10pt}{4pt}
+\titlespacing*{\subsection}{0pt}{6pt}{2pt}
+
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
+
+\title{\textbf{Cahier des Charges — CARIBOOKS}\\[4pt]
+\large\textit{Plateforme e-commerce solidaire de vente de livres d'occasion — Recyclerie Caritas}}
+\author{Alexandre REY \\ E3 DAD — Concepteur Développeur d'Applications (CDA) \\ ESTIAM — Encadrant : Mhand Boufala}
+\date{Année scolaire 2025-2026}
+
+\begin{document}
+\maketitle
+\thispagestyle{fancy}
+
+\noindent{\small Ce document formalise le besoin exprimé par le commanditaire (Recyclerie
+Caritas) et les spécifications attendues de la plateforme CARIBOOKS. Il ne traite pas des choix
+de solution technique, documentés dans le mémoire de projet (\texttt{main.tex}).}
+
+\section{Contexte et objectifs}
+
+L'association \textbf{Caritas} facilite la réinsertion professionnelle en Suisse romande via
+la vente d'objets de seconde main. Une partie du stock de livres d'occasion ne trouve pas
+preneur en magasin. La commanditaire (bénévole référente, Product Owner informelle) souhaite
+digitaliser cette activité avec un outil simple pour des bénévoles non technophiles.
+
+\noindent\textbf{Enjeux :} économique (limiter les invendus), social (soutenir la mission de
+Caritas), opérationnel (saisie rapide sans compétence technique), financier (pas d'abonnement
+SaaS récurrent).
+
+\noindent\textbf{Public cible :} associations caritatives, étudiants et grand public résidant
+en Suisse, achats en CHF avec livraison nationale.
+
+\noindent\textbf{Objectifs opérationnels :} (1) ajout d'un livre en moins de 2 minutes via
+scan ISBN ; (2) recherche par filtres combinés ; (3) paiement CHF sécurisé, livraison
+restreinte à la Suisse ; (4) back-office autonome pour les bénévoles.
+
+\noindent\textbf{Critères de réussite :} mise en vente < 2 min ; paiement CHF sans erreur
+bloquante en sandbox PostFinance ; zéro prix hors CHF ou livraison hors Suisse ; tests
+automatisés sur les parcours critiques.
+
+\section{Périmètre du projet}
+
+\begin{longtable}{@{}L{1.2cm}L{3.5cm}L{9.8cm}@{}}
+\toprule
+\textbf{Réf.} & \textbf{Fonctionnalité} & \textbf{Description} \\
+\midrule
+\endhead
+F01 & Inscription / connexion & Compte, authentification, rôles utilisateur / administrateur. \\
+F02 & Ajout d'un livre & Scan ISBN (préremplissage) ou saisie manuelle en secours. \\
+F03 & Prix et état & Prix en CHF, état parmi \textit{comme neuf}, \textit{bon état}, \textit{état correct}. \\
+F04 & Gestion des annonces & Publication, modification, suppression. \\
+F05 & Catalogue et recherche & Filtres combinés (titre, auteur, genre, prix, état). \\
+F06 & Fiche détaillée & Informations complètes du livre et du vendeur. \\
+F07 & Panier et réservation de stock & Réservation temporaire, libération automatique en cas d'abandon. \\
+F08 & Paiement sécurisé & CHF via PostFinance (TWINT, Visa, Mastercard). \\
+F09 & Livraison Suisse & Poste Suisse ou Click \& Collect. \\
+F10 & Back-office bénévole & Gestion des annonces et des commandes. \\
+F11 & Conformité RGPD / nLPD & Export et effacement des données personnelles. \\
+\bottomrule
+\caption{Périmètre fonctionnel du MVP}
+\end{longtable}
+
+\noindent\textbf{Hors périmètre :} messagerie acheteur/vendeur, suivi logistique détaillé,
+estimation automatique du prix de revente, recommandations et avis.
+
+\noindent\textbf{Frontières :} intègre OpenLibrary (métadonnées) et PostFinance (paiement) ;
+ne gère ni comptabilité ni logistique physique ; système mono-tenant réservé à Caritas.
+
+\section{Acteurs}
+
+\begin{longtable}{@{}L{2.8cm}L{4.5cm}L{7.2cm}@{}}
+\toprule
+\textbf{Acteur} & \textbf{Objectif} & \textbf{Actions autorisées} \\
+\midrule
+\endhead
+Administrateur & Qualité et bon fonctionnement des annonces & CRUD annonces, modération, gestion des comptes \\
+Vendeur (bénévole) & Vendre rapidement les livres du stock & Ajouter, fixer un prix, modifier, supprimer ses annonces \\
+Acheteur & Trouver et acheter un livre & Rechercher, filtrer, consulter, acheter via PostFinance \\
+\bottomrule
+\caption{Acteurs du système}
+\end{longtable}
+
+\noindent\textbf{Gouvernance :} la commanditaire valide les livrables de sprint ; Alexandre REY
+conçoit et développe seul la solution ; l'encadrant pédagogique valide la conformité au
+référentiel CDA.
+
+\section{Spécifications fonctionnelles}
+
+Chaque spécification (\texttt{SF-XX}) est reprise dans le plan de tests du mémoire pour
+assurer la traçabilité besoin $\rightarrow$ test.
+
+\begin{longtable}{@{}L{1.1cm}L{5.5cm}L{7.9cm}@{}}
+\toprule
+\textbf{Réf.} & \textbf{Spécification} & \textbf{Critère d'acceptation} \\
+\midrule
+\endhead
+SF-01 & Authentification et rôles, mot de passe haché & Aucune route de gestion accessible sans authentification. \\
+SF-02 & Ajout d'un livre par scan ISBN, saisie manuelle en secours & Livre reconnu ajouté en moins de 2 minutes. \\
+SF-03 & Catalogue et recherche multicritère & Résultat cohérent en moins d'une seconde perçue. \\
+SF-04 & Fiche détaillée et favoris & Informations essentielles visibles sans action supplémentaire. \\
+SF-05 & Panier avec réservation temporaire du stock & Livre jamais vendu deux fois ; panier abandonné libère le stock automatiquement. \\
+SF-06 & Paiement CHF via PostFinance & Paiement réussi en sandbox déclenche le statut \og payée \fg{}. \\
+SF-07 & Livraison restreinte à la Suisse & Adresse hors Suisse rejetée par le système. \\
+SF-08 & Back-office bénévole & Gestion d'une annonce sans assistance technique. \\
+SF-09 & Conformité RGPD / nLPD & Demande d'effacement supprime effectivement les données. \\
+SF-10 & Accessibilité de base & Parcours critiques utilisables au clavier. \\
+\bottomrule
+\caption{Spécifications fonctionnelles et critères d'acceptation}
+\end{longtable}
+
+\section{Exigences non fonctionnelles et contraintes}
+
+\begin{longtable}{@{}L{2.8cm}L{10.7cm}@{}}
+\toprule
+\textbf{Catégorie} & \textbf{Exigence} \\
+\midrule
+\endhead
+Sécurité & Jeton signé à durée de vie limitée, mots de passe hachés, validation serveur, contrôle des permissions par rôle. \\
+Devise / territoire & Transactions en CHF, livraison restreinte à la Suisse. \\
+Disponibilité & Dégradation en saisie manuelle si la source de métadonnées externe est indisponible. \\
+Performance & Catalogue et recherche réactifs (< 1 s perçue). \\
+Ergonomie & Utilisable par des bénévoles non technophiles, sans formation. \\
+Conformité légale & Respect du RGPD (UE) et de la nLPD (Suisse). \\
+Maintenabilité & Architecture en couches (présentation, service, domaine, infrastructure). \\
+Coût & Aucun abonnement SaaS récurrent, frais de paiement transparents. \\
+\bottomrule
+\caption{Exigences non fonctionnelles}
+\end{longtable}
+
+\noindent\textbf{Contraintes techniques :} MySQL exclusivement, backend FastAPI (Python) en
+couches, frontend Next.js (React/TypeScript) 100\,\% typé, métadonnées via OpenLibrary,
+conteneurisation Docker, tests automatisés avant déploiement.
+
+\noindent\textbf{Contraintes organisationnelles :} développement solo en alternance
+(environ 18h/sprint), projet de 3 mois en 6 sprints de 2 semaines, méthode Agile Scrum
+simplifiée, aucun budget dédié.
+
+\section{Livrables, planning et risques}
+
+\noindent\textbf{Livrables :} code source (Git), application déployée, mémoire de projet,
+présent cahier des charges, liste des compétences, support de soutenance, suite de tests
+automatisés (CI), documentation API (Swagger/OpenAPI).
+
+\noindent\textbf{Planning :} 6 sprints de 2 semaines — environnement \& modélisation (S1),
+authentification (S2), ajout de livre / scan ISBN (S3), catalogue \& fiche livre (S4),
+paiement (S5), back-office, tests et déploiement (S6).
+
+\noindent\textbf{Principaux risques :} livres sans ISBN (mitigation : saisie manuelle) ;
+vente simultanée du même exemplaire (mitigation : réservation temporaire de stock) ; dérive
+de périmètre (mitigation : application stricte du MVP) ; indisponibilité de la source externe
+de métadonnées (mitigation : saisie manuelle en secours).
+
+\section{Recette}
+
+La recette est réalisée par démonstration à la commanditaire, en fin de sprint puis en fin de
+projet, sur la base des critères d'acceptation de la section 4.
+
+\begin{longtable}{@{}L{1.3cm}L{8.5cm}L{3.9cm}@{}}
+\toprule
+\textbf{Réf.} & \textbf{Critère de réception} & \textbf{État} \\
+\midrule
+\endhead
+SF-01 & Aucun accès non authentifié aux routes de gestion & Conforme \\
+SF-02 & Ajout d'un livre reconnu en moins de 2 minutes & Conforme \\
+SF-03 & Recherche multicritère fonctionnelle & Conforme \\
+SF-04 & Fiche détaillée complète et lisible & Conforme \\
+SF-05 & Libération automatique du stock réservé & Conforme \\
+SF-06 & Paiement CHF validé en environnement de test & Conforme avec réserve \\
+SF-07 & Livraison restreinte à la Suisse & Conforme \\
+SF-08 & Gestion autonome des annonces par un bénévole & Conforme \\
+SF-09 & Export / effacement des données personnelles & Conforme \\
+SF-10 & Parcours critiques utilisables au clavier & Conforme avec réserve \\
+\bottomrule
+\caption{Grille de recette du MVP}
+\end{longtable}
+
+\noindent Le détail des tests et des réserves est documenté dans le chapitre \og Tests et
+validation \fg{} du mémoire de projet.
+
+\end{document}

@@ -86,15 +86,18 @@ def google_auth(payload: GoogleAuthRequest, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="Token Google incomplet")
 
     # Find existing user by google_id, then by email (link account)
-    user = crud_user.get_user_by_google_id(db, google_id)
-    if user is None:
-        user = crud_user.get_user_by_email(db, email)
-        if user is not None:
-            user = crud_user.link_google_id(db, user, google_id)
-        else:
-            prenom = info.get("given_name") or email.split("@")[0]
-            nom = info.get("family_name") or ""
-            user = crud_user.create_oauth_user(db, google_id=google_id, email=email, prenom=prenom, nom=nom)
+    try:
+        user = crud_user.get_user_by_google_id(db, google_id)
+        if user is None:
+            user = crud_user.get_user_by_email(db, email)
+            if user is not None:
+                user = crud_user.link_google_id(db, user, google_id)
+            else:
+                prenom = info.get("given_name") or email.split("@")[0]
+                nom = info.get("family_name") or ""
+                user = crud_user.create_oauth_user(db, google_id=google_id, email=email, prenom=prenom, nom=nom)
+    except Exception:
+        raise HTTPException(status_code=500, detail="Connexion Google indisponible, réessayez plus tard")
 
     to_encode = {"sub": user.email, "role": user.role}
     access_token = create_access_token(to_encode, SECRET_KEY, ACCESS_TOKEN_EXPIRE_MINUTES)
