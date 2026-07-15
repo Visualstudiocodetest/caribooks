@@ -413,7 +413,7 @@ ESTIAM --- Promotion E3 DAD --- Encadrant : Mhand Boufala}
       \begin{enumerate}\small
         \item Inscription / Connexion (JWT + bcrypt)
         \item Ajout livre par scan ISBN ou saisie manuelle
-        \item Préremplissage OpenLibrary avec fallback Google Books
+        \item Préremplissage automatique des métadonnées via OpenLibrary
         \item Catalogue avec filtres (titre, auteur, prix, état)
         \item Paiement PostFinance en CHF (TWINT, Visa/MC)
         \item Back-office bénévole (CRUD annonces + stock)
@@ -557,36 +557,23 @@ def require_admin(user=Depends(get_current_user)):
 \begin{frame}[fragile]{Module Scan ISBN --- Endpoint lookup ISBN}
 \begin{lstlisting}[style=pysmall,caption={}]
 # presentation/book_router.py
-@router.get("/isbn/{isbn}")
-async def lookup_isbn(isbn: str):
-    async with httpx.AsyncClient() as client:
+@router.get("/isbn-metadata/{isbn}")
+def get_isbn_metadata(isbn: str):
+    clean = isbn.strip().upper().replace("-", "")
 
-        # 1. OpenLibrary (source principale)
-        resp = await client.get(
-            "https://openlibrary.org/api/books",
-            params={"bibkeys": f"ISBN:{isbn}",
-                    "format": "json",
-                    "jscmd":  "data"})
-        data = resp.json()
-        if f"ISBN:{isbn}" in data:
-            book = data[f"ISBN:{isbn}"]
-            return {"isbn":    isbn,
-                "titre":   book.get("title"),
-                "auteur":  book["authors"][0]["name"],
-                "editeur": book["publishers"][0]["name"],
-                "source":  "openlibrary"}
+    # Source unique : OpenLibrary
+    r = httpx.get(
+        "https://openlibrary.org/api/books",
+        params={"bibkeys": f"ISBN:{clean}",
+                "format": "json",
+                "jscmd":  "data"},
+        timeout=8)
+    if r.status_code == 200:
+        book = r.json().get(f"ISBN:{clean}")
+        if book and book.get("title"):
+            return book
 
-        # 2. Fallback Google Books
-        resp2 = await client.get(
-            "https://www.googleapis.com/books/v1/volumes",
-            params={"q": f"isbn:{isbn}"})
-        if resp2.json().get("totalItems", 0) > 0:
-            info = resp2.json()["items"][0]["volumeInfo"]
-            return {"titre":  info.get("title"),
-                    "source": "google_books", ...}
-
-    raise HTTPException(404,
-        "ISBN non trouve. Saisie manuelle.")
+    raise HTTPException(404, "ISBN introuvable")
 \end{lstlisting}
 \end{frame}
 

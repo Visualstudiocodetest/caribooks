@@ -47,3 +47,35 @@ Bien que le KKS soit originellement utilisé dans l'industrie, nous appliquons s
 ## Migrations
 
 Créer les scripts de migrations dans le dossier migrations
+
+## 4. Documents LaTeX du dossier de certification (CDA)
+
+Le dépôt contient des documents `.tex` qui constituent le dossier de certification à présenter
+au jury (titre Concepteur Développeur d'Applications). Ce ne sont **pas de la documentation
+technique classique** : ce sont des livrables évalués, où toute incohérence entre le texte et le
+code réel est une non-conformité relevée par le jury.
+
+| Fichier | Rôle |
+|---|---|
+| `main.tex` | Mémoire de projet — contexte, analyse et conception, réalisation, tests et validation. Contient des extraits de code réels (annexes) et référence les diagrammes de `diagrams/`. |
+| `cahier_des_charges.tex` | Cahier des charges autonome — besoin, périmètre (MVP inclus/exclus), spécifications fonctionnelles `SF-XX`, exigences non fonctionnelles, contraintes techniques, recette. |
+| `liste_competences.tex` | Traçabilité compétence par compétence entre le référentiel CDA (3 blocs) et les réalisations concrètes du projet, avec niveau d'autonomie. |
+| `powerpoint.tex` | Support de soutenance orale (slides Beamer/TikZ), résumé visuel du projet. |
+| `diagrams/*.mmd` → `*.pdf` | Diagrammes Mermaid (UML, Merise, architecture, séquence) rendus en PDF et inclus dans `main.tex` / `powerpoint.tex`. |
+
+### Règle de synchronisation obligatoire
+
+**Toute modification du code qui change un comportement, un endpoint, une architecture, un flux
+de données ou une intégration externe décrite dans ces documents doit s'accompagner de la mise à
+jour des fichiers `.tex` (et du `.mmd` correspondant si un diagramme est concerné) dans le même
+changement.**
+
+Concrètement, avant de considérer une tâche terminée, vérifier si le changement touche :
+- un endpoint ou son comportement documenté en annexe de `main.tex` ou dans les slides de code de `powerpoint.tex` ;
+- une contrainte, une fonctionnalité ou un critère d'acceptation listés dans `cahier_des_charges.tex` ;
+- une compétence ou un exemple de mise en œuvre décrit dans `liste_competences.tex` ;
+- un flux, une architecture ou une séquence représentés dans un diagramme `diagrams/*.mmd` (ex. : ajout/suppression d'un fournisseur externe, changement de topologie de déploiement, nouvelle étape dans un parcours utilisateur).
+
+Si un diagramme `.mmd` est modifié, régénérer le `.pdf` correspondant (voir `diagrams/render.sh`)
+avant de considérer le changement complet. Ne jamais laisser un extrait de code, une URL, un nom
+d'endpoint ou une contrainte dans les `.tex` diverger de l'état réel du dépôt.

@@ -86,8 +86,12 @@ export default function ConfidentialitePage() {
           <strong>PostFinance SA</strong> — traitement des paiements (Suisse)
         </li>
         <li>
-          <strong>Google LLC</strong> — authentification OAuth, Google Books API (États-Unis —
-          transfert encadré par les clauses contractuelles types UE)
+          <strong>Google LLC</strong> — authentification OAuth (États-Unis — transfert encadré
+          par les clauses contractuelles types UE)
+        </li>
+        <li>
+          <strong>Internet Archive (OpenLibrary)</strong> — récupération des métadonnées
+          bibliographiques par ISBN (États-Unis)
         </li>
         <li>
           <strong>Vercel Inc.</strong> — hébergement frontend (États-Unis — transfert encadré par

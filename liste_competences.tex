@@ -1,0 +1,127 @@
+\documentclass[10pt, a4paper]{article}
+
+% ==========================================
+% PRÉAMBULE
+% ==========================================
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[french]{babel}
+\usepackage{geometry}
+\usepackage{hyperref}
+\usepackage{fancyhdr}
+\usepackage{xcolor}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{longtable}
+\usepackage{enumitem}
+\usepackage{titlesec}
+
+\geometry{top=2cm, bottom=2cm, left=2cm, right=2cm}
+\setlist{nosep, leftmargin=1.2em}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=black,
+    filecolor=magenta,
+    urlcolor=blue,
+    pdftitle={Liste des competences CARIBOOKS - Alexandre REY},
+}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{Liste des Compétences — CARIBOOKS}
+\fancyhead[R]{Alexandre REY - ESTIAM}
+\fancyfoot[C]{\thepage}
+
+\titlespacing*{\section}{0pt}{10pt}{4pt}
+
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
+
+\title{\textbf{Liste des Compétences Travaillées — CARIBOOKS}\\[4pt]
+\large\textit{Traçabilité référentiel CDA $\leftrightarrow$ réalisations du projet}}
+\author{Alexandre REY \\ E3 DAD — Concepteur Développeur d'Applications (CDA) \\ ESTIAM — Encadrant : Mhand Boufala}
+\date{Année scolaire 2025-2026}
+
+\begin{document}
+\maketitle
+\thispagestyle{fancy}
+
+\noindent{\small Ce document détaille, compétence par compétence, comment chacune a été
+mobilisée dans CARIBOOKS. Les preuves associées figurent dans le dépôt de code source et dans
+le mémoire de projet (\texttt{main.tex}).}
+
+\section{Bloc 1 — Développer une application sécurisée}
+
+\begin{longtable}{@{}L{6cm}L{9.5cm}@{}}
+\toprule
+\textbf{Compétence} & \textbf{Mise en œuvre dans CARIBOOKS} \\
+\midrule
+\endhead
+Environnement de développement sécurisé & Docker / docker-compose, secrets via \texttt{.env} \\
+Authentification & Inscription, connexion, JWT, rôles utilisateur/administrateur \\
+Stockage sécurisé des identifiants & Hashage des mots de passe (bcrypt) \\
+Validation des données entrantes & Schémas Pydantic sur toutes les routes FastAPI \\
+Contrôle des permissions & Middleware d'autorisation par rôle \\
+Prévention des injections SQL & Requêtes paramétrées via SQLAlchemy \\
+Prévention des vulnérabilités OWASP & Application des recommandations OWASP Top 10 \\
+Conformité RGPD / nLPD & Export et effacement des données personnelles \\
+Accessibilité de l'interface & Contraste, navigation clavier, alt textuelles \\
+\bottomrule
+\caption{Compétences Bloc 1}
+\end{longtable}
+
+\section{Bloc 2 — Concevoir et développer une application multicouche répartie}
+
+\begin{longtable}{@{}L{6cm}L{9.5cm}@{}}
+\toprule
+\textbf{Compétence} & \textbf{Mise en œuvre dans CARIBOOKS} \\
+\midrule
+\endhead
+Analyse et formalisation du besoin & Cahier des charges, échanges avec la Product Owner \\
+Modélisation UML & Cas d'utilisation, séquence, classes, déploiement \\
+Modèle de données relationnel & Modélisation Merise (MCD/MLD), base MySQL \\
+Architecture logicielle en couches & Présentation / Services / Domaine / Infrastructure \\
+Accès aux données & Couche SQLAlchemy, CRUD générique réutilisable \\
+API REST & Endpoints FastAPI documentés, validés par Pydantic \\
+Interface web découplée du back-end & Frontend Next.js / React / TypeScript \\
+Intégration de services tiers & OpenLibrary (métadonnées), PostFinance (paiement) \\
+Cohérence en environnement concurrent & Réservation temporaire de stock, libération automatique \\
+\bottomrule
+\caption{Compétences Bloc 2}
+\end{longtable}
+
+\section{Bloc 3 — Préparer le déploiement d'une application}
+
+\begin{longtable}{@{}L{6cm}L{9.5cm}@{}}
+\toprule
+\textbf{Compétence} & \textbf{Mise en œuvre dans CARIBOOKS} \\
+\midrule
+\endhead
+Conteneurisation & API, frontend et base de données sous Docker \\
+Intégration continue & Pipeline GitHub Actions, tests à chaque changement \\
+Déploiement continu & Déploiement automatisé du frontend, images de production \\
+Choix et configuration de l'hébergement & Frontend Vercel, backend/MySQL sur VM Oracle Cloud \\
+Sécurisation de la production & HTTPS, variables d'environnement séparées du code \\
+Plan et campagne de tests & Cas nominaux/limites, pytest, analyse de couverture \\
+Documentation du déploiement & Procédure documentée et reproductible \\
+\bottomrule
+\caption{Compétences Bloc 3}
+\end{longtable}
+
+\section{Compétences transversales}
+
+\begin{longtable}{@{}L{6cm}L{9.5cm}@{}}
+\toprule
+\textbf{Compétence} & \textbf{Mise en œuvre dans CARIBOOKS} \\
+\midrule
+\endhead
+Gestion de projet Agile & 6 sprints de 2 semaines, Scrum simplifié en solo \\
+Communication avec un commanditaire non technique & Démonstrations de fin de sprint \\
+Rédaction technique & Mémoire, cahier des charges, documentation de déploiement \\
+Gestion de version (Git/GitHub) & Commits structurés, branches de correctifs isolées \\
+Esprit critique face aux outils IA & Utilisation supervisée, relecture systématique \\
+\bottomrule
+\caption{Compétences transversales}
+\end{longtable}
+
+\end{document}
