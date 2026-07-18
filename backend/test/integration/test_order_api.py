@@ -227,10 +227,14 @@ def test_paiement_status_and_amount_not_client_settable(client: TestClient, regi
     assert r.json()["statut"] == "PENDING"
 
 
-def test_local_webhook_finalizes_and_is_idempotent(client: TestClient, register_and_login, uniq: str):
+def test_local_webhook_finalizes_and_is_idempotent(client: TestClient, register_and_login, uniq: str, monkeypatch):
     """The local dev webhook (the only way to reach _finalize_commande without
     real PostFinance credentials) must both finalize on first delivery and be
-    idempotent on replay — a retried webhook must not double-decrement stock."""
+    idempotent on replay — a retried webhook must not double-decrement stock.
+
+    Explicitly set ENVIRONMENT rather than relying on the ambient value — CI
+    sets ENVIRONMENT=test, which must also keep this endpoint enabled."""
+    monkeypatch.setenv("ENVIRONMENT", "test")
     headers = register_and_login(f"orders_webhook_{uniq}@example.com")
     admin_headers = register_and_login(f"orders_webhook_admin_{uniq}@example.com", role="admin")
     article_id = _make_article(client, admin_headers, uniq, prix_chf=10.0)

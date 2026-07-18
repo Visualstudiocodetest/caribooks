@@ -828,14 +828,16 @@ async def postfinance_webhook(request: Request, db: Session = Depends(get_db)):
 
 @router.post("/paiements/webhook/local")
 def local_payment_webhook(payload: dict, db: Session = Depends(get_db)):
-    """Development-only webhook simulator for local iframe payments.
+    """Development/test-only webhook simulator for local iframe payments.
 
-    Fail-closed: only enabled when ENVIRONMENT is explicitly "development".
-    Any other/missing/misconfigured value disables it, rather than requiring
-    ENVIRONMENT to exactly equal "production" to disable it — an unauthenticated
+    Fail-closed: only enabled when ENVIRONMENT is explicitly "development" or
+    "test" (CI sets ENVIRONMENT=test, and the test suite itself relies on this
+    endpoint to simulate PostFinance callbacks). Any other/missing/
+    misconfigured value disables it, rather than requiring ENVIRONMENT to
+    exactly equal "production" to disable it — an unauthenticated
     payment-forgery endpoint must never be reachable by a deployment mistake.
     """
-    if os.getenv("ENVIRONMENT", "development").strip().lower() != "development":
+    if os.getenv("ENVIRONMENT", "development").strip().lower() not in ("development", "test"):
         raise HTTPException(status_code=404, detail="Not found")
 
     ref = payload.get("reference") or payload.get("Metadata", {}).get("reference")
