@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
+import { useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/components/auth/AuthProvider'
 import { useCart } from '@/components/cart/CartProvider'
 import { Money } from '@/components/ui/Money'
@@ -64,9 +65,18 @@ const SUCCESS_STATUSES = new Set(['CAPTURED', 'PAID', 'COMPLETED', 'AUTHORIZED',
 export function PaymentClient() {
   const router = useRouter()
   const searchParams = useSearchParams()
+  const queryClient = useQueryClient()
   const commandeId = Number(searchParams.get('commandeId'))
   const { isLoggedIn } = useAuth()
   const { clear } = useCart()
+
+  // After releasing a reservation (cancel / failed payment), the freed stock must
+  // be reflected everywhere: invalidate the cached availability queries and refresh
+  // the server components (catalogue) so the book is buyable again immediately.
+  const refreshAvailability = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ['availability'] })
+    router.refresh()
+  }, [queryClient, router])
 
   const [commande, setCommande] = useState<CommandeRead | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -92,6 +102,14 @@ export function PaymentClient() {
   const ready = useMemo(
     () => isLoggedIn && Number.isFinite(commandeId) && commandeId > 0,
     [isLoggedIn, commandeId],
+  )
+
+  // Whether the chosen PostFinance method collects the card offsite (redirect)
+  // rather than inline — drives the "you'll be redirected" hint.
+  const selectedMethodOffsite = useMemo(
+    () =>
+      paymentMethods.find((m) => m.id === selectedMethodId)?.dataCollectionType === 'OFFSITE',
+    [paymentMethods, selectedMethodId],
   )
 
   const mountIframe = useCallback(
@@ -207,6 +225,7 @@ export function PaymentClient() {
             // has these items (it's no longer cleared until payment actually
             // succeeds), so the user can simply retry from /cart.
             await cancelCommande(cmd.id_commande).catch(() => {})
+            refreshAvailability()
             setError('Le paiement a échoué. Vos articles sont toujours dans votre panier — vous pouvez réessayer.')
           } else {
             setError('Paiement en attente de confirmation. Réessayez ou contactez le support.')
@@ -334,19 +353,25 @@ export function PaymentClient() {
     handler.validate()
   }
 
-  async function onCancel() {
-    setCancelling(true)
-    setError(null)
-    try {
-      await cancelCommande(commandeId)
-      // The cart still has these items (it's only cleared on payment
-      // success), so the user can review/retry from there directly.
-      router.push('/cart')
-    } catch (e: unknown) {
-      setCancelling(false)
-      setError(e instanceof ApiError ? e.message : 'Erreur lors de l’annulation.')
-    }
-  }
+  // Leaving checkout (cancel or back-to-catalogue) abandons this attempt: release
+  // the stock reservation so the book is immediately buyable again and no longer
+  // shows as "unavailable" in the cart. The cart items themselves are kept (only
+  // a successful payment clears them), so the user can restart checkout any time.
+  const leaveCheckout = useCallback(
+    async (destination: string) => {
+      setCancelling(true)
+      setError(null)
+      try {
+        await cancelCommande(commandeId)
+        refreshAvailability()
+        router.push(destination)
+      } catch (e: unknown) {
+        setCancelling(false)
+        setError(e instanceof ApiError ? e.message : 'Erreur lors de l’annulation.')
+      }
+    },
+    [commandeId, refreshAvailability, router],
+  )
 
   if (!isLoggedIn) {
     return (
@@ -430,10 +455,19 @@ export function PaymentClient() {
               </div>
             </div>
           ) : (
-            <div
-              id="postfinance-payment-form"
-              style={{ minHeight: iframeHeight, border: '1px solid var(--border, #e5e7eb)', borderRadius: 8 }}
-            />
+            <>
+              {selectedMethodOffsite ? (
+                <div className="card cardPadding" style={{ fontSize: 14 }}>
+                  Après avoir cliqué sur « {payButtonLabel} », vous serez redirigé vers la page
+                  sécurisée PostFinance pour saisir votre carte (en test&nbsp;: carte 4111&nbsp;1111&nbsp;1111&nbsp;1111,
+                  date future, CVC quelconque).
+                </div>
+              ) : null}
+              <div
+                id="postfinance-payment-form"
+                style={{ minHeight: iframeHeight, border: '1px solid var(--border, #e5e7eb)', borderRadius: 8 }}
+              />
+            </>
           )}
 
           {validationErrors.length > 0 ? (
@@ -456,14 +490,19 @@ export function PaymentClient() {
             <button
               className="btn"
               type="button"
-              onClick={onCancel}
+              onClick={() => leaveCheckout('/cart')}
               disabled={cancelling || paying}
             >
               {cancelling ? 'Annulation…' : 'Annuler la commande'}
             </button>
-            <Link className="btn" href="/catalog">
+            <button
+              className="btn"
+              type="button"
+              onClick={() => leaveCheckout('/catalog')}
+              disabled={cancelling || paying}
+            >
               Retour au catalogue
-            </Link>
+            </button>
           </div>
         </div>
       ) : null}

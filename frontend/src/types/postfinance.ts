@@ -3,6 +3,9 @@ export type PostFinancePaymentMethod = {
   name?: string
   resolvedTitle?: Record<string, string>
   resolvedImageUrl?: string | null
+  // ONSITE = card fields collected inline in the iframe; OFFSITE = the customer is
+  // redirected to PostFinance's hosted page to enter the card after clicking pay.
+  dataCollectionType?: 'ONSITE' | 'OFFSITE' | string
 }
 
 export type PostFinanceIframeSession = {
