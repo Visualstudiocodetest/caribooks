@@ -4,7 +4,7 @@ from fastapi.testclient import TestClient
 
 
 def test_article_crud(client: TestClient, register_and_login, uniq: str):
-    headers = register_and_login(f"article_{uniq}@example.com")
+    headers = register_and_login(f"article_{uniq}@example.com", role="admin")
 
     # prerequisites
     r = client.post(
@@ -61,4 +61,18 @@ def test_article_crud(client: TestClient, register_and_login, uniq: str):
 
     # delete
     assert client.delete(f"/articles/{art['id_article']}", headers=headers).status_code == 204
+
+
+def test_article_write_requires_admin(client: TestClient, register_and_login, uniq: str):
+    user_headers = register_and_login(f"article_nonadmin_{uniq}@example.com", role="user")
+    payload = {
+        "id_type_objet": 1,
+        "id_etat_usure": 1,
+        "sku": f"SKU_NA_{uniq}",
+        "titre": "Should not be creatable",
+        "prix_chf": 5.0,
+    }
+    assert client.post("/articles/", json=payload, headers=user_headers).status_code == 403
+    assert client.put("/articles/1", json={"titre": "x"}, headers=user_headers).status_code == 403
+    assert client.delete("/articles/1", headers=user_headers).status_code == 403
 

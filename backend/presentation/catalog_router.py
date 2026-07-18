@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 
 from  infrastructure import models
 from  infrastructure.crud_base import CrudBase
-from  presentation.deps import get_current_user, get_db
+from  presentation.deps import get_db, require_admin
 from  presentation.schemas import (
     CategorieCreate,
     CategorieRead,
@@ -42,7 +42,7 @@ def get_type_objet(id_type_objet: int, db: Session = Depends(get_db)):
 def create_type_objet(
     payload: TypeObjetCreate,
     db: Session = Depends(get_db),
-    _current_user=Depends(get_current_user),
+    _admin=Depends(require_admin),
 ):
     obj = models.TypeObjet(**payload.model_dump())
     return type_objet_crud.create(db, obj)
@@ -53,7 +53,7 @@ def update_type_objet(
     id_type_objet: int,
     payload: TypeObjetUpdate,
     db: Session = Depends(get_db),
-    _current_user=Depends(get_current_user),
+    _admin=Depends(require_admin),
 ):
     updated = type_objet_crud.update(db, id_type_objet, payload.model_dump(exclude_unset=True))
     if updated is None:
@@ -65,7 +65,7 @@ def update_type_objet(
 def delete_type_objet(
     id_type_objet: int,
     db: Session = Depends(get_db),
-    _current_user=Depends(get_current_user),
+    _admin=Depends(require_admin),
 ):
     if not type_objet_crud.delete(db, id_type_objet):
         raise HTTPException(status_code=404, detail="TypeObjet not found")
@@ -89,7 +89,7 @@ def get_etat_usure(id_etat_usure: int, db: Session = Depends(get_db)):
 def create_etat_usure(
     payload: EtatUsureCreate,
     db: Session = Depends(get_db),
-    _current_user=Depends(get_current_user),
+    _admin=Depends(require_admin),
 ):
     obj = models.EtatUsure(**payload.model_dump())
     return etat_usure_crud.create(db, obj)
@@ -100,7 +100,7 @@ def update_etat_usure(
     id_etat_usure: int,
     payload: EtatUsureUpdate,
     db: Session = Depends(get_db),
-    _current_user=Depends(get_current_user),
+    _admin=Depends(require_admin),
 ):
     updated = etat_usure_crud.update(db, id_etat_usure, payload.model_dump(exclude_unset=True))
     if updated is None:
@@ -112,7 +112,7 @@ def update_etat_usure(
 def delete_etat_usure(
     id_etat_usure: int,
     db: Session = Depends(get_db),
-    _current_user=Depends(get_current_user),
+    _admin=Depends(require_admin),
 ):
     if not etat_usure_crud.delete(db, id_etat_usure):
         raise HTTPException(status_code=404, detail="EtatUsure not found")
@@ -136,7 +136,7 @@ def get_categorie(id_categorie: int, db: Session = Depends(get_db)):
 def create_categorie(
     payload: CategorieCreate,
     db: Session = Depends(get_db),
-    _current_user=Depends(get_current_user),
+    _admin=Depends(require_admin),
 ):
     obj = models.Categorie(**payload.model_dump())
     return categorie_crud.create(db, obj)
@@ -147,7 +147,7 @@ def update_categorie(
     id_categorie: int,
     payload: CategorieUpdate,
     db: Session = Depends(get_db),
-    _current_user=Depends(get_current_user),
+    _admin=Depends(require_admin),
 ):
     updated = categorie_crud.update(db, id_categorie, payload.model_dump(exclude_unset=True))
     if updated is None:
@@ -159,7 +159,7 @@ def update_categorie(
 def delete_categorie(
     id_categorie: int,
     db: Session = Depends(get_db),
-    _current_user=Depends(get_current_user),
+    _admin=Depends(require_admin),
 ):
     if not categorie_crud.delete(db, id_categorie):
         raise HTTPException(status_code=404, detail="Categorie not found")

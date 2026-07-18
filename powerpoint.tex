@@ -500,12 +500,18 @@ def create_access_token(payload: dict,
 
 # presentation/deps.py
 ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
-SECRET_KEY  = os.getenv("SECRET_KEY", "dev-secret")
+_WEAK = {"", "dev-secret-key", "changeme", "secret"}
+_env_secret = os.getenv("SECRET_KEY")
 
-if ENVIRONMENT in ("prod","production") \
-   and SECRET_KEY == "dev-secret":
+# Refuse un secret connu/placeholder, quel que soit
+# ENVIRONMENT (pas seulement en "production")
+if _env_secret and _env_secret.lower() in _WEAK:
     raise RuntimeError(
-        "SECRET_KEY non securisee en production!")
+        "SECRET_KEY placeholder refuse")
+
+# Absent : secret aleatoire par processus (jamais
+# de valeur par defaut devinable)
+SECRET_KEY = _env_secret or secrets.token_urlsafe(32)
 
 def get_current_user(
     credentials = Depends(HTTPBearer()),

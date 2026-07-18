@@ -4,7 +4,7 @@ from fastapi.testclient import TestClient
 
 
 def test_stock_and_sources_crud(client: TestClient, register_and_login, uniq: str):
-    headers = register_and_login(f"stock_{uniq}@example.com")
+    headers = register_and_login(f"stock_{uniq}@example.com", role="admin")
 
     # create prerequisites for stock: article
     r = client.post(
@@ -67,4 +67,13 @@ def test_stock_and_sources_crud(client: TestClient, register_and_login, uniq: st
 
     assert client.delete(f"/stock/{st['id_stock']}", headers=headers).status_code == 204
     assert client.delete(f"/stock/sources/{source['id_source_stock']}", headers=headers).status_code == 204
+
+
+def test_stock_write_requires_admin(client: TestClient, register_and_login, uniq: str):
+    user_headers = register_and_login(f"stock_nonadmin_{uniq}@example.com", role="user")
+    assert client.post(
+        "/stock/sources", json={"libelle": "x", "type_source": "WAREHOUSE"}, headers=user_headers
+    ).status_code == 403
+    assert client.post("/stock/1/increment", json={"qty": 1}, headers=user_headers).status_code == 403
+    assert client.post("/stock/1/decrement", json={"qty": 1}, headers=user_headers).status_code == 403
 

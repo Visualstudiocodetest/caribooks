@@ -1,18 +1,12 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 from presentation.auth_schemas import LoginRequest, UserCreate, UserRead, Token, GoogleAuthRequest
 from infrastructure import crud_user
 import os
 import httpx
-from presentation.deps import get_db
+from presentation.deps import get_db, ENVIRONMENT, SECRET_KEY
 from services.jwt_service import create_access_token
-
-
-ENVIRONMENT = os.getenv("ENVIRONMENT", "development").lower()
-SECRET_KEY = os.getenv("SECRET_KEY", "dev-secret-key")
-
-if ENVIRONMENT in ("prod", "production") and SECRET_KEY == "dev-secret-key":
-    raise RuntimeError("CRITICAL: SECRET_KEY is not set securely for production environment.")
+from services.rate_limit import check_rate_limit, reset_rate_limit
 
 ACCESS_TOKEN_EXPIRE_MINUTES = 480
 
@@ -42,6 +36,12 @@ def register(user_in: UserCreate, db: Session = Depends(get_db)):
 
 @router.post("/token", response_model=Token)
 def login_for_access_token(payload: LoginRequest, db: Session = Depends(get_db)):
+    rate_limit_key = f"token:{str(payload.username).strip().lower()}"
+    # 10 attempts / 5 minutes per account — blocks password-guessing/credential
+    # stuffing against a known email without depending on client IP (which is
+    # unreliable behind the reverse proxy without trusted X-Forwarded-For setup).
+    check_rate_limit(rate_limit_key, max_attempts=10, window_seconds=300)
+
     user = crud_user.get_user_by_email(db, str(payload.username))
     verified = False
     if user and user.mot_de_passe_hash:
@@ -51,6 +51,7 @@ def login_for_access_token(payload: LoginRequest, db: Session = Depends(get_db))
             verified = False
     if not user or not verified:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Incorrect credentials")
+    reset_rate_limit(rate_limit_key)
     to_encode = {"sub": user.email, "role": user.role}
     access_token = create_access_token(to_encode, SECRET_KEY, ACCESS_TOKEN_EXPIRE_MINUTES)
     return Token(access_token=access_token)
@@ -63,8 +64,14 @@ else:
 
 
 @router.post("/google", response_model=Token)
-def google_auth(payload: GoogleAuthRequest, db: Session = Depends(get_db)):
+def google_auth(payload: GoogleAuthRequest, request: Request, db: Session = Depends(get_db)):
     """Verify a Google ID token (credential from Sign In With Google) and return a JWT."""
+    client_host = request.client.host if request.client else "unknown"
+    # 20 attempts / 5 minutes per client — bounds hammering of the outbound
+    # Google tokeninfo call; a forged/expired credential can't be brute-forced
+    # the way a password can, so this is DoS/abuse protection more than
+    # credential-stuffing defense.
+    check_rate_limit(f"google:{client_host}", max_attempts=20, window_seconds=300)
     try:
         r = httpx.get(
             "https://oauth2.googleapis.com/tokeninfo",
@@ -86,18 +93,15 @@ def google_auth(payload: GoogleAuthRequest, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="Token Google incomplet")
 
     # Find existing user by google_id, then by email (link account)
-    try:
-        user = crud_user.get_user_by_google_id(db, google_id)
-        if user is None:
-            user = crud_user.get_user_by_email(db, email)
-            if user is not None:
-                user = crud_user.link_google_id(db, user, google_id)
-            else:
-                prenom = info.get("given_name") or email.split("@")[0]
-                nom = info.get("family_name") or ""
-                user = crud_user.create_oauth_user(db, google_id=google_id, email=email, prenom=prenom, nom=nom)
-    except Exception:
-        raise HTTPException(status_code=500, detail="Connexion Google indisponible, réessayez plus tard")
+    user = crud_user.get_user_by_google_id(db, google_id)
+    if user is None:
+        user = crud_user.get_user_by_email(db, email)
+        if user is not None:
+            user = crud_user.link_google_id(db, user, google_id)
+        else:
+            prenom = info.get("given_name") or email.split("@")[0]
+            nom = info.get("family_name") or ""
+            user = crud_user.create_oauth_user(db, google_id=google_id, email=email, prenom=prenom, nom=nom)
 
     to_encode = {"sub": user.email, "role": user.role}
     access_token = create_access_token(to_encode, SECRET_KEY, ACCESS_TOKEN_EXPIRE_MINUTES)

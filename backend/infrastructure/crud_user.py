@@ -83,7 +83,7 @@ def create_user(db: Session, user_data: dict) -> models.Utilisateur:
         prenom=user_data["prenom"],
         email=user_data["email"],
         mot_de_passe_hash=get_password_hash(user_data["mot_de_passe"]),
-        role=user_data.get("role", "user"),
+        role="user",
         billing_address_line1=user_data.get("billing_address_line1"),
         billing_address_line2=user_data.get("billing_address_line2"),
         billing_postal_code=user_data.get("billing_postal_code"),

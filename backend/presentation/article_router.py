@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 
 from  infrastructure import models
 from  infrastructure.crud_base import CrudBase
-from  presentation.deps import get_current_user, get_db
+from  presentation.deps import get_db, require_admin
 from  presentation.schemas import ArticleCreate, ArticleRead, ArticleUpdate
 
 router = APIRouter(prefix="/articles", tags=["articles"])
@@ -47,7 +47,7 @@ def get_article(id_article: int, db: Session = Depends(get_db)):
 def create_article(
     payload: ArticleCreate,
     db: Session = Depends(get_db),
-    _current_user=Depends(get_current_user),
+    _admin=Depends(require_admin),
 ):
     obj = models.Article(
         id_type_objet=payload.id_type_objet,
@@ -73,7 +73,7 @@ def update_article(
     id_article: int,
     payload: ArticleUpdate,
     db: Session = Depends(get_db),
-    _current_user=Depends(get_current_user),
+    _admin=Depends(require_admin),
 ):
     obj = db.query(models.Article).filter(models.Article.id_article == id_article).first()
     if obj is None:
@@ -95,7 +95,7 @@ def update_article(
 def delete_article(
     id_article: int,
     db: Session = Depends(get_db),
-    _current_user=Depends(get_current_user),
+    _admin=Depends(require_admin),
 ):
     if not article_crud.delete(db, id_article):
         raise HTTPException(status_code=404, detail="Article not found")

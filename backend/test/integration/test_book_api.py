@@ -1,6 +1,7 @@
 import pytest
 from  infrastructure.db import SessionLocal
 from  infrastructure.models import Article
+from  infrastructure import models
 from sqlalchemy.sql import text
 
 
@@ -23,15 +24,21 @@ def test_create_and_get_book():
         "prenom": "User",
         "email": f"integration_{uniq}@example.com",
         "mot_de_passe": "password123",
-        "role": "admin"
     }
     r = client.post("/auth/register", json=user)
     assert r.status_code in (201, 400), r.text
+    # Registration never grants a role (privilege escalation fix) — promote
+    # directly in the DB, the same way an admin would via PUT /users/{id}.
+    db = SessionLocal()
+    try:
+        db.query(models.Utilisateur).filter(models.Utilisateur.email == user["email"]).update({"role": "admin"})
+        db.commit()
+    finally:
+        db.close()
     token_resp = client.post("/auth/token", json={"username": user["email"], "password": user["mot_de_passe"]})
     if token_resp.status_code != 200:
         # try to reset stored hash to expected one (tests may run against existing DB)
-        from  infrastructure.db import SessionLocal
-        from  infrastructure import crud_user, models
+        from  infrastructure import crud_user
         db = SessionLocal()
         try:
             db_user = db.query(models.Utilisateur).filter(models.Utilisateur.email == user["email"]).first()

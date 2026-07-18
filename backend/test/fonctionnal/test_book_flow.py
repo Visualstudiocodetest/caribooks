@@ -1,5 +1,6 @@
 import pytest
 from  infrastructure.db import SessionLocal
+from  infrastructure import models
 
 """
 Functional test: Book CRUD flow via API
@@ -23,10 +24,17 @@ def test_book_crud_flow():
         "prenom": "User",
         "email": f"flow_{uniq_user}@example.com",
         "mot_de_passe": test_password,
-        "role": "admin",
     }
     r = client.post("/auth/register", json=user)
     assert r.status_code in (201, 400), r.text
+    # Registration never grants a role (privilege escalation fix) — promote
+    # directly in the DB, the same way an admin would via PUT /users/{id}.
+    db = SessionLocal()
+    try:
+        db.query(models.Utilisateur).filter(models.Utilisateur.email == user["email"]).update({"role": "admin"})
+        db.commit()
+    finally:
+        db.close()
     token_resp = client.post("/auth/token", json={"username": user["email"], "password": user["mot_de_passe"]})
     assert token_resp.status_code == 200, token_resp.text
     token = token_resp.json()["access_token"]
