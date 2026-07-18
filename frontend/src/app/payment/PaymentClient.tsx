@@ -2,8 +2,9 @@
 
 import Link from 'next/link'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useSearchParams } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useAuth } from '@/components/auth/AuthProvider'
+import { useCart } from '@/components/cart/CartProvider'
 import { Money } from '@/components/ui/Money'
 import { ApiError } from '@/services/api'
 import type { CommandeRead } from '@/types/api'
@@ -13,6 +14,7 @@ import type {
   PostFinancePaymentMethod,
 } from '@/types/postfinance'
 import {
+  cancelCommande,
   confirmPaiementPostFinance,
   createPaiementPostFinance,
   getCommande,
@@ -60,9 +62,11 @@ function loadPostFinanceScript(url: string): Promise<void> {
 const SUCCESS_STATUSES = new Set(['CAPTURED', 'PAID', 'COMPLETED', 'AUTHORIZED', 'FULFILL', 'SUCCESSFUL', 'FULFILLED'])
 
 export function PaymentClient() {
+  const router = useRouter()
   const searchParams = useSearchParams()
   const commandeId = Number(searchParams.get('commandeId'))
   const { isLoggedIn } = useAuth()
+  const { clear } = useCart()
 
   const [commande, setCommande] = useState<CommandeRead | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -77,6 +81,7 @@ export function PaymentClient() {
   const [paying, setPaying] = useState(false)
   const [payButtonLabel, setPayButtonLabel] = useState('Valider et payer')
   const [usePrimaryTrigger, setUsePrimaryTrigger] = useState(false)
+  const [cancelling, setCancelling] = useState(false)
 
   const [cartSecondsLeft, setCartSecondsLeft] = useState<number | null>(null)
 
@@ -102,15 +107,17 @@ export function PaymentClient() {
       return
     }
 
-    // Destroy the previous handler before mounting a new one — otherwise
-    // PostFinance appends a second iframe inside the existing container.
-    if (handlerRef.current) {
-      handlerRef.current.destroy?.()
-      handlerRef.current = null
-      handlerMethodRef.current = null
-      const container = document.getElementById('postfinance-payment-form')
-      if (container) container.innerHTML = ''
-    }
+    // Always destroy any previous handler AND clear the container before
+    // mounting a new one — PostFinance appends a second iframe into the
+    // existing container rather than replacing it. This must not be gated on
+    // handlerRef.current being set: the effect cleanup below nulls that ref
+    // without touching the DOM, so a subsequent mount would otherwise skip
+    // clearing and leave the old iframe in place alongside the new one.
+    handlerRef.current?.destroy?.()
+    handlerRef.current = null
+    handlerMethodRef.current = null
+    const existingContainer = document.getElementById('postfinance-payment-form')
+    if (existingContainer) existingContainer.innerHTML = ''
 
     factory.configure?.('replacePrimaryAction', true)
 
@@ -190,11 +197,17 @@ export function PaymentClient() {
           if (!mounted) return
           const statut = pollResp?.paiement?.statut
           if (statut && SUCCESS_STATUSES.has(String(statut).toUpperCase())) {
+            clear()
             window.location.href = '/account/orders'
             return
           }
           if (statusParam === 'failed') {
-            setError('Le paiement a échoué. Vous pouvez réessayer.')
+            // Release the reservation immediately instead of leaving it to
+            // expire on its own over the next 20 minutes — the cart still
+            // has these items (it's no longer cleared until payment actually
+            // succeeds), so the user can simply retry from /cart.
+            await cancelCommande(cmd.id_commande).catch(() => {})
+            setError('Le paiement a échoué. Vos articles sont toujours dans votre panier — vous pouvez réessayer.')
           } else {
             setError('Paiement en attente de confirmation. Réessayez ou contactez le support.')
           }
@@ -204,8 +217,6 @@ export function PaymentClient() {
         const session = await createPaiementPostFinance({
           id_commande: cmd.id_commande,
           reference_externe: makeReference(),
-          montant_chf: cmd.montant_total_chf,
-          statut: 'PENDING',
         })
         if (!mounted) return
 
@@ -257,8 +268,15 @@ export function PaymentClient() {
       handlerRef.current?.destroy?.()
       handlerRef.current = null
       handlerMethodRef.current = null
+      const container = document.getElementById('postfinance-payment-form')
+      if (container) container.innerHTML = ''
     }
-  }, [commandeId, ready, searchParams, mountIframe])
+    // Depend on the string form of searchParams, not the object itself — the
+    // object's identity can change across renders without its content
+    // changing, which previously re-ran this effect (re-creating a PostFinance
+    // payment session and re-mounting the iframe) more often than intended.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [commandeId, ready, searchParams.toString(), mountIframe])
 
   useEffect(() => {
     if (!selectedMethodId || localMode) return
@@ -292,6 +310,7 @@ export function PaymentClient() {
     if (localMode && paiementId) {
       try {
         await confirmPaiementPostFinance(paiementId)
+        clear()
         window.location.href = '/account/orders'
       } catch (e: unknown) {
         setPaying(false)
@@ -313,6 +332,20 @@ export function PaymentClient() {
     }
 
     handler.validate()
+  }
+
+  async function onCancel() {
+    setCancelling(true)
+    setError(null)
+    try {
+      await cancelCommande(commandeId)
+      // The cart still has these items (it's only cleared on payment
+      // success), so the user can review/retry from there directly.
+      router.push('/cart')
+    } catch (e: unknown) {
+      setCancelling(false)
+      setError(e instanceof ApiError ? e.message : 'Erreur lors de l’annulation.')
+    }
   }
 
   if (!isLoggedIn) {
@@ -419,6 +452,14 @@ export function PaymentClient() {
               disabled={paying || loading || (!localMode && !iframeReady)}
             >
               {paying ? 'Traitement…' : payButtonLabel}
+            </button>
+            <button
+              className="btn"
+              type="button"
+              onClick={onCancel}
+              disabled={cancelling || paying}
+            >
+              {cancelling ? 'Annulation…' : 'Annuler la commande'}
             </button>
             <Link className="btn" href="/catalog">
               Retour au catalogue

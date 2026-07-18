@@ -29,6 +29,13 @@ export function getCommande(id_commande: number): Promise<CommandeRead> {
   return apiFetch<CommandeRead>(`/orders/commandes/${id_commande}`, { auth: true })
 }
 
+export function cancelCommande(id_commande: number): Promise<CommandeRead> {
+  return apiFetch<CommandeRead>(`/orders/commandes/${id_commande}/cancel`, {
+    method: 'POST',
+    auth: true,
+  })
+}
+
 export function createPaiement(payload: PaiementCreate): Promise<PaiementRead> {
   return apiFetch<PaiementRead>('/orders/paiements', {
     method: 'POST',

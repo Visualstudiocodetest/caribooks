@@ -9,6 +9,7 @@ from presentation.catalog_router import router as catalog_router
 from presentation.article_router import router as article_router
 from presentation.stock_router import router as stock_router
 from presentation.order_router import router as order_router
+from presentation.order_admin_router import router as order_admin_router
 from presentation.scan_router import router as scan_router
 from presentation.user_router import router as user_router
 from presentation.images_router import router as images_router
@@ -53,6 +54,7 @@ app.include_router(catalog_router)
 app.include_router(article_router)
 app.include_router(stock_router)
 app.include_router(order_router)
+app.include_router(order_admin_router)
 app.include_router(scan_router)
 app.include_router(user_router)
 app.include_router(images_router)

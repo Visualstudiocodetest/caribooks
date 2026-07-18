@@ -63,32 +63,38 @@ export type UserCreate = {
 
 export type UserUpdate = Partial<UserCreate & { mot_de_passe?: string }>
 
+// numero_commande/shipping_method are client-chosen; montant_total_chf,
+// statut, and frais_port_chf are always server-computed (never accepted from
+// the client — see backend/presentation/order_router.py) and only appear on
+// the Read shape below.
 export type CommandeCreate = {
   numero_commande: string
-  montant_total_chf: number
-  statut: string
   shipping_method?: 'POST' | 'CLICK_COLLECT'
-  frais_port_chf?: number
 }
 
 export type CommandeRead = CommandeCreate & {
   id_commande: number
   id_utilisateur: number
+  montant_total_chf: number
+  statut: string
+  frais_port_chf: number
   date_commande: string
   date_creation?: string  // alias for date_commande
   cart_expires_at?: string | null
   cart_seconds_left?: number | null  // timezone-proof countdown (seconds)
 }
 
+// prix_unitaire_chf is always looked up server-side from the article's
+// catalog price — never accepted from the client.
 export type LigneCommandeCreate = {
   id_commande: number
   id_article: number
   quantite: number
-  prix_unitaire_chf: number
 }
 
 export type LigneCommandeRead = LigneCommandeCreate & {
   id_ligne_commande: number
+  prix_unitaire_chf: number
 }
 
 export type LigneCommandeAdminRead = LigneCommandeRead & {
@@ -103,18 +109,21 @@ export type CommandeAdminRead = CommandeRead & {
   client_adresse?: string | null
 }
 
+// montant_chf/statut are always server-computed — a payment always starts
+// PENDING with the commande's own total, and only a verified PostFinance/
+// Payrexx callback can change its status.
 export type PaiementCreate = {
   id_commande: number
   fournisseur_paiement?: string
   reference_externe: string
-  montant_chf: number
   devise?: 'CHF'
-  statut: string
   date_paiement?: string | null
 }
 
 export type PaiementRead = PaiementCreate & {
   id_paiement: number
+  montant_chf: number
+  statut: string
 }
 
 export type PaiementUpdate = Partial<Omit<PaiementCreate, 'id_commande'>>

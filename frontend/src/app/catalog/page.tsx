@@ -23,5 +23,9 @@ export default async function CatalogPage() {
   }
 
   const available = books.filter((b) => (map.get(b.id_article) || 0) > 0)
-  return <CatalogClient books={available} />
+  // Plain object (not Map) — Server -> Client Component props must be
+  // serializable. Passed through so BookCard can cap "Ajouter au panier" at
+  // the real remaining quantity instead of allowing unlimited clicks.
+  const availability = Object.fromEntries(map)
+  return <CatalogClient books={available} availability={availability} />
 }

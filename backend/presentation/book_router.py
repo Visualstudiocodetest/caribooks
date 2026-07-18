@@ -16,16 +16,16 @@ router = APIRouter(prefix="/books", tags=["books"])
 @router.get("/", response_model=List[BookRead])
 def list_books(db: Session = Depends(get_db)):
     # Release stock from expired carts so delisted books reappear once available.
-    from presentation.order_router import _cleanup_expired_carts
-    _cleanup_expired_carts(db)
+    from services.order_service import cleanup_expired_carts
+    cleanup_expired_carts(db)
     service = BookService(db)
     return service.list_books()
 
 
 @router.get("", response_model=List[BookRead], include_in_schema=False)
 def list_books_no_slash(db: Session = Depends(get_db)):
-    from presentation.order_router import _cleanup_expired_carts
-    _cleanup_expired_carts(db)
+    from services.order_service import cleanup_expired_carts
+    cleanup_expired_carts(db)
     service = BookService(db)
     return service.list_books()
 

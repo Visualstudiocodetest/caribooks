@@ -71,10 +71,10 @@ def delete_source(
 
 @router.get("/", response_model=list[StockRead])
 def list_stock(db: Session = Depends(get_db)):
-    # Release stock reserved by carts whose 15-min window has expired, so the
+    # Release stock reserved by carts whose 20-min window has expired, so the
     # catalogue reflects truly available quantities on every read.
-    from presentation.order_router import _cleanup_expired_carts
-    _cleanup_expired_carts(db)
+    from services.order_service import cleanup_expired_carts
+    cleanup_expired_carts(db)
     return stock_crud.list(db)
 
 
