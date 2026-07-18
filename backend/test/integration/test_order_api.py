@@ -418,3 +418,99 @@ def test_postfinance_iframe_session_and_confirm_local_mode(client: TestClient, r
         stock_replay = client.get("/stock/", headers=admin_headers).json()
         row_replay = next(s for s in stock_replay if s["id_article"] == article_id)
         assert row_replay["quantite_disponible"] == 2
+
+
+def test_cancel_commande_releases_reservation_immediately(client: TestClient, register_and_login, uniq: str):
+    """Customer-facing cancel: previously the only way to release a cart
+    reservation was the 20-minute cart_expires_at expiry, during which the
+    book would appear unavailable/hidden from the catalogue for everyone."""
+    headers = register_and_login(f"orders_cancel_{uniq}@example.com")
+    admin_headers = register_and_login(f"orders_cancel_admin_{uniq}@example.com", role="admin")
+    article_id = _make_article(client, admin_headers, uniq, prix_chf=10.0)
+    _make_stock(client, admin_headers, uniq, article_id, qty=3)
+
+    r = client.post("/orders/commandes", json={"numero_commande": f"CMD_CXL_{uniq}"}, headers=headers)
+    cmd = r.json()
+    r = client.post(
+        "/orders/lignes",
+        json={"id_commande": cmd["id_commande"], "id_article": article_id, "quantite": 2},
+        headers=headers,
+    )
+    assert r.status_code == 201, r.text
+
+    stock_before = client.get("/stock/", headers=admin_headers).json()
+    row_before = next(s for s in stock_before if s["id_article"] == article_id)
+    assert row_before["quantite_reservee"] == 2
+
+    r = client.post(f"/orders/commandes/{cmd['id_commande']}/cancel", headers=headers)
+    assert r.status_code == 200, r.text
+    assert r.json()["statut"] == "CANCELLED"
+
+    stock_after = client.get("/stock/", headers=admin_headers).json()
+    row_after = next(s for s in stock_after if s["id_article"] == article_id)
+    assert row_after["quantite_reservee"] == 0  # released immediately, not after 20 minutes
+
+    # Cancelling an already-terminal commande is rejected.
+    r = client.post(f"/orders/commandes/{cmd['id_commande']}/cancel", headers=headers)
+    assert r.status_code == 400
+
+
+def test_cancel_commande_is_owner_scoped(client: TestClient, register_and_login, uniq: str):
+    owner_headers = register_and_login(f"orders_cancel_owner_{uniq}@example.com")
+    other_headers = register_and_login(f"orders_cancel_other_{uniq}@example.com")
+
+    r = client.post("/orders/commandes", json={"numero_commande": f"CMD_CXLOWN_{uniq}"}, headers=owner_headers)
+    cmd = r.json()
+
+    r = client.post(f"/orders/commandes/{cmd['id_commande']}/cancel", headers=other_headers)
+    assert r.status_code == 404
+
+
+def test_delete_commande_releases_reservation(client: TestClient, register_and_login, uniq: str):
+    """Previously delete_commande/delete_ligne deleted rows without releasing
+    quantite_reservee — a permanent stock leak with no automatic recovery."""
+    headers = register_and_login(f"orders_delcmd_{uniq}@example.com")
+    admin_headers = register_and_login(f"orders_delcmd_admin_{uniq}@example.com", role="admin")
+    article_id = _make_article(client, admin_headers, uniq, prix_chf=10.0)
+    _make_stock(client, admin_headers, uniq, article_id, qty=3)
+
+    r = client.post("/orders/commandes", json={"numero_commande": f"CMD_DEL_{uniq}"}, headers=headers)
+    cmd = r.json()
+    r = client.post(
+        "/orders/lignes",
+        json={"id_commande": cmd["id_commande"], "id_article": article_id, "quantite": 2},
+        headers=headers,
+    )
+    assert r.status_code == 201, r.text
+
+    assert client.delete(f"/orders/commandes/{cmd['id_commande']}", headers=headers).status_code == 204
+
+    stock_after = client.get("/stock/", headers=admin_headers).json()
+    row_after = next(s for s in stock_after if s["id_article"] == article_id)
+    assert row_after["quantite_reservee"] == 0
+
+
+def test_delete_ligne_releases_reservation(client: TestClient, register_and_login, uniq: str):
+    headers = register_and_login(f"orders_delligne_{uniq}@example.com")
+    admin_headers = register_and_login(f"orders_delligne_admin_{uniq}@example.com", role="admin")
+    article_id = _make_article(client, admin_headers, uniq, prix_chf=10.0)
+    _make_stock(client, admin_headers, uniq, article_id, qty=3)
+
+    r = client.post("/orders/commandes", json={"numero_commande": f"CMD_DELL_{uniq}"}, headers=headers)
+    cmd = r.json()
+    r = client.post(
+        "/orders/lignes",
+        json={"id_commande": cmd["id_commande"], "id_article": article_id, "quantite": 2},
+        headers=headers,
+    )
+    assert r.status_code == 201, r.text
+    ligne_id = r.json()["id_ligne_commande"]
+
+    assert client.delete(f"/orders/lignes/{ligne_id}", headers=headers).status_code == 204
+
+    stock_after = client.get("/stock/", headers=admin_headers).json()
+    row_after = next(s for s in stock_after if s["id_article"] == article_id)
+    assert row_after["quantite_reservee"] == 0
+
+    r = client.get(f"/orders/commandes/{cmd['id_commande']}", headers=headers)
+    assert r.json()["montant_total_chf"] == 9.0  # lines gone, only shipping remains

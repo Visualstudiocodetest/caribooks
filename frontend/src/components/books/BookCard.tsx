@@ -27,15 +27,26 @@ function BookCover({ src, titre }: { src: string | null | undefined; titre: stri
   )
 }
 
-export function BookCard({ book }: { book: BookRead }) {
-  const { addItem, items } = useCart()
+export function BookCard({ book, available = null }: { book: BookRead; available?: number | null }) {
+  const { addItem, items, setQuantity } = useCart()
   const [added, setAdded] = useState(false)
-  const inCart = items.some((i) => i.id_article === book.id_article)
+  const existing = items.find((i) => i.id_article === book.id_article)
+  const inCart = Boolean(existing)
+  // available === null means "unknown" (no stock rows tracked for this
+  // article) — stay permissive, matching the backend's own create_ligne rule.
+  const isSoldOut = available !== null && available < 1
+  const atMax = Boolean(existing && available !== null && existing.quantity >= available)
+  const isDisabled = isSoldOut || atMax
 
   function handleAddToCart(e: React.MouseEvent) {
     e.preventDefault()
     e.stopPropagation()
-    addItem({ id_article: book.id_article, titre: book.titre, prix_chf: book.prix_chf, image_link: book.image_link })
+    if (isDisabled) return
+    if (existing) {
+      setQuantity(book.id_article, existing.quantity + 1)
+    } else {
+      addItem({ id_article: book.id_article, titre: book.titre, prix_chf: book.prix_chf, image_link: book.image_link })
+    }
     setAdded(true)
     setTimeout(() => setAdded(false), 1500)
   }
@@ -64,21 +75,31 @@ export function BookCard({ book }: { book: BookRead }) {
         </div>
         <button
           onClick={handleAddToCart}
+          disabled={isDisabled}
           style={{
             marginTop: 2,
             width: '100%',
             padding: '6px 0',
             borderRadius: 8,
             border: 'none',
-            cursor: 'pointer',
+            cursor: isDisabled ? 'not-allowed' : 'pointer',
             fontWeight: 700,
             fontSize: 13,
+            opacity: isDisabled ? 0.6 : 1,
             background: added ? '#065f46' : inCart ? '#e0f2fe' : 'var(--color-primary)',
             color: added ? 'white' : inCart ? '#0369a1' : 'white',
             transition: 'background 0.2s',
           }}
         >
-          {added ? '✓ Ajouté' : inCart ? 'Déjà dans le panier' : '+ Ajouter au panier'}
+          {isSoldOut
+            ? 'Indisponible'
+            : atMax
+            ? 'Quantité max'
+            : added
+            ? '✓ Ajouté'
+            : inCart
+            ? 'Déjà dans le panier'
+            : '+ Ajouter au panier'}
         </button>
       </div>
     </Link>

@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { listBooks } from '@/services/books'
+import { listStocks } from '@/services/stocks'
 import { BookGrid } from '@/components/books/BookGrid'
 
 export const dynamic = 'force-dynamic'
@@ -7,6 +8,17 @@ export const dynamic = 'force-dynamic'
 export default async function HomePage() {
   const books = await listBooks().catch(() => [])
   const recent = books.slice(0, 8)
+
+  // Server-side stock lookup so BookCard can cap "Ajouter au panier" at the
+  // real remaining quantity instead of allowing unlimited clicks on a book
+  // that's out of stock (the home page, unlike /catalog, doesn't filter
+  // unavailable books out of the list at all).
+  const stocks = await listStocks().catch(() => [])
+  const availability: Record<number, number> = {}
+  for (const s of stocks) {
+    const avail = (s.quantite_disponible || 0) - (s.quantite_reservee || 0)
+    availability[s.id_article] = (availability[s.id_article] || 0) + avail
+  }
 
   return (
     <div style={{ display: 'grid', gap: 32 }}>
@@ -91,7 +103,7 @@ export default async function HomePage() {
               Tout voir →
             </Link>
           </div>
-          <BookGrid books={recent} />
+          <BookGrid books={recent} availability={availability} />
         </section>
       ) : (
         <section className="card cardPadding" style={{ textAlign: 'center' }}>

@@ -8,7 +8,13 @@ import { apiFetch } from '@/services/api'
 type EtatItem = { id_etat_usure: number; libelle: string }
 type CategorieItem = { id_categorie: number; libelle: string }
 
-export function CatalogClient({ books }: { books: BookRead[] }) {
+export function CatalogClient({
+  books,
+  availability,
+}: {
+  books: BookRead[]
+  availability?: Record<number, number>
+}) {
   const [query, setQuery] = useState('')
   const [etatList, setEtatList] = useState<EtatItem[]>([])
   const [categorieList, setCategorieList] = useState<CategorieItem[]>([])
@@ -173,7 +179,7 @@ export function CatalogClient({ books }: { books: BookRead[] }) {
           ) : null}
         </div>
       ) : (
-        <BookGrid books={filtered} />
+        <BookGrid books={filtered} availability={availability} />
       )}
     </div>
   )

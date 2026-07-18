@@ -8,7 +8,7 @@ import { useAuth } from '@/components/auth/AuthProvider'
 import { Money } from '@/components/ui/Money'
 import CartItemRow from '@/components/cart/CartItemRow'
 import { ApiError } from '@/services/api'
-import { createCommande, createLigne } from '@/services/orders'
+import { cancelCommande, createCommande, createLigne } from '@/services/orders'
 
 function makeNumeroCommande() {
   const now = new Date()
@@ -34,27 +34,36 @@ export default function CartPage() {
   async function onOrder() {
     setStatus('loading')
     setError(null)
+    let commandeId: number | null = null
     try {
       const commande = await createCommande({
         numero_commande: makeNumeroCommande(),
-        montant_total_chf: finalTotal,
-        statut: 'CREATED',
         shipping_method: shippingMethod,
-        frais_port_chf: shippingFee,
       })
+      commandeId = commande.id_commande
       await Promise.all(
         items.map((it) =>
           createLigne({
             id_commande: commande.id_commande,
             id_article: it.id_article,
             quantite: it.quantity,
-            prix_unitaire_chf: it.prix_chf,
           }),
         ),
       )
-      clear()
+      // The cart is intentionally NOT cleared here — it's only cleared once
+      // payment actually succeeds (see PaymentClient.tsx). Clearing it right
+      // after creating the commande meant that cancelling or abandoning
+      // payment left the user with an empty "panier" and no way to resume,
+      // even though nothing had actually been paid for yet.
       router.push(`/payment?commandeId=${encodeURIComponent(String(commande.id_commande))}`)
     } catch (e) {
+      if (commandeId) {
+        // Release any stock a partially-successful line reservation already
+        // grabbed, so a failed checkout attempt doesn't leave the item
+        // reserved (and thus "unavailable") for up to 20 minutes while the
+        // user retries.
+        await cancelCommande(commandeId).catch(() => {})
+      }
       const err = e as unknown
       setError(err instanceof ApiError ? err.message : 'Erreur lors de la commande. Réessayez.')
       setStatus('error')
