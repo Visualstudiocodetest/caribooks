@@ -61,6 +61,11 @@ function loadPostFinanceScript(url: string): Promise<void> {
 }
 
 const SUCCESS_STATUSES = new Set(['CAPTURED', 'PAID', 'COMPLETED', 'AUTHORIZED', 'FULFILL', 'SUCCESSFUL', 'FULFILLED'])
+// Terminal PostFinance failure states — the card was refused, or the transaction
+// was voided/declined. These are definitive (no point polling further).
+const FAILURE_STATUSES = new Set(['FAILED', 'DECLINE', 'DECLINED', 'VOIDED', 'VOID'])
+
+const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms))
 
 export function PaymentClient() {
   const router = useRouter()
@@ -78,6 +83,17 @@ export function PaymentClient() {
     router.refresh()
   }, [queryClient, router])
 
+  // Single place that marks a payment as done: empty the cart (so the paid items
+  // can't be re-ordered) and switch to the success screen (which has no pay
+  // button, so the customer can't be charged a second time). Stock is finalized
+  // server-side by finalize_commande.
+  const markPaymentSucceeded = useCallback(() => {
+    clear()
+    setPaying(false)
+    setError(null)
+    setPhase('success')
+  }, [clear])
+
   const [commande, setCommande] = useState<CommandeRead | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
@@ -94,6 +110,15 @@ export function PaymentClient() {
   const [cancelling, setCancelling] = useState(false)
 
   const [cartSecondsLeft, setCartSecondsLeft] = useState<number | null>(null)
+  // 'form' = enter payment; 'confirming' = returned from PostFinance, verifying;
+  // 'success' = paid (crystal-clear confirmation, no pay button so no double pay).
+  // Initialise straight to 'confirming' when we land back from PostFinance (the URL
+  // carries paiementId / status=failed) so the payment form never flashes.
+  const [phase, setPhase] = useState<'form' | 'confirming' | 'success'>(() => {
+    const pid = Number(searchParams.get('paiementId'))
+    const returning = (Number.isFinite(pid) && pid > 0) || searchParams.get('status') === 'failed'
+    return returning ? 'confirming' : 'form'
+  })
 
   const handlerRef = useRef<PostFinanceIframeHandler | null>(null)
   const handlerMethodRef = useRef<number | null>(null)
@@ -204,26 +229,76 @@ export function PaymentClient() {
 
         const statusParam = searchParams.get('status')
         const paiementIdParam = Number(searchParams.get('paiementId'))
+
+        // Helper: release the reservation + refresh availability so the book is
+        // buyable again after a failed/abandoned payment. The cart keeps its items.
+        const releaseAfterFailure = async () => {
+          await cancelCommande(cmd.id_commande).catch(() => {})
+          refreshAvailability()
+        }
+
+        // PostFinance redirected to the failed URL — definitive failure, no poll.
+        if (statusParam === 'failed') {
+          await releaseAfterFailure()
+          setError(
+            'Le paiement a été refusé ou annulé (carte invalide, fonds insuffisants, ou paiement interrompu). ' +
+              'Vos articles sont toujours dans votre panier — vous pouvez réessayer.',
+          )
+          return
+        }
+
+        // Returned on the success URL (has paiementId). The transaction is often
+        // still PROCESSING at redirect time, so poll for a resolved state instead
+        // of reading a single check as "pending" (the old false-negative). The
+        // webhook is the ultimate source of truth; this just gives quick feedback.
         if (Number.isFinite(paiementIdParam) && paiementIdParam > 0) {
-          const pollResp = await pollPaiementPostFinance(paiementIdParam)
-          if (!mounted) return
-          const statut = pollResp?.paiement?.statut
-          if (statut && SUCCESS_STATUSES.has(String(statut).toUpperCase())) {
-            clear()
-            window.location.href = '/account/orders'
-            return
+          // We are back from PostFinance verifying the result — hide the payment
+          // form so the customer cannot submit a second payment while we confirm.
+          setPhase('confirming')
+          const MAX_ATTEMPTS = 15
+          for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+            if (!mounted) return
+            let statut = ''
+            try {
+              const pollResp = await pollPaiementPostFinance(paiementIdParam)
+              statut = String(pollResp?.paiement?.statut || '').toUpperCase()
+            } catch {
+              // transient — keep polling
+            }
+            if (!mounted) return
+
+            if (SUCCESS_STATUSES.has(statut)) {
+              markPaymentSucceeded()
+              return
+            }
+            if (FAILURE_STATUSES.has(statut)) {
+              await releaseAfterFailure()
+              setError(
+                'Le paiement a été refusé (carte invalide ou refusée). ' +
+                  'Vos articles sont toujours dans votre panier — vous pouvez réessayer.',
+              )
+              return
+            }
+            // Reservation ran out while the user was on the PostFinance page.
+            // Use the absolute expiry against the live clock so we catch expiry
+            // that happens during this wait, not just an already-expired landing.
+            const expired = cmd.cart_expires_at
+              ? new Date(cmd.cart_expires_at).getTime() <= Date.now()
+              : (cmd.cart_seconds_left ?? 1) <= 0
+            if (expired) {
+              setError(
+                'Votre réservation a expiré avant la fin du paiement (délai de 20 minutes dépassé). ' +
+                  'Les articles ont été remis en vente — reprenez votre commande depuis le panier.',
+              )
+              return
+            }
+            await sleep(2000)
           }
-          if (statusParam === 'failed') {
-            // Release the reservation immediately instead of leaving it to
-            // expire on its own over the next 20 minutes — the cart still
-            // has these items (it's no longer cleared until payment actually
-            // succeeds), so the user can simply retry from /cart.
-            await cancelCommande(cmd.id_commande).catch(() => {})
-            refreshAvailability()
-            setError('Le paiement a échoué. Vos articles sont toujours dans votre panier — vous pouvez réessayer.')
-          } else {
-            setError('Paiement en attente de confirmation. Réessayez ou contactez le support.')
-          }
+          // Still unresolved after ~30s: the webhook will finalize it shortly.
+          setError(
+            'Votre paiement est en cours de confirmation. Consultez « Mes commandes » dans un instant ; ' +
+              'si le problème persiste, contactez le support.',
+          )
           return
         }
 
@@ -323,8 +398,7 @@ export function PaymentClient() {
     if (localMode && paiementId) {
       try {
         await confirmPaiementPostFinance(paiementId)
-        clear()
-        window.location.href = '/account/orders'
+        markPaymentSucceeded()
       } catch (e: unknown) {
         setPaying(false)
         setError(e instanceof ApiError ? e.message : 'Erreur lors du paiement local.')
@@ -389,6 +463,68 @@ export function PaymentClient() {
         <Link className="btn btnPrimary" href="/cart">
           Aller au panier
         </Link>
+      </div>
+    )
+  }
+
+  // Crystal-clear success confirmation — no pay button anywhere on this screen,
+  // so the customer cannot be charged a second time. The cart is already emptied.
+  if (phase === 'success') {
+    return (
+      <div style={{ display: 'grid', gap: 16, maxWidth: 640, margin: '0 auto' }}>
+        <div className="card" style={{ padding: 24, display: 'grid', gap: 14, textAlign: 'center' }}>
+          <div
+            aria-hidden="true"
+            style={{
+              width: 64, height: 64, borderRadius: '50%', margin: '0 auto',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              background: '#065f4618', color: '#065f46', fontSize: 34, fontWeight: 900,
+            }}
+          >
+            ✓
+          </div>
+          <h1 style={{ margin: 0, color: '#065f46' }}>Paiement réussi</h1>
+          <div style={{ fontWeight: 700 }}>Merci, votre commande est confirmée.</div>
+          {commande ? (
+            <div className="muted">
+              Commande {commande.numero_commande} — <Money amount={commande.montant_total_chf} />
+            </div>
+          ) : null}
+          <div className="banner-success" role="status" style={{ fontWeight: 700 }}>
+            Vous avez été débité une seule fois. Ne relancez pas le paiement.
+          </div>
+          <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap' }}>
+            <Link className="btn btnPrimary" href="/account/orders">Voir mes commandes</Link>
+            <Link className="btn" href="/catalog">Continuer mes achats</Link>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Returned from PostFinance: verifying the result. Show a clear "in progress"
+  // state (or the resolved error) — but NEVER the payment form, so a second
+  // payment can't be submitted while we confirm the first.
+  if (phase === 'confirming') {
+    return (
+      <div style={{ display: 'grid', gap: 16, maxWidth: 640, margin: '0 auto' }}>
+        <h1 style={{ margin: 0 }}>Paiement</h1>
+        {error ? (
+          <>
+            <div className="banner-error">{error}</div>
+            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+              <Link className="btn btnPrimary" href="/cart">Retour au panier</Link>
+              <Link className="btn" href="/account/orders">Mes commandes</Link>
+            </div>
+          </>
+        ) : (
+          <div className="card cardPadding" role="status" style={{ display: 'grid', gap: 6 }}>
+            <div style={{ fontWeight: 800 }}>Confirmation de votre paiement en cours…</div>
+            <div className="muted">
+              Merci de patienter, ne fermez pas cette page et ne relancez pas le paiement.
+            </div>
+          </div>
+        )}
       </div>
     )
   }
