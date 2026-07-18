@@ -10,6 +10,7 @@ from  infrastructure.crud_base import CrudBase
 from  presentation.deps import get_current_user, get_db
 from  presentation.deps import require_admin
 from  presentation.schemas import (
+    AdminCommandeStatusUpdate,
     CommandeAdminRead,
     CommandeCreate,
     CommandeRead,
@@ -45,6 +46,12 @@ commande_crud = CrudBase[models.Commande](models.Commande, "id_commande")
 ligne_crud = CrudBase[models.LigneCommande](models.LigneCommande, "id_ligne_commande")
 paiement_crud = CrudBase[models.Paiement](models.Paiement, "id_paiement")
 
+# Server-side source of truth for shipping fees — the client only chooses a
+# shipping_method, never the fee itself (previously the fee was accepted
+# directly from the client, allowing e.g. shipping_method=POST with
+# frais_port_chf=0 to skip the real fee).
+SHIPPING_FEES_CHF = {"POST": 9.0, "CLICK_COLLECT": 1.0}
+
 
 def _get_commande_owned(db: Session, id_commande: int, id_utilisateur: int) -> models.Commande | None:
     return (
@@ -52,6 +59,21 @@ def _get_commande_owned(db: Session, id_commande: int, id_utilisateur: int) -> m
         .filter(models.Commande.id_commande == id_commande, models.Commande.id_utilisateur == id_utilisateur)
         .first()
     )
+
+
+def _recompute_commande_total(db: Session, commande: models.Commande) -> None:
+    """Recompute montant_total_chf from the commande's own lignes + shipping fee.
+
+    Called any time a ligne is created/updated or the shipping method changes,
+    so the persisted total always reflects server-authoritative prices —
+    never a client-supplied value.
+    """
+    lignes_total = (
+        db.query(func.sum(models.LigneCommande.prix_unitaire_chf * models.LigneCommande.quantite))
+        .filter(models.LigneCommande.id_commande == commande.id_commande)
+        .scalar()
+    ) or 0
+    commande.montant_total_chf = float(lignes_total) + float(commande.frais_port_chf or 0)  # type: ignore[assignment]
 
 
 def _release_cart_reservation(db: Session, id_commande: int) -> None:
@@ -229,7 +251,17 @@ def get_commande(id_commande: int, db: Session = Depends(get_db), current_user=D
 @router.post("/commandes", response_model=CommandeRead, status_code=status.HTTP_201_CREATED)
 def create_commande(payload: CommandeCreate, db: Session = Depends(get_db), current_user=Depends(get_current_user)):
     _cleanup_expired_carts(db)
-    obj = models.Commande(id_utilisateur=current_user.id_utilisateur, **payload.model_dump())
+    shipping_method = (payload.shipping_method or "POST").upper()
+    if shipping_method not in SHIPPING_FEES_CHF:
+        raise HTTPException(status_code=400, detail="Invalid shipping method")
+    obj = models.Commande(
+        id_utilisateur=current_user.id_utilisateur,
+        numero_commande=payload.numero_commande,
+        shipping_method=shipping_method,
+        frais_port_chf=SHIPPING_FEES_CHF[shipping_method],
+        montant_total_chf=0,
+        statut="CREATED",
+    )
     created = commande_crud.create(db, obj)
     # Set expiry with the DB clock so it is always exactly 20 minutes AFTER
     # creation (avoids timezone drift between MySQL NOW() and Python UTC, which
@@ -254,9 +286,17 @@ def update_commande(
     if obj is None:
         raise HTTPException(status_code=404, detail="Commande not found")
     data = payload.model_dump(exclude_unset=True)
+    shipping_method = data.pop("shipping_method", None)
+    if shipping_method is not None:
+        shipping_method = shipping_method.upper()
+        if shipping_method not in SHIPPING_FEES_CHF:
+            raise HTTPException(status_code=400, detail="Invalid shipping method")
+        obj.shipping_method = shipping_method  # type: ignore[assignment]
+        obj.frais_port_chf = SHIPPING_FEES_CHF[shipping_method]  # type: ignore[assignment]
     for k, v in data.items():
         if hasattr(obj, k):
             setattr(obj, k, v)
+    _recompute_commande_total(db, obj)
     db.commit()
     db.refresh(obj)
     return obj
@@ -306,6 +346,12 @@ def create_ligne(payload: LigneCommandeCreate, db: Session = Depends(get_db), cu
         raise HTTPException(status_code=404, detail="Commande not found")
     if (c.statut or "").upper() in ("CANCELLED", "FAILED"):
         raise HTTPException(status_code=409, detail="Votre réservation a expiré. Retournez au panier.")
+    article = db.query(models.Article).filter(models.Article.id_article == payload.id_article).first()
+    if article is None:
+        raise HTTPException(status_code=404, detail="Article not found")
+    # Unit price always comes from the catalog, never the client — otherwise a
+    # tampered request body could set an arbitrary prix_unitaire_chf.
+    unit_price = float(article.prix_chf)  # type: ignore[arg-type]
     try:
         # Lock stock rows for this article to prevent concurrent reservations
         stocks = (
@@ -335,7 +381,12 @@ def create_ligne(payload: LigneCommandeCreate, db: Session = Depends(get_db), cu
                 remaining -= take
 
         # create the ligne and commit once (for articles without stock rows, we allow creation)
-        obj = models.LigneCommande(**payload.model_dump())
+        obj = models.LigneCommande(
+            id_commande=payload.id_commande,
+            id_article=payload.id_article,
+            quantite=payload.quantite,
+            prix_unitaire_chf=unit_price,
+        )
         db.add(obj)
 
         # NOTE: we intentionally do NOT set article.actif = False here.
@@ -344,6 +395,8 @@ def create_ligne(payload: LigneCommandeCreate, db: Session = Depends(get_db), cu
         # order is actually paid (see _finalize_commande). Over-reservation is
         # still prevented by the "Not enough stock" check above.
 
+        db.flush()
+        _recompute_commande_total(db, c)
         db.commit()
         db.refresh(obj)
         return obj
@@ -374,12 +427,57 @@ def update_ligne(
     if obj is None:
         raise HTTPException(status_code=404, detail="LigneCommande not found")
     data = payload.model_dump(exclude_unset=True)
-    for k, v in data.items():
-        if hasattr(obj, k):
-            setattr(obj, k, v)
-    db.commit()
-    db.refresh(obj)
-    return obj
+    new_qty = data.get("quantite")
+    try:
+        if new_qty is not None and int(new_qty) != int(obj.quantite):  # type: ignore[arg-type]
+            delta = int(new_qty) - int(obj.quantite)  # type: ignore[arg-type]
+            stocks = (
+                db.query(models.Stock)
+                .filter(models.Stock.id_article == obj.id_article)
+                .order_by(models.Stock.id_stock.asc())
+                .with_for_update()
+                .all()
+            )
+            if delta > 0:
+                total_available = sum((s.quantite_disponible or 0) - (s.quantite_reservee or 0) for s in stocks)  # type: ignore
+                if delta > total_available:  # type: ignore
+                    raise HTTPException(status_code=400, detail="Not enough stock")
+                remaining = delta
+                for s in stocks:
+                    if remaining <= 0:  # type: ignore
+                        break
+                    avail = (s.quantite_disponible or 0) - (s.quantite_reservee or 0)  # type: ignore
+                    take = min(avail, remaining)  # type: ignore
+                    if take <= 0:  # type: ignore
+                        continue
+                    s.quantite_reservee = (s.quantite_reservee or 0) + take  # type: ignore
+                    remaining -= take
+            else:
+                release = -delta
+                for s in stocks:
+                    if release <= 0:  # type: ignore
+                        break
+                    cur_res = s.quantite_reservee or 0  # type: ignore
+                    give_back = min(cur_res, release)  # type: ignore
+                    if give_back <= 0:  # type: ignore
+                        continue
+                    s.quantite_reservee = cur_res - give_back  # type: ignore
+                    release -= give_back
+            obj.quantite = int(new_qty)  # type: ignore[assignment]
+
+        db.flush()
+        commande = db.query(models.Commande).filter(models.Commande.id_commande == obj.id_commande).first()
+        if commande is not None:
+            _recompute_commande_total(db, commande)
+        db.commit()
+        db.refresh(obj)
+        return obj
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Could not update ligne: {e}") from e
 
 
 @router.delete("/lignes/{id_ligne_commande}", status_code=status.HTTP_204_NO_CONTENT)
@@ -395,7 +493,12 @@ def delete_ligne(id_ligne_commande: int, db: Session = Depends(get_db), current_
     )
     if obj is None:
         raise HTTPException(status_code=404, detail="LigneCommande not found")
+    id_commande = int(obj.id_commande)  # type: ignore[arg-type]
     db.delete(obj)
+    db.flush()
+    commande = db.query(models.Commande).filter(models.Commande.id_commande == id_commande).first()
+    if commande is not None:
+        _recompute_commande_total(db, commande)
     db.commit()
     return None
 
@@ -425,19 +528,23 @@ def get_paiement(id_paiement: int, db: Session = Depends(get_db), current_user=D
 
 @router.post("/paiements", response_model=PaiementRead, status_code=status.HTTP_201_CREATED)
 def create_paiement(payload: PaiementCreate, db: Session = Depends(get_db), current_user=Depends(get_current_user)):
-    if _get_commande_owned(db, payload.id_commande, int(current_user.id_utilisateur)) is None:
+    commande = _get_commande_owned(db, payload.id_commande, int(current_user.id_utilisateur))
+    if commande is None:
         raise HTTPException(status_code=404, detail="Commande not found")
-    obj = models.Paiement(**payload.model_dump())
-    created = paiement_crud.create(db, obj)
-    # finalize immediately if payment is captured/paid
-    try:
-        if created.statut and str(created.statut).upper() in ("CAPTURED", "PAID", "COMPLETED"):  # type: ignore
-            _finalize_commande(db, int(created.id_commande))  # type: ignore
-            db.commit()
-    except Exception:
-        # don't fail payment creation on finalization errors
-        db.rollback()
-    return created
+    # montant_chf/statut are never client-supplied — a payment always starts
+    # PENDING with the commande's own server-computed total. It can only ever
+    # transition to a paid state via a verified PostFinance/Payrexx callback
+    # (see confirm/poll/webhook handlers below), never at creation time.
+    obj = models.Paiement(
+        id_commande=payload.id_commande,
+        fournisseur_paiement=payload.fournisseur_paiement or "POSTFINANCE",
+        reference_externe=payload.reference_externe,
+        montant_chf=float(commande.montant_total_chf),  # type: ignore[arg-type]
+        devise=payload.devise,
+        statut="PENDING",
+        date_paiement=payload.date_paiement,
+    )
+    return paiement_crud.create(db, obj)
 
 
 def _load_commande_context(db: Session, id_commande: int, id_utilisateur: int):
@@ -473,9 +580,16 @@ def create_paiement_postfinance(
     frontend_base_url = os.getenv("FRONTEND_BASE_URL", str(request.base_url).rstrip("/"))
     failed_url = f"{frontend_base_url}/payment?commandeId={payload.id_commande}&status=failed"
 
-    obj = models.Paiement(**payload.model_dump())
-    obj.fournisseur_paiement = payload.fournisseur_paiement or "POSTFINANCE"  # type: ignore[assignment]
-    obj.statut = payload.statut or "PENDING"  # type: ignore[assignment]
+    # montant_chf/statut are never client-supplied — see create_paiement above.
+    obj = models.Paiement(
+        id_commande=payload.id_commande,
+        fournisseur_paiement=payload.fournisseur_paiement or "POSTFINANCE",
+        reference_externe=payload.reference_externe,
+        montant_chf=float(commande.montant_total_chf),  # type: ignore[arg-type]
+        devise=payload.devise,
+        statut="PENDING",
+        date_paiement=payload.date_paiement,
+    )
     created = paiement_crud.create(db, obj)
 
     success_url = (
@@ -591,16 +705,22 @@ def confirm_paiement_postfinance(
         shipping_address=billing_address,
     )
 
+    already_finalized = is_postfinance_success_status(str(getattr(obj, "statut", "") or ""))
     if pf_resp.get("local"):
         obj.statut = "AUTHORIZED"  # type: ignore[assignment]
         obj.date_paiement = datetime.now(timezone.utc)  # type: ignore[assignment]
         db.commit()
         db.refresh(obj)
-        try:
-            _finalize_commande(db, int(obj.id_commande))  # type: ignore[arg-type]
-            db.commit()
-        except Exception:
-            db.rollback()
+        if not already_finalized:
+            try:
+                _finalize_commande(db, int(obj.id_commande))  # type: ignore[arg-type]
+                db.commit()
+            except Exception:
+                db.rollback()
+        # The finalize commit above expires `obj` (expire_on_commit) — refresh
+        # so its fields are populated when serialized in the response below,
+        # rather than serializing as an empty object.
+        db.refresh(obj)
     elif pf_resp.get("state") or pf_resp.get("status"):
         obj.statut = str(pf_resp.get("state") or pf_resp.get("status"))  # type: ignore[assignment]
         db.commit()
@@ -683,26 +803,39 @@ async def postfinance_webhook(request: Request, db: Session = Depends(get_db)):
         # no matching payment; ignore
         return {"ok": False, "reason": "not_found"}
 
+    # Idempotency: PostFinance explicitly documents webhooks may be delivered
+    # more than once. Without this guard, a replayed webhook would re-enter
+    # _finalize_commande and double-decrement real stock for an order that was
+    # already finalized.
+    already_finalized = is_postfinance_success_status(str(getattr(obj, "statut", "") or ""))
+
     new_status = parsed.get("status") or "UNKNOWN"
     obj.statut = new_status  # type: ignore
     obj.date_paiement = datetime.now(timezone.utc)  # type: ignore
     db.commit()
     db.refresh(obj)
 
-    try:
-        if is_postfinance_success_status(str(new_status)):
-            _finalize_commande(db, int(obj.id_commande))  # type: ignore[arg-type]
-            db.commit()
-    except Exception:
-        db.rollback()
+    if not already_finalized:
+        try:
+            if is_postfinance_success_status(str(new_status)):
+                _finalize_commande(db, int(obj.id_commande))  # type: ignore[arg-type]
+                db.commit()
+        except Exception:
+            db.rollback()
 
     return {"ok": True}
 
 
 @router.post("/paiements/webhook/local")
 def local_payment_webhook(payload: dict, db: Session = Depends(get_db)):
-    """Development-only webhook simulator for local iframe payments."""
-    if os.getenv("ENVIRONMENT", "development") == "production":
+    """Development-only webhook simulator for local iframe payments.
+
+    Fail-closed: only enabled when ENVIRONMENT is explicitly "development".
+    Any other/missing/misconfigured value disables it, rather than requiring
+    ENVIRONMENT to exactly equal "production" to disable it — an unauthenticated
+    payment-forgery endpoint must never be reachable by a deployment mistake.
+    """
+    if os.getenv("ENVIRONMENT", "development").strip().lower() != "development":
         raise HTTPException(status_code=404, detail="Not found")
 
     ref = payload.get("reference") or payload.get("Metadata", {}).get("reference")
@@ -719,17 +852,20 @@ def local_payment_webhook(payload: dict, db: Session = Depends(get_db)):
     if obj is None:
         return {"ok": False, "reason": "not_found"}
 
+    already_finalized = is_postfinance_success_status(str(getattr(obj, "statut", "") or ""))
+
     obj.statut = str(status)  # type: ignore[assignment]
     obj.date_paiement = datetime.now(timezone.utc)  # type: ignore[assignment]
     db.commit()
     db.refresh(obj)
 
-    try:
-        if is_postfinance_success_status(str(status)):
-            _finalize_commande(db, int(obj.id_commande))  # type: ignore[arg-type]
-            db.commit()
-    except Exception:
-        db.rollback()
+    if not already_finalized:
+        try:
+            if is_postfinance_success_status(str(status)):
+                _finalize_commande(db, int(obj.id_commande))  # type: ignore[arg-type]
+                db.commit()
+        except Exception:
+            db.rollback()
 
     return {"ok": True}
 
@@ -749,27 +885,15 @@ def update_paiement(
     )
     if obj is None:
         raise HTTPException(status_code=404, detail="Paiement not found")
+    # statut is intentionally not part of PaiementUpdate — a payment's status
+    # may only change via a verified PostFinance/Payrexx callback (confirm/poll/
+    # webhook above), never directly through this owner-facing endpoint.
     data = payload.model_dump(exclude_unset=True)
-    prev_stat = str(obj.statut) if getattr(obj, "statut", None) else None
     for k, v in data.items():
         if hasattr(obj, k):
             setattr(obj, k, v)
     db.commit()
     db.refresh(obj)
-    # handle statut transitions
-    new_stat = getattr(obj, "statut", None)
-    try:
-        if prev_stat is None or prev_stat.upper() not in ("CAPTURED", "PAID", "COMPLETED"):
-            if new_stat and new_stat.upper() in ("CAPTURED", "PAID", "COMPLETED"):
-                _finalize_commande(db, int(obj.id_commande))  # type: ignore[arg-type]
-                db.commit()
-        # refund transition
-        if prev_stat and prev_stat.upper() in ("CAPTURED", "PAID", "COMPLETED") and new_stat and new_stat.upper() == "REFUNDED":
-            _refund_commande(db, int(obj.id_commande))  # type: ignore[arg-type]
-            db.commit()
-    except Exception:
-        db.rollback()
-
     return obj
 
 
@@ -808,14 +932,11 @@ def admin_get_lignes(id_commande: int, db: Session = Depends(get_db), _admin=Dep
 
 
 @router.put("/admin/commandes/{id_commande}/status", response_model=CommandeRead)
-def admin_set_status(id_commande: int, payload: CommandeUpdate, db: Session = Depends(get_db), _admin=Depends(require_admin)):
+def admin_set_status(id_commande: int, payload: AdminCommandeStatusUpdate, db: Session = Depends(get_db), _admin=Depends(require_admin)):
     obj = db.query(models.Commande).filter(models.Commande.id_commande == id_commande).first()
     if obj is None:
         raise HTTPException(status_code=404, detail="Commande not found")
-    data = payload.model_dump(exclude_unset=True)
-    for k, v in data.items():
-        if hasattr(obj, k):
-            setattr(obj, k, v)
+    obj.statut = payload.statut  # type: ignore[assignment]
     db.commit()
     db.refresh(obj)
     return obj
@@ -874,6 +995,28 @@ def admin_cancel_commande(id_commande: int, db: Session = Depends(get_db), _admi
     if cur in ("CREATED", "PENDING"):
         _release_cart_reservation(db, id_commande)
     obj.statut = "CANCELLED"  # type: ignore[assignment]
+    db.commit()
+    db.refresh(obj)
+    return _build_commande_admin_read(obj)
+
+
+@router.post("/admin/commandes/{id_commande}/refund", response_model=CommandeAdminRead)
+def admin_refund_commande(id_commande: int, db: Session = Depends(get_db), _admin=Depends(require_admin)):
+    """Admin-only refund: restores sold stock and marks the order/payments REFUNDED.
+
+    Refunds are an admin/back-office action coordinated with the payment
+    provider, not customer self-service — see order_router.py's PaiementUpdate
+    handling for why the client can no longer trigger this directly.
+    """
+    obj = db.query(models.Commande).filter(models.Commande.id_commande == id_commande).first()
+    if obj is None:
+        raise HTTPException(status_code=404, detail="Commande not found")
+    cur = (obj.statut or "").upper()
+    if cur not in ("PAID", "CAPTURED", "COMPLETED", "SENT", "AT_RECEPTION", "FINISHED"):
+        raise HTTPException(status_code=400, detail=f"Cannot refund from status {cur}")
+    _refund_commande(db, id_commande)
+    obj.statut = "REFUNDED"  # type: ignore[assignment]
+    db.query(models.Paiement).filter(models.Paiement.id_commande == id_commande).update({"statut": "REFUNDED"})
     db.commit()
     db.refresh(obj)
     return _build_commande_admin_read(obj)

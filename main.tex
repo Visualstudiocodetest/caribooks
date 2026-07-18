@@ -1383,9 +1383,10 @@ def create_access_token(payload: dict, secret_key: str,
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from infrastructure import crud_user
-from presentation.deps import get_db
+from presentation.deps import get_db, SECRET_KEY
 from presentation.auth_schemas import LoginRequest, Token
 from services.jwt_service import create_access_token
+from services.rate_limit import check_rate_limit, reset_rate_limit
 
 ACCESS_TOKEN_EXPIRE_MINUTES = 480
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -1393,6 +1394,9 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 @router.post("/token", response_model=Token)
 def login_for_access_token(payload: LoginRequest,
                            db: Session = Depends(get_db)):
+    # 10 tentatives / 5 min par compte (anti brute-force)
+    rate_key = f"token:{str(payload.username).lower()}"
+    check_rate_limit(rate_key, max_attempts=10, window_seconds=300)
     user = crud_user.get_user_by_email(db, str(payload.username))
     verified = bool(user) and crud_user.verify_password(
         str(payload.password), str(user.mot_de_passe_hash)
@@ -1402,6 +1406,7 @@ def login_for_access_token(payload: LoginRequest,
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect credentials",
         )
+    reset_rate_limit(rate_key)
     to_encode = {"sub": user.email, "role": user.role}
     access_token = create_access_token(
         to_encode, SECRET_KEY, ACCESS_TOKEN_EXPIRE_MINUTES

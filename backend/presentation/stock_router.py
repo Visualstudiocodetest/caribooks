@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 
 from  infrastructure import models
 from  infrastructure.crud_base import CrudBase
-from  presentation.deps import get_current_user, get_db
+from  presentation.deps import get_db, require_admin
 from  presentation.schemas import (
     SourceStockCreate,
     SourceStockRead,
@@ -39,7 +39,7 @@ def get_source(id_source_stock: int, db: Session = Depends(get_db)):
 def create_source(
     payload: SourceStockCreate,
     db: Session = Depends(get_db),
-    _current_user=Depends(get_current_user),
+    _admin=Depends(require_admin),
 ):
     obj = models.SourceStock(**payload.model_dump())
     return source_stock_crud.create(db, obj)
@@ -50,7 +50,7 @@ def update_source(
     id_source_stock: int,
     payload: SourceStockUpdate,
     db: Session = Depends(get_db),
-    _current_user=Depends(get_current_user),
+    _admin=Depends(require_admin),
 ):
     updated = source_stock_crud.update(db, id_source_stock, payload.model_dump(exclude_unset=True))
     if updated is None:
@@ -62,7 +62,7 @@ def update_source(
 def delete_source(
     id_source_stock: int,
     db: Session = Depends(get_db),
-    _current_user=Depends(get_current_user),
+    _admin=Depends(require_admin),
 ):
     if not source_stock_crud.delete(db, id_source_stock):
         raise HTTPException(status_code=404, detail="SourceStock not found")
@@ -90,7 +90,7 @@ def get_stock(id_stock: int, db: Session = Depends(get_db)):
 def create_stock(
     payload: StockCreate,
     db: Session = Depends(get_db),
-    _current_user=Depends(get_current_user),
+    _admin=Depends(require_admin),
 ):
     obj = models.Stock(**payload.model_dump())
     return stock_crud.create(db, obj)
@@ -101,7 +101,7 @@ def update_stock(
     id_stock: int,
     payload: StockUpdate,
     db: Session = Depends(get_db),
-    _current_user=Depends(get_current_user),
+    _admin=Depends(require_admin),
 ):
     updated = stock_crud.update(db, id_stock, payload.model_dump(exclude_unset=True))
     if updated is None:
@@ -113,7 +113,7 @@ def update_stock(
 def delete_stock(
     id_stock: int,
     db: Session = Depends(get_db),
-    _current_user=Depends(get_current_user),
+    _admin=Depends(require_admin),
 ):
     if not stock_crud.delete(db, id_stock):
         raise HTTPException(status_code=404, detail="Stock not found")
@@ -121,7 +121,7 @@ def delete_stock(
 
 
 @router.post("/{id_stock}/increment", response_model=StockRead)
-def increment_stock(id_stock: int, payload: dict = Body(...), db: Session = Depends(get_db), _current_user=Depends(get_current_user)):
+def increment_stock(id_stock: int, payload: dict = Body(...), db: Session = Depends(get_db), _admin=Depends(require_admin)):
     qty = int(payload.get("qty", 1))
     obj = stock_crud.get(db, id_stock)
     if obj is None:
@@ -133,7 +133,7 @@ def increment_stock(id_stock: int, payload: dict = Body(...), db: Session = Depe
 
 
 @router.post("/{id_stock}/decrement", response_model=StockRead)
-def decrement_stock(id_stock: int, payload: dict = Body(...), db: Session = Depends(get_db), _current_user=Depends(get_current_user)):
+def decrement_stock(id_stock: int, payload: dict = Body(...), db: Session = Depends(get_db), _admin=Depends(require_admin)):
     qty = int(payload.get("qty", 1))
     obj = stock_crud.get(db, id_stock)
     if obj is None:

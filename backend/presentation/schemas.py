@@ -182,10 +182,10 @@ class StockRead(StockBase, ORMBase):
 
 class CommandeBase(BaseModel):
     numero_commande: str
-    montant_total_chf: float = Field(..., ge=0)
-    statut: str
+    # shipping_method is client-chosen; the fee (frais_port_chf) and initial
+    # statut are always server-derived — never trust a price/status from the
+    # client (see order_router.py SHIPPING_FEES_CHF).
     shipping_method: Optional[str] = "POST"
-    frais_port_chf: Optional[float] = 0.0
 
 
 class CommandeCreate(CommandeBase):
@@ -194,13 +194,15 @@ class CommandeCreate(CommandeBase):
 
 class CommandeUpdate(BaseModel):
     numero_commande: Optional[str] = None
-    montant_total_chf: Optional[float] = Field(default=None, ge=0)
-    statut: Optional[str] = None
+    shipping_method: Optional[str] = None
 
 
 class CommandeRead(CommandeBase, ORMBase):
     id_commande: int
     id_utilisateur: int
+    montant_total_chf: float
+    statut: str
+    frais_port_chf: float
     date_commande: datetime
     cart_expires_at: Optional[datetime] = None
     # Seconds until the cart reservation expires, computed with the DB clock
@@ -212,7 +214,6 @@ class LigneCommandeBase(BaseModel):
     id_commande: int
     id_article: int
     quantite: int = Field(..., gt=0)
-    prix_unitaire_chf: float = Field(..., ge=0)
 
 
 class LigneCommandeCreate(LigneCommandeBase):
@@ -221,16 +222,23 @@ class LigneCommandeCreate(LigneCommandeBase):
 
 class LigneCommandeUpdate(BaseModel):
     quantite: Optional[int] = Field(default=None, gt=0)
-    prix_unitaire_chf: Optional[float] = Field(default=None, ge=0)
 
 
 class LigneCommandeRead(LigneCommandeBase, ORMBase):
     id_ligne_commande: int
+    prix_unitaire_chf: float
 
 
 class LigneCommandeAdminRead(LigneCommandeRead):
     titre_article: Optional[str] = None
     sku_article: Optional[str] = None
+
+
+class AdminCommandeStatusUpdate(BaseModel):
+    """Admin-only: unlike CommandeUpdate (customer-facing), an admin may set
+    statut directly — used for corrections outside the normal advance/cancel
+    state machine."""
+    statut: str
 
 
 class CommandeAdminRead(CommandeRead):
@@ -241,12 +249,16 @@ class CommandeAdminRead(CommandeRead):
 
 
 class PaiementBase(BaseModel):
+    # montant_chf and statut are intentionally NOT client-settable — a payment's
+    # amount and status may only be derived server-side (from the owning
+    # Commande) or set via a verified PostFinance/Payrexx callback (webhook
+    # signature check, or a server-side status fetch). Trusting these from the
+    # client allowed forging a "paid" order with an arbitrary amount. See
+    # order_router.py.
     id_commande: int
     fournisseur_paiement: str = "POSTFINANCE"
     reference_externe: str
-    montant_chf: float = Field(..., gt=0)  # Must be > 0, not >= 0
     devise: str = "CHF"
-    statut: str
     date_paiement: Optional[datetime] = None
 
     @field_validator("devise")
@@ -264,9 +276,7 @@ class PaiementCreate(PaiementBase):
 class PaiementUpdate(BaseModel):
     fournisseur_paiement: Optional[str] = None
     reference_externe: Optional[str] = None
-    montant_chf: Optional[float] = Field(default=None, ge=0)
     devise: Optional[str] = None
-    statut: Optional[str] = None
     date_paiement: Optional[datetime] = None
 
     @field_validator("devise")
@@ -281,6 +291,8 @@ class PaiementUpdate(BaseModel):
 
 class PaiementRead(PaiementBase, ORMBase):
     id_paiement: int
+    montant_chf: float
+    statut: str
 
 
 class ScanISBNBase(BaseModel):
