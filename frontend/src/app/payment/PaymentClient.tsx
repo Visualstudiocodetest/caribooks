@@ -104,13 +104,7 @@ export function PaymentClient() {
     [isLoggedIn, commandeId],
   )
 
-  // Whether the chosen PostFinance method collects the card offsite (redirect)
-  // rather than inline — drives the "you'll be redirected" hint.
-  const selectedMethodOffsite = useMemo(
-    () =>
-      paymentMethods.find((m) => m.id === selectedMethodId)?.dataCollectionType === 'OFFSITE',
-    [paymentMethods, selectedMethodId],
-  )
+
 
   const mountIframe = useCallback(
   (methodId: number) => {
@@ -353,24 +347,26 @@ export function PaymentClient() {
     handler.validate()
   }
 
-  // Leaving checkout (cancel or back-to-catalogue) abandons this attempt: release
-  // the stock reservation so the book is immediately buyable again and no longer
-  // shows as "unavailable" in the cart. The cart items themselves are kept (only
-  // a successful payment clears them), so the user can restart checkout any time.
+  // Leaving checkout abandons this attempt: release the stock reservation so the
+  // book is immediately buyable again. Two variants:
+  //  - "Retour au catalogue": keep the cart (user may want to resume checkout).
+  //  - "Annuler la commande": also empty the cart (user is giving up on it).
+  // Both land back on the catalogue with fresh availability.
   const leaveCheckout = useCallback(
-    async (destination: string) => {
+    async ({ clearCart }: { clearCart: boolean }) => {
       setCancelling(true)
       setError(null)
       try {
         await cancelCommande(commandeId)
+        if (clearCart) clear()
         refreshAvailability()
-        router.push(destination)
+        router.push('/catalog')
       } catch (e: unknown) {
         setCancelling(false)
         setError(e instanceof ApiError ? e.message : 'Erreur lors de l’annulation.')
       }
     },
-    [commandeId, refreshAvailability, router],
+    [commandeId, clear, refreshAvailability, router],
   )
 
   if (!isLoggedIn) {
@@ -455,19 +451,10 @@ export function PaymentClient() {
               </div>
             </div>
           ) : (
-            <>
-              {selectedMethodOffsite ? (
-                <div className="card cardPadding" style={{ fontSize: 14 }}>
-                  Après avoir cliqué sur « {payButtonLabel} », vous serez redirigé vers la page
-                  sécurisée PostFinance pour saisir votre carte (en test&nbsp;: carte 4111&nbsp;1111&nbsp;1111&nbsp;1111,
-                  date future, CVC quelconque).
-                </div>
-              ) : null}
-              <div
-                id="postfinance-payment-form"
-                style={{ minHeight: iframeHeight, border: '1px solid var(--border, #e5e7eb)', borderRadius: 8 }}
-              />
-            </>
+            <div
+              id="postfinance-payment-form"
+              style={{ minHeight: iframeHeight, border: '1px solid var(--border, #e5e7eb)', borderRadius: 8 }}
+            />
           )}
 
           {validationErrors.length > 0 ? (
@@ -490,7 +477,7 @@ export function PaymentClient() {
             <button
               className="btn"
               type="button"
-              onClick={() => leaveCheckout('/cart')}
+              onClick={() => leaveCheckout({ clearCart: true })}
               disabled={cancelling || paying}
             >
               {cancelling ? 'Annulation…' : 'Annuler la commande'}
@@ -498,7 +485,7 @@ export function PaymentClient() {
             <button
               className="btn"
               type="button"
-              onClick={() => leaveCheckout('/catalog')}
+              onClick={() => leaveCheckout({ clearCart: false })}
               disabled={cancelling || paying}
             >
               Retour au catalogue
