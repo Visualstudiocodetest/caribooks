@@ -6,39 +6,11 @@ import { getMyCommandes } from '@/services/orders'
 import { useAuth } from '@/components/auth/AuthProvider'
 import { Money } from '@/components/ui/Money'
 import type { CommandeRead } from '@/types/api'
-
-const STATUS_LABELS: Record<string, string> = {
-  CREATED: 'En attente',
-  PENDING: 'En attente',
-  PAID: 'Payée',
-  CAPTURED: 'Payée',
-  COMPLETED: 'Payée',
-  SENT: 'Expédiée',
-  AT_RECEPTION: 'Prête à retirer',
-  FINISHED: 'Terminée',
-  REFUNDED: 'Remboursée',
-  FAILED: 'Échouée',
-  CANCELLED: 'Annulée',
-}
-
-const STATUS_COLORS: Record<string, string> = {
-  CREATED: '#b45309',
-  PENDING: '#b45309',
-  PAID: '#065f46',
-  CAPTURED: '#065f46',
-  COMPLETED: '#065f46',
-  SENT: '#1d4ed8',
-  AT_RECEPTION: '#1d4ed8',
-  FINISHED: '#374151',
-  REFUNDED: '#6b7280',
-  FAILED: '#dc2626',
-  CANCELLED: '#6b7280',
-}
+import { statusColor, statusLabel } from '@/lib/orderStatus'
 
 function StatusBadge({ statut }: { statut: string }) {
-  const key = (statut || '').toUpperCase()
-  const label = STATUS_LABELS[key] || statut
-  const color = STATUS_COLORS[key] || '#6b7280'
+  const label = statusLabel(statut)
+  const color = statusColor(statut)
   return (
     <span
       style={{

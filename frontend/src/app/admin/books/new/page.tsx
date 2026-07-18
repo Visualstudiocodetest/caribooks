@@ -7,6 +7,8 @@ import { createBook } from '@/services/books'
 import Image from 'next/image'
 import { lookupIsbn } from '@/services/openlibrary'
 import { fetchRemoteImage } from '@/services/images'
+import { cleanIsbn } from '@/lib/isbn'
+import { isExternalImage } from '@/lib/images'
 
 export default function AdminNewBookPage() {
   const router = useRouter()
@@ -30,10 +32,6 @@ export default function AdminNewBookPage() {
   const intervalRef = useRef<number | null>(null)
   const lastRawRef = useRef<string>('')
   const lastAtRef = useRef<number>(0)
-
-  function cleanIsbn(value: string) {
-    return value.replace(/[^0-9Xx]/g, '').toUpperCase()
-  }
 
   async function startScanner() {
     setScanError(null)
@@ -247,7 +245,7 @@ export default function AdminNewBookPage() {
       }
       // If admin provided an external image URL, ask backend to fetch it first
       let finalImage = imageLink || null
-      if (finalImage && finalImage.startsWith('http') && !finalImage.includes('/static/images/')) {
+      if (finalImage && isExternalImage(finalImage)) {
         try {
           finalImage = await fetchRemoteImage(finalImage)
         } catch {
@@ -359,7 +357,7 @@ export default function AdminNewBookPage() {
                 width={80}
                 height={110}
                 style={{ objectFit: 'cover', borderRadius: 8, border: '1px solid var(--color-border)' }}
-                unoptimized={Boolean(imageLink && imageLink.startsWith('http') && !imageLink.includes('/static/images/'))}
+                unoptimized={isExternalImage(imageLink)}
               />
             ) : (
               <div

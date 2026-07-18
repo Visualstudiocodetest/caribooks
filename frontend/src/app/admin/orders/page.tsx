@@ -4,36 +4,9 @@ import { useEffect, useState } from 'react'
 import { listAdminCommandes, adminAdvanceCommande, adminGetLignes, adminCancelCommande, adminSetSent, adminSetAtReception } from '@/services/admin'
 import { Money } from '@/components/ui/Money'
 import type { CommandeAdminRead, LigneCommandeAdminRead } from '@/types/api'
+import { statusColor, statusLabel } from '@/lib/orderStatus'
 
 const PAID_STATUSES = new Set(['PAID', 'CAPTURED', 'COMPLETED'])
-
-const STATUS_LABELS: Record<string, string> = {
-  CREATED: 'En attente',
-  PENDING: 'En attente',
-  PAID: 'Payée',
-  CAPTURED: 'Payée',
-  COMPLETED: 'Payée',
-  SENT: 'Expédiée',
-  AT_RECEPTION: 'Prête à retirer',
-  FINISHED: 'Terminée',
-  REFUNDED: 'Remboursée',
-  FAILED: 'Échouée',
-  CANCELLED: 'Annulée',
-}
-
-const STATUS_COLORS: Record<string, string> = {
-  CREATED: '#b45309',
-  PENDING: '#b45309',
-  PAID: '#065f46',
-  CAPTURED: '#065f46',
-  COMPLETED: '#065f46',
-  SENT: '#1d4ed8',
-  AT_RECEPTION: '#1d4ed8',
-  FINISHED: '#374151',
-  REFUNDED: '#6b7280',
-  FAILED: '#dc2626',
-  CANCELLED: '#6b7280',
-}
 
 const TERMINAL_STATUSES = new Set(['FINISHED', 'CANCELLED', 'REFUNDED'])
 
@@ -49,10 +22,10 @@ const STATUS_FILTER_OPTIONS = [
 ]
 
 function StatusBadge({ statut }: { statut: string }) {
-  const key = (statut || '').toUpperCase()
+  const color = statusColor(statut)
   return (
-    <span style={{ display: 'inline-block', padding: '2px 10px', borderRadius: 999, fontSize: 12, fontWeight: 700, background: `${STATUS_COLORS[key] ?? '#6b7280'}18`, color: STATUS_COLORS[key] ?? '#6b7280', border: `1px solid ${STATUS_COLORS[key] ?? '#6b7280'}40`, whiteSpace: 'nowrap' }}>
-      {STATUS_LABELS[key] ?? statut}
+    <span style={{ display: 'inline-block', padding: '2px 10px', borderRadius: 999, fontSize: 12, fontWeight: 700, background: `${color}18`, color, border: `1px solid ${color}40`, whiteSpace: 'nowrap' }}>
+      {statusLabel(statut)}
     </span>
   )
 }

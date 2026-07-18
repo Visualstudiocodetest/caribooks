@@ -10,16 +10,14 @@ import { useAuth } from '@/components/auth/AuthProvider'
 import type { BookRead } from '@/types/api'
 import { lookupIsbn } from '@/services/openlibrary'
 import { fetchRemoteImage } from '@/services/images'
+import { cleanIsbn } from '@/lib/isbn'
+import { isExternalImage } from '@/lib/images'
 
 type OpenLibraryPreview = {
   titre: string
   auteur: string
   image_link: string | null
   description: string
-}
-
-function cleanIsbn(value: string): string {
-  return value.replace(/[^0-9Xx]/g, '').toUpperCase()
 }
 
 function isbn13To10(isbn13: string): string | null {
@@ -309,7 +307,7 @@ export default function ScanPage() {
                 width={64}
                 height={88}
                 style={{ objectFit: 'cover', borderRadius: 10, border: '1px solid var(--color-border)' }}
-                unoptimized={Boolean(book.image_link && book.image_link.startsWith('http') && !book.image_link.includes('/static/images/'))}
+                unoptimized={isExternalImage(book.image_link)}
               />
             ) : (
               <div className="card" style={{ width: 64, height: 88 }} />
@@ -354,7 +352,7 @@ export default function ScanPage() {
                 width={64}
                 height={88}
                 style={{ objectFit: 'cover', borderRadius: 10, border: '1px solid var(--color-border)' }}
-                unoptimized={Boolean(openPreview.image_link && openPreview.image_link.startsWith('http') && !openPreview.image_link.includes('/static/images/'))}
+                unoptimized={isExternalImage(openPreview.image_link)}
               />
             ) : (
               <div className="card" style={{ width: 64, height: 88 }} />

@@ -6,10 +6,11 @@ import Image from 'next/image'
 import type { BookRead } from '@/types/api'
 import { Money } from '@/components/ui/Money'
 import { useCart } from '@/components/cart/CartProvider'
+import { isExternalImage } from '@/lib/images'
 
 function BookCover({ src, titre }: { src: string | null | undefined; titre: string }) {
   const [failed, setFailed] = useState(false)
-  const isExternal = Boolean(src && src.startsWith('http') && !src.includes('/static/images/'))
+  const isExternal = isExternalImage(src)
 
   if (!src || failed) {
     return (
