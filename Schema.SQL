@@ -163,6 +163,7 @@ CREATE TABLE IF NOT EXISTS `commande` (
   `statut` varchar(50) NOT NULL,
   `shipping_method` varchar(50) NOT NULL DEFAULT 'POST',
   `frais_port_chf` decimal(10,2) NOT NULL DEFAULT '0.00',
+  `cart_expires_at` timestamp NULL DEFAULT NULL,
   PRIMARY KEY (`id_commande`),
   UNIQUE KEY `numero_commande` (`numero_commande`),
   KEY `idx_commande_utilisateur` (`id_utilisateur`),
