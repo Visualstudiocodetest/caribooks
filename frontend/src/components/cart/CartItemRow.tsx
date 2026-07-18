@@ -1,9 +1,9 @@
 "use client"
 
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import { Money } from '@/components/ui/Money'
 import type { CartItem } from './CartProvider'
-import { getAvailableQuantityForArticle } from '@/services/stocks'
+import { useAvailability } from '@/hooks/useAvailability'
 
 export default function CartItemRow({
   item,
@@ -14,20 +14,15 @@ export default function CartItemRow({
   onRemove: (id_article: number) => void
   onSetQuantity: (id_article: number, q: number) => void
 }) {
-  const [available, setAvailable] = useState<number | null>(null)
+  const { available } = useAvailability(item.id_article)
+  const outOfStock = available !== null && available < 1
 
   useEffect(() => {
-    let mounted = true
-    getAvailableQuantityForArticle(item.id_article).then((qty) => {
-      if (mounted) setAvailable(qty)
-    })
-    return () => {
-      mounted = false
-    }
-  }, [item.id_article])
-
-  useEffect(() => {
-    if (available !== null && item.quantity > available) {
+    // Clamp DOWN to the available quantity — but only when at least 1 is available.
+    // Clamping to 0 would make setQuantity drop the line entirely (quantity <= 0 is
+    // filtered out), silently removing an item the user still has in their cart.
+    // A transiently out-of-stock item stays visible and is flagged instead.
+    if (available !== null && available >= 1 && item.quantity > available) {
       onSetQuantity(item.id_article, available)
     }
   }, [available, item.quantity, item.id_article, onSetQuantity])
@@ -37,9 +32,8 @@ export default function CartItemRow({
     onSetQuantity(item.id_article, item.quantity - 1)
   }
 
-  const increase = async () => {
-    const qty = available === null ? await getAvailableQuantityForArticle(item.id_article) : available
-    if (item.quantity + 1 > qty) return
+  const increase = () => {
+    if (available === null || item.quantity + 1 > available) return
     onSetQuantity(item.id_article, item.quantity + 1)
   }
 
@@ -50,6 +44,11 @@ export default function CartItemRow({
         <div className="muted">
           <Money amount={item.prix_chf} />
         </div>
+        {outOfStock ? (
+          <div style={{ color: '#dc2626', fontSize: 12, fontWeight: 700 }} role="status">
+            Indisponible — retirez cet article
+          </div>
+        ) : null}
       </div>
 
       <div className="qty-controls">
