@@ -7,12 +7,21 @@ stock reservation, cart expiry, order totals, and finalization/refund/cancel.
 
 from __future__ import annotations
 
+from decimal import Decimal, ROUND_HALF_UP
+
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy.sql import func
 from sqlalchemy import text
 
 from infrastructure import models
+
+
+def _chf(value) -> float:
+    """Quantize a monetary value to 2 decimals (CHF) using Decimal to avoid binary
+    float drift when summing line totals + shipping, then return a plain float so
+    the JSON API contract (numbers, not strings) is unchanged."""
+    return float(Decimal(str(value or 0)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP))
 
 # Server-side source of truth for shipping fees — the client only chooses a
 # shipping_method, never the fee itself (previously the fee was accepted
@@ -88,7 +97,7 @@ def recompute_commande_total(db: Session, commande: models.Commande) -> None:
         .filter(models.LigneCommande.id_commande == commande.id_commande)
         .scalar()
     ) or 0
-    commande.montant_total_chf = float(lignes_total) + float(commande.frais_port_chf or 0)  # type: ignore[assignment]
+    commande.montant_total_chf = _chf(Decimal(str(lignes_total)) + Decimal(str(commande.frais_port_chf or 0)))  # type: ignore[assignment]
 
 
 def _reactivate_article_if_available(db: Session, id_article: int) -> None:

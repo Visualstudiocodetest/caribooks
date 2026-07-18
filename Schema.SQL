@@ -196,7 +196,7 @@ CREATE TABLE IF NOT EXISTS `ligne_commande` (
 CREATE TABLE IF NOT EXISTS `paiement` (
   `id_paiement` bigint NOT NULL AUTO_INCREMENT,
   `id_commande` bigint NOT NULL,
-  `fournisseur_paiement` varchar(50) NOT NULL DEFAULT 'PAYREXX',
+  `fournisseur_paiement` varchar(50) NOT NULL DEFAULT 'POSTFINANCE',
   `reference_externe` varchar(255) NOT NULL,
   `montant_chf` decimal(10,2) NOT NULL,
   `devise` char(3) NOT NULL DEFAULT 'CHF',
