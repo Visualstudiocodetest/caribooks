@@ -14,7 +14,11 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 
 
 @router.post("/register", response_model=UserRead, status_code=status.HTTP_201_CREATED)
-def register(user_in: UserCreate, db: Session = Depends(get_db)):
+def register(user_in: UserCreate, request: Request, db: Session = Depends(get_db)):
+    client_host = request.client.host if request.client else "unknown"
+    # 5 registrations / 10 minutes per client — bounds automated account creation
+    # and email-enumeration probing (the 400 below reveals whether an email exists).
+    check_rate_limit(f"register:{client_host}", max_attempts=5, window_seconds=600)
     existing = crud_user.get_user_by_email(db, user_in.email)
     if existing:
         raise HTTPException(status_code=400, detail="Email already registered")
@@ -91,6 +95,16 @@ def google_auth(payload: GoogleAuthRequest, request: Request, db: Session = Depe
     email: str = info.get("email", "")
     if not google_id or not email:
         raise HTTPException(status_code=400, detail="Token Google incomplet")
+
+    # Google's tokeninfo returns email_verified as the string "true"/"false" (or a
+    # bool). We MUST require a verified email before linking to or creating an account
+    # by email: otherwise anyone who controls a Google account with an *unverified*
+    # email equal to a victim's registered email would be issued a JWT for the
+    # victim's account (account takeover).
+    email_verified_raw = info.get("email_verified")
+    email_verified = str(email_verified_raw).strip().lower() == "true" or email_verified_raw is True
+    if not email_verified:
+        raise HTTPException(status_code=400, detail="Email Google non vérifié")
 
     # Find existing user by google_id, then by email (link account)
     user = crud_user.get_user_by_google_id(db, google_id)

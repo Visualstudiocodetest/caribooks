@@ -5,7 +5,7 @@ class UserCreate(BaseModel):
     nom: str
     prenom: str
     email: EmailStr
-    mot_de_passe: str = Field(..., min_length=6)
+    mot_de_passe: str = Field(..., min_length=8)
     billing_address_line1: Optional[str] = None
     billing_address_line2: Optional[str] = None
     billing_postal_code: Optional[str] = None

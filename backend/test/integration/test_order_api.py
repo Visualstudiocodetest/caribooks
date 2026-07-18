@@ -120,8 +120,10 @@ def test_orders_lignes_paiements_scoped_to_user(client: TestClient, register_and
     assert client.get("/orders/paiements", headers=headers).status_code == 200
     assert client.get(f"/orders/paiements/{pay['id_paiement']}", headers=headers).status_code == 200
 
-    # cleanup
-    assert client.delete(f"/orders/paiements/{pay['id_paiement']}", headers=headers).status_code == 204
+    # cleanup — deleting a paiement is now an admin-only action (financial record),
+    # so the customer's own token must be rejected before the admin cleans up.
+    assert client.delete(f"/orders/paiements/{pay['id_paiement']}", headers=headers).status_code == 403
+    assert client.delete(f"/orders/paiements/{pay['id_paiement']}", headers=admin_headers).status_code == 204
     assert client.delete(f"/orders/lignes/{ligne['id_ligne_commande']}", headers=headers).status_code == 204
     assert client.delete(f"/orders/commandes/{cmd['id_commande']}", headers=headers).status_code == 204
 
@@ -217,13 +219,16 @@ def test_paiement_status_and_amount_not_client_settable(client: TestClient, regi
     r = client.get(f"/orders/commandes/{cmd['id_commande']}", headers=headers)
     assert r.json()["statut"] == "CREATED"
 
-    # nor can the client flip it to CAPTURED via the update route
+    # the client can no longer reach the paiement update route at all — it is now
+    # admin-only (a payment is a financial record, not customer-editable).
     r = client.put(
         f"/orders/paiements/{pay['id_paiement']}",
         json={"statut": "CAPTURED"},
         headers=headers,
     )
-    assert r.status_code == 200
+    assert r.status_code == 403
+    # and the status is still PENDING when read back
+    r = client.get(f"/orders/paiements/{pay['id_paiement']}", headers=headers)
     assert r.json()["statut"] == "PENDING"
 
 
@@ -514,3 +519,132 @@ def test_delete_ligne_releases_reservation(client: TestClient, register_and_logi
 
     r = client.get(f"/orders/commandes/{cmd['id_commande']}", headers=headers)
     assert r.json()["montant_total_chf"] == 9.0  # lines gone, only shipping remains
+
+
+def _pay_order_via_local_webhook(client: TestClient, headers: dict, cmd_id: int, uniq: str) -> int:
+    """Create a payment for cmd_id and mark it PAID through the local webhook.
+    Returns the id_paiement."""
+    r = client.post(
+        "/orders/paiements",
+        json={"id_commande": cmd_id, "reference_externe": f"REF_PAY_{uniq}"},
+        headers=headers,
+    )
+    assert r.status_code == 201, r.text
+    pay = r.json()
+    r = client.post(
+        "/orders/paiements/webhook/local",
+        json={"reference": f"REF_PAY_{uniq}", "status": "PAID"},
+    )
+    assert r.status_code == 200, r.text
+    return pay["id_paiement"]
+
+
+def test_finalize_marks_order_paid_and_clears_expiry(client: TestClient, register_and_login, uniq: str, monkeypatch):
+    """finalize_commande must flip the commande to PAID and drop cart_expires_at,
+    so the cart-expiry cleanup can never cancel a paid order."""
+    monkeypatch.setenv("ENVIRONMENT", "test")
+    headers = register_and_login(f"paid_status_{uniq}@example.com")
+    admin_headers = register_and_login(f"paid_status_admin_{uniq}@example.com", role="admin")
+    article_id = _make_article(client, admin_headers, uniq, prix_chf=12.0)
+    _make_stock(client, admin_headers, uniq, article_id, qty=3)
+
+    cmd = client.post("/orders/commandes", json={"shipping_method": "POST"}, headers=headers).json()
+    client.post(
+        "/orders/lignes",
+        json={"id_commande": cmd["id_commande"], "id_article": article_id, "quantite": 1},
+        headers=headers,
+    )
+    _pay_order_via_local_webhook(client, headers, cmd["id_commande"], uniq)
+
+    got = client.get(f"/orders/commandes/{cmd['id_commande']}", headers=headers).json()
+    assert got["statut"] == "PAID"
+    assert got["cart_expires_at"] is None
+
+
+def test_paid_order_survives_expiry_cleanup(client: TestClient, register_and_login, uniq: str, monkeypatch):
+    """Even if a paid order somehow still carries a past cart_expires_at, the
+    cleanup must not cancel it (defense-in-depth: cleanup only touches OPEN orders)."""
+    from sqlalchemy import text
+    from infrastructure import models
+    from infrastructure.db import SessionLocal
+
+    monkeypatch.setenv("ENVIRONMENT", "test")
+    headers = register_and_login(f"paid_survive_{uniq}@example.com")
+    admin_headers = register_and_login(f"paid_survive_admin_{uniq}@example.com", role="admin")
+    article_id = _make_article(client, admin_headers, uniq, prix_chf=8.0)
+    _make_stock(client, admin_headers, uniq, article_id, qty=3)
+
+    cmd = client.post("/orders/commandes", json={"shipping_method": "POST"}, headers=headers).json()
+    client.post(
+        "/orders/lignes",
+        json={"id_commande": cmd["id_commande"], "id_article": article_id, "quantite": 1},
+        headers=headers,
+    )
+    _pay_order_via_local_webhook(client, headers, cmd["id_commande"], uniq)
+
+    # Force a stale (past) expiry on the now-PAID order.
+    db = SessionLocal()
+    try:
+        db.query(models.Commande).filter(models.Commande.id_commande == cmd["id_commande"]).update(
+            {"cart_expires_at": text("NOW() - INTERVAL 1 HOUR")}
+        )
+        db.commit()
+    finally:
+        db.close()
+
+    # Any endpoint that triggers cleanup_expired_carts (e.g. GET /stock/).
+    assert client.get("/stock/", headers=admin_headers).status_code == 200
+
+    got = client.get(f"/orders/commandes/{cmd['id_commande']}", headers=headers).json()
+    assert got["statut"] == "PAID"  # NOT CANCELLED
+
+
+def test_cannot_add_line_to_paid_order(client: TestClient, register_and_login, uniq: str, monkeypatch):
+    """Once an order is PAID, its lines/totals are frozen (previously only
+    CANCELLED/FAILED were blocked, so a customer could keep adding lines)."""
+    monkeypatch.setenv("ENVIRONMENT", "test")
+    headers = register_and_login(f"frozen_{uniq}@example.com")
+    admin_headers = register_and_login(f"frozen_admin_{uniq}@example.com", role="admin")
+    article_id = _make_article(client, admin_headers, uniq, prix_chf=8.0)
+    _make_stock(client, admin_headers, uniq, article_id, qty=5)
+
+    cmd = client.post("/orders/commandes", json={"shipping_method": "POST"}, headers=headers).json()
+    client.post(
+        "/orders/lignes",
+        json={"id_commande": cmd["id_commande"], "id_article": article_id, "quantite": 1},
+        headers=headers,
+    )
+    _pay_order_via_local_webhook(client, headers, cmd["id_commande"], uniq)
+
+    r = client.post(
+        "/orders/lignes",
+        json={"id_commande": cmd["id_commande"], "id_article": article_id, "quantite": 1},
+        headers=headers,
+    )
+    assert r.status_code == 409, r.text
+
+
+def test_numero_commande_is_server_generated(client: TestClient, register_and_login, uniq: str):
+    """The client can no longer choose numero_commande; the server generates a
+    unique CMD-… reference and ignores any client-sent value."""
+    headers = register_and_login(f"numgen_{uniq}@example.com")
+    r = client.post(
+        "/orders/commandes",
+        json={"numero_commande": "HACKED-123", "shipping_method": "POST"},
+        headers=headers,
+    )
+    assert r.status_code == 201, r.text
+    assert r.json()["numero_commande"] != "HACKED-123"
+    assert r.json()["numero_commande"].startswith("CMD-")
+
+
+def test_stock_increment_rejects_invalid_qty(client: TestClient, register_and_login, uniq: str):
+    admin_headers = register_and_login(f"stockqty_admin_{uniq}@example.com", role="admin")
+    article_id = _make_article(client, admin_headers, uniq, prix_chf=8.0)
+    _make_stock(client, admin_headers, uniq, article_id, qty=5)
+    stock_rows = client.get("/stock/", headers=admin_headers).json()
+    id_stock = next(s for s in stock_rows if s["id_article"] == article_id)["id_stock"]
+
+    # negative / zero quantities are rejected by the bounded StockQtyChange model
+    assert client.post(f"/stock/{id_stock}/increment", json={"qty": -5}, headers=admin_headers).status_code == 422
+    assert client.post(f"/stock/{id_stock}/decrement", json={"qty": 0}, headers=admin_headers).status_code == 422

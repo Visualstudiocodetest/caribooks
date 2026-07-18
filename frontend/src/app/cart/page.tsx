@@ -10,15 +10,6 @@ import CartItemRow from '@/components/cart/CartItemRow'
 import { ApiError } from '@/services/api'
 import { cancelCommande, createCommande, createLigne } from '@/services/orders'
 
-function makeNumeroCommande() {
-  const now = new Date()
-  const y = now.getFullYear()
-  const m = String(now.getMonth() + 1).padStart(2, '0')
-  const d = String(now.getDate()).padStart(2, '0')
-  const t = String(now.getTime()).slice(-6)
-  return `CB-${y}${m}${d}-${t}`
-}
-
 export default function CartPage() {
   const router = useRouter()
   const { isLoggedIn } = useAuth()
@@ -37,7 +28,6 @@ export default function CartPage() {
     let commandeId: number | null = null
     try {
       const commande = await createCommande({
-        numero_commande: makeNumeroCommande(),
         shipping_method: shippingMethod,
       })
       commandeId = commande.id_commande

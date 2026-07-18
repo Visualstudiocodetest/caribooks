@@ -17,6 +17,16 @@ def client() -> TestClient:
 
 
 
+@pytest.fixture(autouse=True)
+def _reset_rate_limits():
+    """Auth rate-limit state is process-global; clear it before every test so one
+    test's registrations/logins don't push another over the per-IP/-account limit."""
+    from services.rate_limit import clear_all_rate_limits
+
+    clear_all_rate_limits()
+    yield
+
+
 @pytest.fixture()
 def uniq() -> str:
     return uuid.uuid4().hex[:10]

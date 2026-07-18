@@ -7,11 +7,12 @@ import { ApiError } from '@/services/api'
 import { googleLogin, register, login } from '@/services/auth'
 import { useAuth } from '@/components/auth/AuthProvider'
 import { GoogleSignInButton } from '@/components/auth/GoogleSignInButton'
+import { safeReturnTo } from '@/lib/navigation'
 
 function RegisterForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const returnTo = searchParams.get('returnTo') || '/'
+  const returnTo = safeReturnTo(searchParams.get('returnTo'))
   const { setToken } = useAuth()
   const [nom, setNom] = useState('')
   const [prenom, setPrenom] = useState('')
