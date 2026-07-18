@@ -1,0 +1,37 @@
+%% Diagramme des cas d'utilisation — Vue globale du système
+flowchart LR
+    ach["👤 Acheteur"]
+    vend["👤 Vendeur<br/>(bénévole)"]
+    admin["👤 Administrateur"]
+    ol["👤 OpenLibrary"]
+    pf["👤 PostFinance"]
+
+    subgraph S["Système CARIBOOKS"]
+        direction TB
+        uc1(["S'inscrire /<br/>se connecter"])
+        uc2(["Parcourir le<br/>catalogue"])
+        uc3(["Rechercher /<br/>filtrer"])
+        uc4(["Gérer ses<br/>favoris"])
+        uc5(["Passer commande<br/>&amp; payer"])
+        uc6(["Ajouter un livre<br/>(scan ISBN)"])
+        uc7(["Gérer ses<br/>annonces"])
+        uc8(["Modérer / gérer<br/>les utilisateurs"])
+    end
+
+    ach --- uc1
+    ach --- uc2
+    ach --- uc3
+    ach --- uc4
+    ach --- uc5
+    vend --- uc1
+    vend --- uc6
+    vend --- uc7
+    admin --- uc8
+    admin --- uc7
+    uc6 --- ol
+    uc5 --- pf
+
+    classDef actor fill:#e7f0ff,stroke:#333;
+    classDef uc fill:#fff7d6,stroke:#9a7d0a;
+    class ach,vend,admin,ol,pf actor;
+    class uc1,uc2,uc3,uc4,uc5,uc6,uc7,uc8 uc;

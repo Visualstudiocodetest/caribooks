@@ -68,6 +68,60 @@ def test_google_auth_rejects_invalid_credential(client: TestClient):
     assert r.status_code == 400
 
 
+class _FakeGoogleResponse:
+    def __init__(self, payload: dict):
+        self._payload = payload
+
+    def raise_for_status(self) -> None:
+        return None
+
+    def json(self) -> dict:
+        return self._payload
+
+
+def test_google_auth_rejects_unverified_email(client: TestClient, register_and_login, uniq: str, monkeypatch):
+    """Account-takeover fix: a Google credential whose email is not verified must
+    never be linked to (or used to log into) an existing account by email."""
+    email = f"victim_{uniq}@example.com"
+    register_and_login(email)  # existing password account owned by the victim
+
+    from presentation import auth_router
+
+    def fake_get(url, params=None, timeout=None):
+        return _FakeGoogleResponse(
+            {"sub": "attacker-google-id", "email": email, "email_verified": "false"}
+        )
+
+    monkeypatch.setattr(auth_router.httpx, "get", fake_get)
+    r = client.post("/auth/google", json={"credential": "forged"})
+    assert r.status_code == 400, r.text
+
+
+def test_google_auth_accepts_verified_email(client: TestClient, uniq: str, monkeypatch):
+    """A verified Google email creates/links an account and returns a JWT."""
+    email = f"verified_{uniq}@example.com"
+
+    from presentation import auth_router
+
+    def fake_get(url, params=None, timeout=None):
+        return _FakeGoogleResponse(
+            {
+                "sub": f"gid-{uniq}",
+                "email": email,
+                "email_verified": "true",
+                "given_name": "Ver",
+                "family_name": "Ified",
+                # match the configured audience (if any) so the aud check passes
+                "aud": auth_router.GOOGLE_CLIENT_ID,
+            }
+        )
+
+    monkeypatch.setattr(auth_router.httpx, "get", fake_get)
+    r = client.post("/auth/google", json={"credential": "valid"})
+    assert r.status_code == 200, r.text
+    assert r.json()["access_token"]
+
+
 def test_login_is_rate_limited_per_account(client: TestClient, register_and_login, uniq: str):
     email = f"ratelimited_{uniq}@example.com"
     register_and_login(email)

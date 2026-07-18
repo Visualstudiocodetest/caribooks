@@ -8,11 +8,12 @@ import { useAuth } from '@/components/auth/AuthProvider'
 import { ApiError } from '@/services/api'
 import { googleLogin, login } from '@/services/auth'
 import { GoogleSignInButton } from '@/components/auth/GoogleSignInButton'
+import { safeReturnTo } from '@/lib/navigation'
 
 function LoginForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const returnTo = searchParams.get('returnTo') || '/'
+  const returnTo = safeReturnTo(searchParams.get('returnTo'))
   const { isLoggedIn, setToken } = useAuth()
 
   useEffect(() => {

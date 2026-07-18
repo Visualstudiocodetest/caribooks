@@ -27,5 +27,21 @@ export function useLocalStorageState<T>(key: string, initialValue: T) {
     }
   }, [hydrated, key, value])
 
+  // Cross-tab sync: reflect changes made in other tabs (e.g. logging out or
+  // editing the cart elsewhere) instead of leaving this tab stale.
+  useEffect(() => {
+    function onStorage(e: StorageEvent) {
+      if (e.key !== key) return
+      try {
+        setValue(e.newValue != null ? (JSON.parse(e.newValue) as T) : initialValue)
+      } catch {
+        // ignore malformed values
+      }
+    }
+    window.addEventListener('storage', onStorage)
+    return () => window.removeEventListener('storage', onStorage)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key])
+
   return { value, setValue, hydrated }
 }

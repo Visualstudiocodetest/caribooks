@@ -175,31 +175,38 @@ class StockUpdate(BaseModel):
     quantite_reservee: Optional[int] = Field(default=None, ge=0)
 
 
+class StockQtyChange(BaseModel):
+    """Body for the admin increment/decrement endpoints. Bounds the quantity
+    (previously an untyped dict, so a negative/huge value was accepted verbatim)."""
+    qty: int = Field(default=1, ge=1, le=100000)
+
+
 class StockRead(StockBase, ORMBase):
     id_stock: int
     date_mise_a_jour: datetime
 
 
 class CommandeBase(BaseModel):
-    numero_commande: str
-    # shipping_method is client-chosen; the fee (frais_port_chf) and initial
-    # statut are always server-derived — never trust a price/status from the
-    # client (see order_router.py SHIPPING_FEES_CHF).
+    # shipping_method is client-chosen; the fee (frais_port_chf), the order number
+    # (numero_commande) and the initial statut are all server-derived — never trust
+    # a price/status/identifier from the client (see order_router.py).
     shipping_method: Optional[str] = "POST"
 
 
 class CommandeCreate(CommandeBase):
+    # numero_commande is intentionally NOT accepted here — it is generated
+    # server-side (unique, non-guessable) to avoid collisions and predictable refs.
     pass
 
 
 class CommandeUpdate(BaseModel):
-    numero_commande: Optional[str] = None
     shipping_method: Optional[str] = None
 
 
 class CommandeRead(CommandeBase, ORMBase):
     id_commande: int
     id_utilisateur: int
+    numero_commande: str
     montant_total_chf: float
     statut: str
     frais_port_chf: float

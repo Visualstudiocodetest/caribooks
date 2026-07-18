@@ -50,7 +50,7 @@ Architecture cloud hybride à coût nul (offres gratuites) :
 ## 🚀 Installation et Lancement en local
 
 ### Prérequis
-- Node.js (v18+)
+- Node.js (v20+)
 - Python (v3.11+)
 - Git
 
@@ -65,7 +65,7 @@ graph LR
    end
 
    subgraph BACKEND
-      API["FastAPI (Uvicorn)<br/>Routers: auth, users, orders"]
+      API["FastAPI (Uvicorn)<br/>Routers: auth, users, books, catalog, articles, stock, orders (+admin), scans, images"]
       Services["Services: jwt_service, book_service (payment helper optional)"]
       Scripts["Scripts: seed_db, migrations"]
    end
@@ -105,9 +105,12 @@ graph LR
 ```
 ## Migrations
 
-Un script de migration SQL a été ajouté pour mettre à jour la base de données en local:
+Les scripts de migration SQL (idempotents) se trouvent dans `backend/migrations/` et sont appliqués via la table `migration_log` lors du déploiement :
 
-- `migrations/20260520_add_billing_and_commande_fields.sql` — ajoute les colonnes d'adresse facturation à `utilisateur` et les champs `shipping_method` / `frais_port_chf` à `commande`.
+- `backend/migrations/20260511_add_image_link_to_article.sql` — ajoute `image_link` à `article`.
+- `backend/migrations/20260614_add_cart_expires_at_to_commande.sql` — ajoute `cart_expires_at` à `commande` (fenêtre de réservation du panier).
+
+Les colonnes d'adresse de facturation (`utilisateur`) et `shipping_method` / `frais_port_chf` (`commande`) sont incluses directement dans `Schema.SQL`.
 
 ---
 
@@ -162,7 +165,7 @@ sequenceDiagram
 ```
 
 Key implementation points:
-- Payment helper (optional): [backend/services/payment_service.py](backend/services/payment_service.py)
+- Payment provider integration (PostFinance): [backend/services/postfinance_service.py](backend/services/postfinance_service.py)
 - Webhook & finalization: [backend/presentation/order_router.py](backend/presentation/order_router.py)
 - Local simulator page: [frontend/src/app/orders/paiements/local/redirect/[ref]/page.tsx](frontend/src/app/orders/paiements/local/redirect/%5Bref%5D/page.tsx)
 
@@ -198,7 +201,7 @@ graph LR
    end
 
    subgraph BACKEND
-      API["FastAPI (Uvicorn)<br/>Routers: auth, users, orders"]
+      API["FastAPI (Uvicorn)<br/>Routers: auth, users, books, catalog, articles, stock, orders (+admin), scans, images"]
       Services["Services: jwt_service, book_service (payment helper optional)"]
       Scripts["Scripts: seed_db, migrations"]
    end

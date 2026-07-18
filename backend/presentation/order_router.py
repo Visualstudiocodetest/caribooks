@@ -1,14 +1,18 @@
 from __future__ import annotations
 
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 import os
 from datetime import datetime, timezone
 
+logger = logging.getLogger("caribooks.orders")
+
 from infrastructure import models
 from infrastructure.crud_base import CrudBase
-from presentation.deps import get_current_user, get_db
+from presentation.deps import get_current_user, get_db, require_admin
 from presentation.schemas import (
     CommandeCreate,
     CommandeRead,
@@ -25,7 +29,9 @@ from services.order_service import (
     attach_seconds_left,
     cancel_commande,
     cleanup_expired_carts,
+    ensure_commande_mutable,
     finalize_commande,
+    generate_numero_commande,
     get_commande_owned,
     load_commande_context,
     recompute_commande_total,
@@ -50,6 +56,33 @@ ligne_crud = CrudBase[models.LigneCommande](models.LigneCommande, "id_ligne_comm
 paiement_crud = CrudBase[models.Paiement](models.Paiement, "id_paiement")
 
 
+def _finalize_paid_order(db: Session, id_commande: int, source: str) -> bool:
+    """Finalize a paid order's stock, committing on success.
+
+    Shared by all four payment callbacks (confirm / poll / webhook / local webhook)
+    so they finalize identically. `finalize_commande` is itself idempotent and row-
+    locked, so concurrent callbacks decrement stock exactly once. On failure we log
+    at error level (with the order id + which callback) instead of swallowing it —
+    the payment is already captured, so a failed finalize needs manual reconciliation
+    and must be visible in the logs, not silent.
+    Returns True if finalize succeeded.
+    """
+    try:
+        finalize_commande(db, int(id_commande))
+        db.commit()
+        return True
+    except Exception:
+        db.rollback()
+        logger.error(
+            "finalize_commande failed for commande=%s (source=%s): payment captured "
+            "but stock/status not updated — needs reconciliation",
+            id_commande,
+            source,
+            exc_info=True,
+        )
+        return False
+
+
 @router.get("/commandes", response_model=list[CommandeRead])
 def list_commandes(db: Session = Depends(get_db), current_user=Depends(get_current_user)):
     return db.query(models.Commande).filter(models.Commande.id_utilisateur == current_user.id_utilisateur).all()
@@ -72,7 +105,7 @@ def create_commande(payload: CommandeCreate, db: Session = Depends(get_db), curr
         raise HTTPException(status_code=400, detail="Invalid shipping method")
     obj = models.Commande(
         id_utilisateur=current_user.id_utilisateur,
-        numero_commande=payload.numero_commande,
+        numero_commande=generate_numero_commande(db),
         shipping_method=shipping_method,
         frais_port_chf=SHIPPING_FEES_CHF[shipping_method],
         montant_total_chf=0,
@@ -101,6 +134,7 @@ def update_commande(
     obj = get_commande_owned(db, id_commande, int(current_user.id_utilisateur))
     if obj is None:
         raise HTTPException(status_code=404, detail="Commande not found")
+    ensure_commande_mutable(obj)
     data = payload.model_dump(exclude_unset=True)
     shipping_method = data.pop("shipping_method", None)
     if shipping_method is not None:
@@ -182,6 +216,8 @@ def create_ligne(payload: LigneCommandeCreate, db: Session = Depends(get_db), cu
         raise HTTPException(status_code=404, detail="Commande not found")
     if (c.statut or "").upper() in ("CANCELLED", "FAILED"):
         raise HTTPException(status_code=409, detail="Votre réservation a expiré. Retournez au panier.")
+    # Any other non-open state (PAID, SENT, …) must not accept new lines either.
+    ensure_commande_mutable(c)
     article = db.query(models.Article).filter(models.Article.id_article == payload.id_article).first()
     if article is None:
         raise HTTPException(status_code=404, detail="Article not found")
@@ -262,6 +298,9 @@ def update_ligne(
     )
     if obj is None:
         raise HTTPException(status_code=404, detail="LigneCommande not found")
+    parent = db.query(models.Commande).filter(models.Commande.id_commande == obj.id_commande).first()
+    if parent is not None:
+        ensure_commande_mutable(parent)
     data = payload.model_dump(exclude_unset=True)
     new_qty = data.get("quantite")
     try:
@@ -329,6 +368,7 @@ def delete_ligne(id_ligne_commande: int, db: Session = Depends(get_db), current_
     )
     if obj is None:
         raise HTTPException(status_code=404, detail="LigneCommande not found")
+    ensure_commande_mutable(obj.commande)  # type: ignore[attr-defined]
     id_commande = int(obj.id_commande)  # type: ignore[arg-type]
     if (obj.commande.statut or "").upper() in ("CREATED", "PENDING"):  # type: ignore[attr-defined]
         # Release the reservation before deleting — otherwise it leaks forever.
@@ -533,11 +573,7 @@ def confirm_paiement_postfinance(
         db.commit()
         db.refresh(obj)
         if not already_finalized:
-            try:
-                finalize_commande(db, int(obj.id_commande))  # type: ignore[arg-type]
-                db.commit()
-            except Exception:
-                db.rollback()
+            _finalize_paid_order(db, int(obj.id_commande), source="confirm")  # type: ignore[arg-type]
         # The finalize commit above expires `obj` (expire_on_commit) — refresh
         # so its fields are populated when serialized in the response below,
         # rather than serializing as an empty object.
@@ -587,12 +623,8 @@ def poll_paiement_postfinance(id_paiement: int, db: Session = Depends(get_db), c
         db.commit()
         db.refresh(obj)
 
-        try:
-            if is_postfinance_success_status(str(new_status)):
-                finalize_commande(db, int(obj.id_commande))  # type: ignore[arg-type]
-                db.commit()
-        except Exception:
-            db.rollback()
+        if is_postfinance_success_status(str(new_status)):
+            _finalize_paid_order(db, int(obj.id_commande), source="poll")  # type: ignore[arg-type]
 
     return {"paiement": obj, "raw": pf_resp}
 
@@ -636,13 +668,8 @@ async def postfinance_webhook(request: Request, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(obj)
 
-    if not already_finalized:
-        try:
-            if is_postfinance_success_status(str(new_status)):
-                finalize_commande(db, int(obj.id_commande))  # type: ignore[arg-type]
-                db.commit()
-        except Exception:
-            db.rollback()
+    if not already_finalized and is_postfinance_success_status(str(new_status)):
+        _finalize_paid_order(db, int(obj.id_commande), source="webhook")  # type: ignore[arg-type]
 
     return {"ok": True}
 
@@ -682,13 +709,8 @@ def local_payment_webhook(payload: dict, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(obj)
 
-    if not already_finalized:
-        try:
-            if is_postfinance_success_status(str(status_val)):
-                finalize_commande(db, int(obj.id_commande))  # type: ignore[arg-type]
-                db.commit()
-        except Exception:
-            db.rollback()
+    if not already_finalized and is_postfinance_success_status(str(status_val)):
+        _finalize_paid_order(db, int(obj.id_commande), source="local_webhook")  # type: ignore[arg-type]
 
     return {"ok": True}
 
@@ -698,19 +720,17 @@ def update_paiement(
     id_paiement: int,
     payload: PaiementUpdate,
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
+    _admin=Depends(require_admin),
 ):
-    obj = (
-        db.query(models.Paiement)
-        .join(models.Commande, models.Paiement.id_commande == models.Commande.id_commande)
-        .filter(models.Paiement.id_paiement == id_paiement, models.Commande.id_utilisateur == current_user.id_utilisateur)
-        .first()
-    )
+    """Admin-only. Payments are financial/audit records: a customer must never be
+    able to edit or delete them (previously the owner could, via id_utilisateur
+    scoping). Their status changes only through verified PostFinance callbacks, and
+    any back-office correction is an admin action."""
+    obj = db.query(models.Paiement).filter(models.Paiement.id_paiement == id_paiement).first()
     if obj is None:
         raise HTTPException(status_code=404, detail="Paiement not found")
     # statut is intentionally not part of PaiementUpdate — a payment's status
-    # may only change via a verified PostFinance/Payrexx callback (confirm/poll/
-    # webhook above), never directly through this owner-facing endpoint.
+    # may only change via a verified PostFinance callback (confirm/poll/webhook).
     data = payload.model_dump(exclude_unset=True)
     for k, v in data.items():
         if hasattr(obj, k):
@@ -721,13 +741,10 @@ def update_paiement(
 
 
 @router.delete("/paiements/{id_paiement}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_paiement(id_paiement: int, db: Session = Depends(get_db), current_user=Depends(get_current_user)):
-    obj = (
-        db.query(models.Paiement)
-        .join(models.Commande, models.Paiement.id_commande == models.Commande.id_commande)
-        .filter(models.Paiement.id_paiement == id_paiement, models.Commande.id_utilisateur == current_user.id_utilisateur)
-        .first()
-    )
+def delete_paiement(id_paiement: int, db: Session = Depends(get_db), _admin=Depends(require_admin)):
+    """Admin-only — see update_paiement. Deleting a payment record is a back-office
+    action, never customer self-service."""
+    obj = db.query(models.Paiement).filter(models.Paiement.id_paiement == id_paiement).first()
     if obj is None:
         raise HTTPException(status_code=404, detail="Paiement not found")
     db.delete(obj)

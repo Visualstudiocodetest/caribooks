@@ -3,7 +3,7 @@
 import { useMemo, useState, useEffect } from 'react'
 import type { BookRead } from '@/types/api'
 import { BookGrid } from '@/components/books/BookGrid'
-import { apiFetch } from '@/services/api'
+import { listCatalog } from '@/services/catalog'
 
 type EtatItem = { id_etat_usure: number; libelle: string }
 type CategorieItem = { id_categorie: number; libelle: string }
@@ -21,17 +21,19 @@ export function CatalogClient({
   const [selectedEtat, setSelectedEtat] = useState('')
   const [selectedCategorie, setSelectedCategorie] = useState('')
   const [sortBy, setSortBy] = useState('')
+  const [minPrix, setMinPrix] = useState('')
+  const [maxPrix, setMaxPrix] = useState('')
   const [showFilters, setShowFilters] = useState(false)
 
   useEffect(() => {
     let mounted = true
     async function load() {
       try {
-        const etats = await apiFetch<EtatItem[]>('/catalog/etat-usures')
+        const etats = await listCatalog<EtatItem>('etat-usures')
         if (mounted && Array.isArray(etats)) setEtatList(etats)
       } catch {}
       try {
-        const cats = await apiFetch<CategorieItem[]>('/catalog/categories')
+        const cats = await listCatalog<CategorieItem>('categories')
         if (mounted && Array.isArray(cats)) setCategorieList(cats)
       } catch {}
     }
@@ -39,25 +41,23 @@ export function CatalogClient({
     return () => { mounted = false }
   }, [])
 
-  const hasActiveFilters = Boolean(selectedEtat || selectedCategorie || sortBy)
+  const activeFilterCount = [selectedEtat, selectedCategorie, sortBy, minPrix, maxPrix].filter(Boolean).length
+  const hasActiveFilters = activeFilterCount > 0
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
+    const min = minPrix ? Number(minPrix) : null
+    const max = maxPrix ? Number(maxPrix) : null
 
     let res = books.filter((b) => {
       if (q) {
         const hay = `${b.titre} ${b.auteur ?? ''} ${b.isbn}`.toLowerCase()
         if (!hay.includes(q)) return false
       }
-      if (selectedEtat) {
-        if (!('id_etat_usure' in b) || String((b as any).id_etat_usure) !== selectedEtat) return false
-      }
-      if (selectedCategorie) {
-        const ids = Array.isArray((b as any).categorie_ids)
-          ? (b as any).categorie_ids.map(String)
-          : []
-        if (!ids.includes(selectedCategorie)) return false
-      }
+      if (selectedEtat && String(b.id_etat_usure) !== selectedEtat) return false
+      if (selectedCategorie && !b.categorie_ids.map(String).includes(selectedCategorie)) return false
+      if (min !== null && b.prix_chf < min) return false
+      if (max !== null && b.prix_chf > max) return false
       return true
     })
 
@@ -77,12 +77,14 @@ export function CatalogClient({
     }
 
     return res
-  }, [books, query, selectedEtat, selectedCategorie, sortBy])
+  }, [books, query, selectedEtat, selectedCategorie, sortBy, minPrix, maxPrix])
 
   function clearFilters() {
     setSelectedEtat('')
     setSelectedCategorie('')
     setSortBy('')
+    setMinPrix('')
+    setMaxPrix('')
   }
 
   return (
@@ -102,7 +104,7 @@ export function CatalogClient({
           onClick={() => setShowFilters((s) => !s)}
           aria-expanded={showFilters}
         >
-          Filtres{hasActiveFilters ? ` (${[selectedEtat, selectedCategorie, sortBy].filter(Boolean).length})` : ''}
+          Filtres{hasActiveFilters ? ` (${activeFilterCount})` : ''}
         </button>
       </div>
 
@@ -151,6 +153,31 @@ export function CatalogClient({
               <option value="titre">Titre A→Z</option>
               <option value="auteur">Auteur A→Z</option>
             </select>
+          </div>
+
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
+            <input
+              className="input"
+              type="number"
+              min={0}
+              inputMode="decimal"
+              value={minPrix}
+              onChange={(e) => setMinPrix(e.target.value)}
+              placeholder="Prix min (CHF)"
+              aria-label="Prix minimum en CHF"
+              style={{ flex: '1 1 140px' }}
+            />
+            <input
+              className="input"
+              type="number"
+              min={0}
+              inputMode="decimal"
+              value={maxPrix}
+              onChange={(e) => setMaxPrix(e.target.value)}
+              placeholder="Prix max (CHF)"
+              aria-label="Prix maximum en CHF"
+              style={{ flex: '1 1 140px' }}
+            />
           </div>
 
           {hasActiveFilters ? (

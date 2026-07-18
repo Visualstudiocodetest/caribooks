@@ -163,6 +163,7 @@ CREATE TABLE IF NOT EXISTS `commande` (
   `statut` varchar(50) NOT NULL,
   `shipping_method` varchar(50) NOT NULL DEFAULT 'POST',
   `frais_port_chf` decimal(10,2) NOT NULL DEFAULT '0.00',
+  `cart_expires_at` timestamp NULL DEFAULT NULL,
   PRIMARY KEY (`id_commande`),
   UNIQUE KEY `numero_commande` (`numero_commande`),
   KEY `idx_commande_utilisateur` (`id_utilisateur`),
@@ -196,7 +197,7 @@ CREATE TABLE IF NOT EXISTS `ligne_commande` (
 CREATE TABLE IF NOT EXISTS `paiement` (
   `id_paiement` bigint NOT NULL AUTO_INCREMENT,
   `id_commande` bigint NOT NULL,
-  `fournisseur_paiement` varchar(50) NOT NULL DEFAULT 'PAYREXX',
+  `fournisseur_paiement` varchar(50) NOT NULL DEFAULT 'POSTFINANCE',
   `reference_externe` varchar(255) NOT NULL,
   `montant_chf` decimal(10,2) NOT NULL,
   `devise` char(3) NOT NULL DEFAULT 'CHF',

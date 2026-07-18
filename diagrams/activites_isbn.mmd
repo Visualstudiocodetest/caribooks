@@ -1,0 +1,22 @@
+%% Diagramme d'activités — Flux d'ajout d'un livre via scan ISBN
+flowchart TD
+    start((" ")) --> a1["Scanner le code-barres ISBN<br/>(JS navigateur)"]
+    a1 --> d1{"Code<br/>reconnu ?"}
+    d1 -->|non| a3["Saisie manuelle<br/>des informations"]
+    d1 -->|oui| a2["GET /books/isbn-metadata/{isbn}"]
+    a2 --> d2{"OpenLibrary<br/>trouvé ?"}
+    d2 -->|oui| a4["Préremplir le formulaire<br/>(titre, auteur, éditeur)"]
+    d2 -->|non| a2b["Fallback Google Books"]
+    a2b --> d3{"Trouvé ?"}
+    d3 -->|oui| a4
+    d3 -->|non| a3
+    a3 --> a5["Compléter état &amp; prix (CHF)"]
+    a4 --> a5
+    a5 --> a6["Publier l'annonce<br/>(POST /books)"]
+    a6 --> a7["Enregistrer le scan<br/>(POST /scans — table scan_isbn)"]
+    a7 --> done(((" ")))
+
+    classDef act fill:#e7f0ff,stroke:#333;
+    classDef dec fill:#ffe3c2,stroke:#9a5b0a;
+    class a1,a2,a2b,a3,a4,a5,a6,a7 act;
+    class d1,d2,d3 dec;

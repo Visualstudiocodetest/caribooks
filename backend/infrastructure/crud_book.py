@@ -51,6 +51,41 @@ def _ensure_default_refs(db: Session, book: Book) -> tuple[int, int]:
 
     return int(type_objet.id_type_objet), int(etat.id_etat_usure)
 
+def _default_source_stock(db: Session) -> models.SourceStock:
+    """Return the first SourceStock, creating a default one if none exists."""
+    ss = db.query(models.SourceStock).order_by(models.SourceStock.id_source_stock.asc()).first()
+    if ss is None:
+        ss = models.SourceStock(libelle="Default", type_source="ADMIN", description="Auto-created source")
+        db.add(ss)
+        db.flush()
+    return ss
+
+
+def _add_one_to_stock(db: Session, id_article: int) -> None:
+    """Increment (or create) the default-source stock row for `id_article` by 1.
+
+    Extracted from the four near-identical blocks that create_book used to inline
+    when a book/article already existed or was freshly created.
+    """
+    ss = _default_source_stock(db)
+    stock_row = (
+        db.query(models.Stock)
+        .filter(models.Stock.id_article == id_article, models.Stock.id_source_stock == ss.id_source_stock)
+        .first()
+    )
+    if stock_row:
+        stock_row.quantite_disponible = (stock_row.quantite_disponible or 0) + 1
+    else:
+        db.add(
+            models.Stock(
+                id_article=id_article,
+                id_source_stock=ss.id_source_stock,
+                quantite_disponible=1,
+                quantite_reservee=0,
+            )
+        )
+
+
 def get_books(db: Session) -> List[models.Livre]:
     """Return all books (Livre + Article)."""
     return db.query(models.Livre).all()
@@ -70,37 +105,13 @@ def create_book(db: Session, book: Book) -> models.Livre:
     If a book with the same ISBN already exists, increment its stock by 1
     instead of creating duplicate Article/Livre rows.
     """
-    # If identical ISBN exists in Livre, increment stock
+    # If identical ISBN exists in Livre, just add one to stock.
     existing = get_book_by_isbn(db, book.isbn)
     if existing:
-        # ensure a SourceStock exists (use first existing or create a default)
-        ss = db.query(models.SourceStock).order_by(models.SourceStock.id_source_stock.asc()).first()
-        if ss is None:
-            ss = models.SourceStock(libelle="Default", type_source="ADMIN", description="Auto-created source")
-            db.add(ss)
-            db.flush()
-
-        stock_row = (
-            db.query(models.Stock)
-            .filter(models.Stock.id_article == existing.id_article, models.Stock.id_source_stock == ss.id_source_stock)
-            .first()
-        )
-        if stock_row:
-            stock_row.quantite_disponible = (stock_row.quantite_disponible or 0) + 1
-            db.commit()
-            db.refresh(existing)
-            return existing
-        else:
-            new_stock = models.Stock(
-                id_article=existing.id_article,
-                id_source_stock=ss.id_source_stock,
-                quantite_disponible=1,
-                quantite_reservee=0,
-            )
-            db.add(new_stock)
-            db.commit()
-            db.refresh(existing)
-            return existing
+        _add_one_to_stock(db, existing.id_article)
+        db.commit()
+        db.refresh(existing)
+        return existing
 
     id_type_objet, id_etat_usure = _ensure_default_refs(db, book)
     # Protect against a case where an Article with this SKU already exists
@@ -108,31 +119,10 @@ def create_book(db: Session, book: Book) -> models.Livre:
     # case, attach a new Livre to the existing Article and update/create stock.
     existing_article = db.query(models.Article).filter(models.Article.sku == book.isbn).first()
     if existing_article:
-        # If a Livre already exists for this article, behave like existing case
+        # If a Livre already exists for this article, behave like the existing case.
         existing_livre = db.query(models.Livre).filter(models.Livre.id_article == existing_article.id_article).first()
         if existing_livre:
-            # increment stock on default source or create one
-            ss = db.query(models.SourceStock).order_by(models.SourceStock.id_source_stock.asc()).first()
-            if ss is None:
-                ss = models.SourceStock(libelle="Default", type_source="ADMIN", description="Auto-created source")
-                db.add(ss)
-                db.flush()
-
-            stock_row = (
-                db.query(models.Stock)
-                .filter(models.Stock.id_article == existing_livre.id_article, models.Stock.id_source_stock == ss.id_source_stock)
-                .first()
-            )
-            if stock_row:
-                stock_row.quantite_disponible = (stock_row.quantite_disponible or 0) + 1
-            else:
-                new_stock = models.Stock(
-                    id_article=existing_livre.id_article,
-                    id_source_stock=ss.id_source_stock,
-                    quantite_disponible=1,
-                    quantite_reservee=0,
-                )
-                db.add(new_stock)
+            _add_one_to_stock(db, existing_livre.id_article)
             db.commit()
             db.refresh(existing_livre)
             return existing_livre
@@ -147,22 +137,7 @@ def create_book(db: Session, book: Book) -> models.Livre:
             langue=book.langue,
         )
         db.add(db_livre)
-        # ensure stock exists (increment first source or create)
-        ss = db.query(models.SourceStock).order_by(models.SourceStock.id_source_stock.asc()).first()
-        if ss is None:
-            ss = models.SourceStock(libelle="Default", type_source="ADMIN", description="Auto-created source")
-            db.add(ss)
-            db.flush()
-        stock_row = (
-            db.query(models.Stock)
-            .filter(models.Stock.id_article == existing_article.id_article, models.Stock.id_source_stock == ss.id_source_stock)
-            .first()
-        )
-        if stock_row:
-            stock_row.quantite_disponible = (stock_row.quantite_disponible or 0) + 1
-        else:
-            new_stock = models.Stock(id_article=existing_article.id_article, id_source_stock=ss.id_source_stock, quantite_disponible=1, quantite_reservee=0)
-            db.add(new_stock)
+        _add_one_to_stock(db, existing_article.id_article)
         db.commit()
         db.refresh(db_livre)
         return db_livre
@@ -188,14 +163,7 @@ def create_book(db: Session, book: Book) -> models.Livre:
         langue=book.langue,
     )
     db.add(db_livre)
-    # create initial stock entry (1) with default source
-    ss = db.query(models.SourceStock).order_by(models.SourceStock.id_source_stock.asc()).first()
-    if ss is None:
-        ss = models.SourceStock(libelle="Default", type_source="ADMIN", description="Auto-created source")
-        db.add(ss)
-        db.flush()
-    new_stock = models.Stock(id_article=db_article.id_article, id_source_stock=ss.id_source_stock, quantite_disponible=1, quantite_reservee=0)
-    db.add(new_stock)
+    _add_one_to_stock(db, db_article.id_article)
     db.commit()
     db.refresh(db_livre)
     return db_livre

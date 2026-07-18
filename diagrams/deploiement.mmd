@@ -1,0 +1,25 @@
+%% Diagramme de déploiement — infrastructure physique de CARIBOOKS
+flowchart LR
+    client["«device»<br/><b>Poste client</b><br/>Navigateur web / mobile"]
+
+    subgraph vercel["«cloud — Vercel»"]
+        fe["Frontend Next.js<br/>SSR / SSG"]
+    end
+
+    subgraph oracle["«serveur — Oracle Cloud»"]
+        direction TB
+        api["API FastAPI (Uvicorn)<br/>conteneur Docker"]
+        db["Base MySQL<br/>Oracle Cloud"]
+        api -->|TCP 3306| db
+    end
+
+    ext["«services externes»<br/>PostFinance<br/>OpenLibrary / Google Books<br/>Poste Suisse"]
+
+    client -->|HTTPS| fe
+    client -->|HTTPS / REST| api
+    api -->|HTTPS| ext
+
+    classDef device fill:#ececec,stroke:#555;
+    classDef artifact fill:#cfe2ff,stroke:#0d3b66;
+    class client,ext device;
+    class fe,api,db artifact;

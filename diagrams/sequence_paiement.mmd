@@ -1,0 +1,22 @@
+%% Diagramme de séquence — Tunnel de paiement PostFinance
+sequenceDiagram
+    autonumber
+    actor Ach as Acheteur
+    participant Fro as Frontend<br/>Next.js
+    participant API as API FastAPI
+    participant PF as PostFinance
+    participant BD as BD MySQL
+
+    Ach->>Fro: valide le panier
+    Fro->>API: POST /orders/commandes
+    API->>BD: INSERT commande (PENDING,<br/>cart_expires_at = +15 min)
+    Fro->>API: POST /orders/paiements/postfinance
+    API->>PF: crée la transaction
+    PF-->>API: javascript_url + payment_methods
+    API-->>Fro: session iframe (paiement)
+    Ach->>PF: paye via iframe (TWINT / carte, CHF)
+    Fro->>API: POST .../{id}/confirm-postfinance
+    PF->>API: webhook (signature ECDSA) CAPTURED / PAID
+    API->>BD: UPDATE statut (PAID) + finalise le stock
+    API-->>Fro: confirmation
+    Fro-->>Ach: page de confirmation

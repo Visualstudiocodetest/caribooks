@@ -1,12 +1,15 @@
 import { apiFetch } from './api'
 import type { LoginRequest, Token, UserCreate, UserRead } from '@/types/api'
 
+// login/register are credential exchanges — they must NOT attach any existing
+// bearer token (auth: false). Sending a stale token with the login body served
+// no purpose and needlessly exposed it.
 export async function login(payload: LoginRequest): Promise<Token> {
-  return apiFetch<Token>('/auth/token', { method: 'POST', body: JSON.stringify(payload), auth: true })
+  return apiFetch<Token>('/auth/token', { method: 'POST', body: JSON.stringify(payload) })
 }
 
 export async function register(payload: UserCreate): Promise<UserRead> {
-  return apiFetch<UserRead>('/auth/register', { method: 'POST', body: JSON.stringify(payload), auth: true })
+  return apiFetch<UserRead>('/auth/register', { method: 'POST', body: JSON.stringify(payload) })
 }
 
 export function getCurrentUser(): Promise<UserRead> {

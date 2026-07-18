@@ -1,31 +1,18 @@
 import { listBooks } from '@/services/books'
 import { CatalogClient } from './CatalogClient'
-import { apiFetch } from '@/services/api'
-import { Stock } from '@/types/api'
+import { getAvailabilityMap } from '@/services/stocks'
 
 export const dynamic = 'force-dynamic'
 
 export default async function CatalogPage() {
   const books = await listBooks().catch(() => [])
-  // Fetch stock info server-side and filter out books with zero available quantity
-  let stocks: Stock[] = []
-  try {
-    stocks = await apiFetch('/stock/')
-  } catch {
-    stocks = []
-  }
+  // One batched availability request instead of fetching the whole /stock/ list
+  // and reducing it here (the map is now computed server-side in a single query).
+  const availability = await getAvailabilityMap().catch(() => ({} as Record<number, number>))
 
-  const map = new Map<number, number>()
-  for (const s of stocks) {
-    const cur = map.get(s.id_article) || 0
-    const avail = (s.quantite_disponible || 0) - (s.quantite_reservee || 0)
-    map.set(s.id_article, cur + avail)
-  }
-
-  const available = books.filter((b) => (map.get(b.id_article) || 0) > 0)
-  // Plain object (not Map) — Server -> Client Component props must be
-  // serializable. Passed through so BookCard can cap "Ajouter au panier" at
-  // the real remaining quantity instead of allowing unlimited clicks.
-  const availability = Object.fromEntries(map)
+  // Show only books with remaining stock. availability keys are numbers server-side
+  // but arrive as string keys once JSON-serialized — index defensively.
+  const availAt = (id: number) => availability[id] ?? (availability as Record<string, number>)[String(id)] ?? 0
+  const available = books.filter((b) => availAt(b.id_article) > 0)
   return <CatalogClient books={available} availability={availability} />
 }

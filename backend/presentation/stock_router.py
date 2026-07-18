@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 
 from  infrastructure import models
 from  infrastructure.crud_base import CrudBase
@@ -11,10 +12,10 @@ from  presentation.schemas import (
     SourceStockRead,
     SourceStockUpdate,
     StockCreate,
+    StockQtyChange,
     StockRead,
     StockUpdate,
 )
-from fastapi import Body
 
 router = APIRouter(prefix="/stock", tags=["stock"])
 
@@ -78,6 +79,30 @@ def list_stock(db: Session = Depends(get_db)):
     return stock_crud.list(db)
 
 
+@router.get("/availability", response_model=dict[int, int])
+def stock_availability(article_ids: str | None = None, db: Session = Depends(get_db)):
+    """Available quantity per article in a single query — max(0, sum(disponible - reservee)).
+
+    Replaces the frontend N+1 where every cart/catalogue item fetched the whole
+    /stock/ list to compute one article's availability. Optional `article_ids` is a
+    comma-separated filter; omit it to get the whole catalogue's availability map.
+    """
+    from services.order_service import cleanup_expired_carts
+
+    cleanup_expired_carts(db)
+    q = db.query(
+        models.Stock.id_article,
+        func.sum(models.Stock.quantite_disponible - models.Stock.quantite_reservee),
+    )
+    if article_ids:
+        ids = [int(x) for x in article_ids.split(",") if x.strip().isdigit()]
+        if not ids:
+            return {}
+        q = q.filter(models.Stock.id_article.in_(ids))
+    rows = q.group_by(models.Stock.id_article).all()
+    return {int(id_article): max(0, int(total or 0)) for id_article, total in rows}
+
+
 @router.get("/{id_stock}", response_model=StockRead)
 def get_stock(id_stock: int, db: Session = Depends(get_db)):
     obj = stock_crud.get(db, id_stock)
@@ -120,27 +145,35 @@ def delete_stock(
     return None
 
 
-@router.post("/{id_stock}/increment", response_model=StockRead)
-def increment_stock(id_stock: int, payload: dict = Body(...), db: Session = Depends(get_db), _admin=Depends(require_admin)):
-    qty = int(payload.get("qty", 1))
-    obj = stock_crud.get(db, id_stock)
+def _get_stock_for_update(db: Session, id_stock: int) -> models.Stock:
+    """Load a stock row with a row lock so concurrent increment/decrement calls
+    can't lose updates (read-modify-write was previously unguarded)."""
+    obj = (
+        db.query(models.Stock)
+        .filter(models.Stock.id_stock == id_stock)
+        .with_for_update()
+        .first()
+    )
     if obj is None:
         raise HTTPException(status_code=404, detail="Stock not found")
-    obj.quantite_disponible = (obj.quantite_disponible or 0) + qty
+    return obj
+
+
+@router.post("/{id_stock}/increment", response_model=StockRead)
+def increment_stock(id_stock: int, payload: StockQtyChange = StockQtyChange(), db: Session = Depends(get_db), _admin=Depends(require_admin)):
+    obj = _get_stock_for_update(db, id_stock)
+    obj.quantite_disponible = (obj.quantite_disponible or 0) + payload.qty
     db.commit()
     db.refresh(obj)
     return obj
 
 
 @router.post("/{id_stock}/decrement", response_model=StockRead)
-def decrement_stock(id_stock: int, payload: dict = Body(...), db: Session = Depends(get_db), _admin=Depends(require_admin)):
-    qty = int(payload.get("qty", 1))
-    obj = stock_crud.get(db, id_stock)
-    if obj is None:
-        raise HTTPException(status_code=404, detail="Stock not found")
-    if (obj.quantite_disponible or 0) < qty:
+def decrement_stock(id_stock: int, payload: StockQtyChange = StockQtyChange(), db: Session = Depends(get_db), _admin=Depends(require_admin)):
+    obj = _get_stock_for_update(db, id_stock)
+    if (obj.quantite_disponible or 0) < payload.qty:
         raise HTTPException(status_code=400, detail="Not enough stock to decrement")
-    obj.quantite_disponible = (obj.quantite_disponible or 0) - qty
+    obj.quantite_disponible = (obj.quantite_disponible or 0) - payload.qty
     db.commit()
     db.refresh(obj)
     return obj

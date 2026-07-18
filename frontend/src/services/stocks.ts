@@ -5,16 +5,13 @@ export async function listStocks(): Promise<Stock[]> {
   return apiFetch<Stock[]>('/stock/')
 }
 
-export async function decrementStock(id_stock: number, qty: number) {
-  return apiFetch(`/stock/${id_stock}/decrement`, {
-    method: 'POST',
-    body: JSON.stringify({ qty }),
-  })
-}
-
-export async function getAvailableQuantityForArticle(id_article: number) {
-  const stocks: Stock[] = await listStocks()
-  return stocks
-    .filter((s) => s.id_article === id_article)
-    .reduce((acc, s) => acc + Math.max(0, (s.quantite_disponible || 0) - (s.quantite_reservee || 0)), 0)
+/**
+ * Batched availability: one request returns { id_article: available } for the
+ * given articles (or the whole catalogue when `articleIds` is omitted). Replaces
+ * the old per-article getAvailableQuantityForArticle which fetched the entire
+ * /stock/ list once per item (N+1).
+ */
+export async function getAvailabilityMap(articleIds?: number[]): Promise<Record<number, number>> {
+  const qs = articleIds && articleIds.length ? `?article_ids=${articleIds.join(',')}` : ''
+  return apiFetch<Record<number, number>>(`/stock/availability${qs}`)
 }

@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { getBook } from '@/services/books'
 import { Money } from '@/components/ui/Money'
 import { AddToCartButton } from '@/components/cart/AddToCartButton'
+import { isExternalImage } from '@/lib/images'
 
 export const dynamic = 'force-dynamic'
 
@@ -16,11 +17,7 @@ export default async function BookDetailPage({ params }: { params: Promise<{ id:
     notFound()
   }
 
-  const isExternal = Boolean(
-    book.image_link &&
-      book.image_link.startsWith('http') &&
-      !book.image_link.includes('/static/images/'),
-  )
+  const isExternal = isExternalImage(book.image_link)
 
   return (
     <div className="content-center">

@@ -7,6 +7,8 @@ stock reservation, cart expiry, order totals, and finalization/refund/cancel.
 
 from __future__ import annotations
 
+from decimal import Decimal, ROUND_HALF_UP
+
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy.sql import func
@@ -14,11 +16,53 @@ from sqlalchemy import text
 
 from infrastructure import models
 
+
+def _chf(value) -> float:
+    """Quantize a monetary value to 2 decimals (CHF) using Decimal to avoid binary
+    float drift when summing line totals + shipping, then return a plain float so
+    the JSON API contract (numbers, not strings) is unchanged."""
+    return float(Decimal(str(value or 0)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP))
+
 # Server-side source of truth for shipping fees — the client only chooses a
 # shipping_method, never the fee itself (previously the fee was accepted
 # directly from the client, allowing e.g. shipping_method=POST with
 # frais_port_chf=0 to skip the real fee).
 SHIPPING_FEES_CHF = {"POST": 9.0, "CLICK_COLLECT": 1.0}
+
+# Single source of truth for the commande status vocabulary. Kept here (the
+# order-domain service) so routers, cleanup and finalize all agree instead of
+# each hard-coding its own tuple of magic strings.
+# OPEN: cart still mutable and still subject to the 20-min expiry.
+OPEN_STATUSES = {"CREATED", "PENDING"}
+# PAID+: payment captured; stock has been (or is being) finalized. An order in
+# any of these must never be auto-cancelled by the cart-expiry cleanup.
+PAID_STATUSES = {"PAID", "CAPTURED", "COMPLETED", "SENT", "AT_RECEPTION", "FINISHED"}
+# Terminal states from which nothing further should be finalized.
+TERMINAL_STATUSES = {"CANCELLED", "REFUNDED"}
+
+
+def generate_numero_commande(db: Session) -> str:
+    """Server-side, collision-resistant order number: CMD-YYYYMMDD-XXXXXXXX.
+
+    Uses a UUID suffix (unguessable, no client input) and the DB clock for the date
+    part. Retries on the rare UUID collision. Replaces the previous behaviour of
+    trusting a client-supplied numero_commande (predictable + IntegrityError → 500).
+    """
+    import uuid
+
+    row = db.execute(text("SELECT DATE_FORMAT(NOW(), '%Y%m%d')")).scalar()
+    day = str(row) if row else "00000000"
+    for _ in range(5):
+        candidate = f"CMD-{day}-{uuid.uuid4().hex[:8].upper()}"
+        exists = (
+            db.query(models.Commande.id_commande)
+            .filter(models.Commande.numero_commande == candidate)
+            .first()
+        )
+        if exists is None:
+            return candidate
+    # Extremely unlikely; fall back to a full UUID so we never 500 on collision.
+    return f"CMD-{day}-{uuid.uuid4().hex.upper()}"
 
 
 def get_commande_owned(db: Session, id_commande: int, id_utilisateur: int) -> models.Commande | None:
@@ -27,6 +71,18 @@ def get_commande_owned(db: Session, id_commande: int, id_utilisateur: int) -> mo
         .filter(models.Commande.id_commande == id_commande, models.Commande.id_utilisateur == id_utilisateur)
         .first()
     )
+
+
+def ensure_commande_mutable(commande: models.Commande) -> None:
+    """Guard: an order's lines, totals and shipping may only change while it is
+    still an open cart (CREATED/PENDING).
+
+    Previously the routers only blocked CANCELLED/FAILED, so a customer could add
+    lines to or re-total an order that was already PAID. Anything not in
+    OPEN_STATUSES (paid, shipped, cancelled, refunded…) is now rejected.
+    """
+    if (commande.statut or "").upper() not in OPEN_STATUSES:
+        raise HTTPException(status_code=409, detail="Commande no longer modifiable in its current state")
 
 
 def recompute_commande_total(db: Session, commande: models.Commande) -> None:
@@ -41,7 +97,7 @@ def recompute_commande_total(db: Session, commande: models.Commande) -> None:
         .filter(models.LigneCommande.id_commande == commande.id_commande)
         .scalar()
     ) or 0
-    commande.montant_total_chf = float(lignes_total) + float(commande.frais_port_chf or 0)  # type: ignore[assignment]
+    commande.montant_total_chf = _chf(Decimal(str(lignes_total)) + Decimal(str(commande.frais_port_chf or 0)))  # type: ignore[assignment]
 
 
 def _reactivate_article_if_available(db: Session, id_article: int) -> None:
@@ -96,7 +152,7 @@ def cleanup_expired_carts(db: Session) -> None:
     expired = (
         db.query(models.Commande)
         .filter(
-            models.Commande.statut.in_(["CREATED", "PENDING"]),
+            models.Commande.statut.in_(list(OPEN_STATUSES)),
             models.Commande.cart_expires_at.isnot(None),
             models.Commande.cart_expires_at < func.now(),
         )
@@ -143,6 +199,30 @@ def cancel_commande(db: Session, commande: models.Commande) -> None:
 
 
 def finalize_commande(db: Session, id_commande: int) -> None:
+    """Turn a paid order's reserved stock into sold stock and mark it PAID.
+
+    Idempotent and concurrency-safe: the commande row is locked FOR UPDATE and, if
+    it is already in a PAID+/terminal state, we return without touching stock again.
+    This is what makes the four payment callbacks (confirm / poll / webhook / local
+    webhook) safe to fire concurrently — the first to acquire the lock finalizes and
+    flips the status to PAID; every later caller sees PAID and no-ops, so stock is
+    decremented exactly once (previously each path could double-decrement).
+
+    It also sets `commande.statut = "PAID"` and clears `cart_expires_at`, so the
+    cart-expiry cleanup can never cancel an order that has actually been paid.
+    """
+    commande = (
+        db.query(models.Commande)
+        .filter(models.Commande.id_commande == id_commande)
+        .with_for_update()
+        .first()
+    )
+    if commande is None:
+        return
+    if (commande.statut or "").upper() not in OPEN_STATUSES:
+        # Already finalized (PAID+) or terminal (CANCELLED/REFUNDED) — nothing to do.
+        return
+
     # For each ligne in the commande, finalize reserved stock into sold stock
     lignes = db.query(models.LigneCommande).filter(models.LigneCommande.id_commande == id_commande).all()
     for l in lignes:
@@ -190,6 +270,11 @@ def finalize_commande(db: Session, id_commande: int) -> None:
             art = db.query(models.Article).filter(models.Article.id_article == aid).first()
             if art:
                 art.actif = False  # type: ignore
+
+    # Mark the order paid and drop the cart-expiry deadline so cleanup_expired_carts
+    # can no longer cancel it. Admins advance PAID -> SENT/AT_RECEPTION/FINISHED later.
+    commande.statut = "PAID"  # type: ignore[assignment]
+    commande.cart_expires_at = None  # type: ignore[assignment]
 
 
 def refund_commande(db: Session, id_commande: int) -> None:

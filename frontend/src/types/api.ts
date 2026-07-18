@@ -63,18 +63,19 @@ export type UserCreate = {
 
 export type UserUpdate = Partial<UserCreate & { mot_de_passe?: string }>
 
-// numero_commande/shipping_method are client-chosen; montant_total_chf,
-// statut, and frais_port_chf are always server-computed (never accepted from
-// the client — see backend/presentation/order_router.py) and only appear on
-// the Read shape below.
+// Only shipping_method is client-chosen. numero_commande, montant_total_chf,
+// statut, and frais_port_chf are all server-computed (never accepted from the
+// client — see backend/presentation/order_router.py) and appear on the Read
+// shape below. numero_commande is generated server-side to avoid predictable
+// references and collision-induced 500s.
 export type CommandeCreate = {
-  numero_commande: string
   shipping_method?: 'POST' | 'CLICK_COLLECT'
 }
 
 export type CommandeRead = CommandeCreate & {
   id_commande: number
   id_utilisateur: number
+  numero_commande: string
   montant_total_chf: number
   statut: string
   frais_port_chf: number

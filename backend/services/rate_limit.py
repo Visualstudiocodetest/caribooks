@@ -32,3 +32,9 @@ def check_rate_limit(key: str, max_attempts: int, window_seconds: int) -> None:
 
 def reset_rate_limit(key: str) -> None:
     _attempts.pop(key, None)
+
+
+def clear_all_rate_limits() -> None:
+    """Wipe every counter. Intended for test isolation (the fixed-window state is
+    process-global, so one test's registrations would otherwise leak into the next)."""
+    _attempts.clear()

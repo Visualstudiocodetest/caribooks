@@ -16,6 +16,7 @@ type CartContextValue = {
   items: CartItem[]
   count: number
   total: number
+  hydrated: boolean
   addItem: (item: Omit<CartItem, 'quantity'>) => void
   removeItem: (id_article: number) => void
   setQuantity: (id_article: number, quantity: number) => void
@@ -25,7 +26,7 @@ type CartContextValue = {
 const CartContext = createContext<CartContextValue | null>(null)
 
 export function CartProvider({ children }: { children: ReactNode }) {
-  const { value: items, setValue: setItems } = useLocalStorageState<CartItem[]>('caribooks_cart', [])
+  const { value: items, setValue: setItems, hydrated } = useLocalStorageState<CartItem[]>('caribooks_cart', [])
 
   const value = useMemo<CartContextValue>(() => {
     const count = items.reduce((acc, it) => acc + it.quantity, 0)
@@ -35,6 +36,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       items,
       count,
       total,
+      hydrated,
       addItem: (item) =>
         setItems((prev) => {
           const existing = prev.find((p) => p.id_article === item.id_article)
@@ -52,7 +54,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         ),
       clear: () => setItems([]),
     }
-  }, [items, setItems])
+  }, [items, setItems, hydrated])
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>
 }
