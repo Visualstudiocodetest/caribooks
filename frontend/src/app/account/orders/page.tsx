@@ -40,7 +40,14 @@ export default function AccountOrdersPage() {
     if (!isLoggedIn) { setLoading(false); return }
     setLoading(true)
     getMyCommandes()
-      .then((list) => { if (mounted) setCommandes(list || []) })
+      .then((list) => {
+        if (!mounted) return
+        // Most recent first (by order date, newest → oldest).
+        const sorted = [...(list || [])].sort(
+          (a, b) => new Date(b.date_commande).getTime() - new Date(a.date_commande).getTime(),
+        )
+        setCommandes(sorted)
+      })
       .catch((e: unknown) => { setError((e as Error).message || 'Impossible de charger les commandes') })
       .finally(() => { if (mounted) setLoading(false) })
     return () => { mounted = false }

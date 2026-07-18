@@ -61,6 +61,11 @@ function loadPostFinanceScript(url: string): Promise<void> {
 }
 
 const SUCCESS_STATUSES = new Set(['CAPTURED', 'PAID', 'COMPLETED', 'AUTHORIZED', 'FULFILL', 'SUCCESSFUL', 'FULFILLED'])
+// Terminal PostFinance failure states — the card was refused, or the transaction
+// was voided/declined. These are definitive (no point polling further).
+const FAILURE_STATUSES = new Set(['FAILED', 'DECLINE', 'DECLINED', 'VOIDED', 'VOID'])
+
+const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms))
 
 export function PaymentClient() {
   const router = useRouter()
@@ -204,26 +209,74 @@ export function PaymentClient() {
 
         const statusParam = searchParams.get('status')
         const paiementIdParam = Number(searchParams.get('paiementId'))
+
+        // Helper: release the reservation + refresh availability so the book is
+        // buyable again after a failed/abandoned payment. The cart keeps its items.
+        const releaseAfterFailure = async () => {
+          await cancelCommande(cmd.id_commande).catch(() => {})
+          refreshAvailability()
+        }
+
+        // PostFinance redirected to the failed URL — definitive failure, no poll.
+        if (statusParam === 'failed') {
+          await releaseAfterFailure()
+          setError(
+            'Le paiement a été refusé ou annulé (carte invalide, fonds insuffisants, ou paiement interrompu). ' +
+              'Vos articles sont toujours dans votre panier — vous pouvez réessayer.',
+          )
+          return
+        }
+
+        // Returned on the success URL (has paiementId). The transaction is often
+        // still PROCESSING at redirect time, so poll for a resolved state instead
+        // of reading a single check as "pending" (the old false-negative). The
+        // webhook is the ultimate source of truth; this just gives quick feedback.
         if (Number.isFinite(paiementIdParam) && paiementIdParam > 0) {
-          const pollResp = await pollPaiementPostFinance(paiementIdParam)
-          if (!mounted) return
-          const statut = pollResp?.paiement?.statut
-          if (statut && SUCCESS_STATUSES.has(String(statut).toUpperCase())) {
-            clear()
-            window.location.href = '/account/orders'
-            return
+          const MAX_ATTEMPTS = 15
+          for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+            if (!mounted) return
+            let statut = ''
+            try {
+              const pollResp = await pollPaiementPostFinance(paiementIdParam)
+              statut = String(pollResp?.paiement?.statut || '').toUpperCase()
+            } catch {
+              // transient — keep polling
+            }
+            if (!mounted) return
+
+            if (SUCCESS_STATUSES.has(statut)) {
+              clear()
+              window.location.href = '/account/orders'
+              return
+            }
+            if (FAILURE_STATUSES.has(statut)) {
+              await releaseAfterFailure()
+              setError(
+                'Le paiement a été refusé (carte invalide ou refusée). ' +
+                  'Vos articles sont toujours dans votre panier — vous pouvez réessayer.',
+              )
+              return
+            }
+            // Reservation ran out while the user was on the PostFinance page.
+            // Use the absolute expiry against the live clock so we catch expiry
+            // that happens during this wait, not just an already-expired landing.
+            const expired = cmd.cart_expires_at
+              ? new Date(cmd.cart_expires_at).getTime() <= Date.now()
+              : (cmd.cart_seconds_left ?? 1) <= 0
+            if (expired) {
+              setError(
+                'Votre réservation a expiré avant la fin du paiement (délai de 20 minutes dépassé). ' +
+                  'Les articles ont été remis en vente — reprenez votre commande depuis le panier.',
+              )
+              return
+            }
+            await sleep(2000)
           }
-          if (statusParam === 'failed') {
-            // Release the reservation immediately instead of leaving it to
-            // expire on its own over the next 20 minutes — the cart still
-            // has these items (it's no longer cleared until payment actually
-            // succeeds), so the user can simply retry from /cart.
-            await cancelCommande(cmd.id_commande).catch(() => {})
-            refreshAvailability()
-            setError('Le paiement a échoué. Vos articles sont toujours dans votre panier — vous pouvez réessayer.')
-          } else {
-            setError('Paiement en attente de confirmation. Réessayez ou contactez le support.')
-          }
+          // Still unresolved after ~30s: the webhook will finalize it shortly.
+          setError(
+            'Votre paiement est en cours de confirmation. Consultez « Mes commandes » dans un instant ; ' +
+              'si le problème persiste, contactez le support.',
+          )
           return
         }
 
