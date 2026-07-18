@@ -1,0 +1,19 @@
+%% Diagramme de séquence — Scan ISBN et préremplissage des métadonnées
+sequenceDiagram
+    autonumber
+    actor Ben as Bénévole
+    participant Nav as Navigateur<br/>(scanner JS)
+    participant API as API FastAPI
+    participant OL as OpenLibrary<br/>/ Google Books
+    participant BD as BD MySQL
+
+    Ben->>Nav: scanne le code-barres
+    Nav->>Nav: décode l'ISBN
+    Nav->>API: GET /books/isbn-metadata/{isbn}
+    API->>OL: requête métadonnées (OpenLibrary)
+    OL-->>API: titre, auteur, éditeur
+    note over API,OL: fallback Google Books si vide
+    API-->>Nav: JSON métadonnées
+    Ben->>Nav: complète état + prix
+    Nav->>API: POST /books + POST /scans
+    API->>BD: INSERT livre / scan_isbn

@@ -1,0 +1,23 @@
+%% Diagramme des cas d'utilisation — Flux de paiement PostFinance
+flowchart LR
+    ach["👤 Acheteur"]
+    pf["👤 PostFinance"]
+    subgraph S["Tunnel de paiement"]
+        direction TB
+        p1(["Valider le panier"])
+        p2(["Choisir le moyen<br/>(TWINT / carte)"])
+        p3(["Initier le<br/>paiement"])
+        p4(["Recevoir la confirmation<br/>(webhook)"])
+    end
+
+    ach --- p1
+    ach --- p2
+    ach --- p3
+    p3 -. «include» .-> p4
+    p3 --- pf
+    p4 --- pf
+
+    classDef actor fill:#e7f0ff,stroke:#333;
+    classDef uc fill:#fff7d6,stroke:#9a7d0a;
+    class ach,pf actor;
+    class p1,p2,p3,p4 uc;

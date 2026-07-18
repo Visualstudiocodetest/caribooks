@@ -1,0 +1,86 @@
+%% Diagramme de classes — Modèle objet CARIBOOKS
+classDiagram
+    direction LR
+
+    class TypeObjet {
+        +id_type_objet
+        +libelle
+        +code
+    }
+    class EtatUsure {
+        +id_etat_usure
+        +libelle
+    }
+    class Categorie {
+        +id_categorie
+        +libelle
+    }
+    class SourceStock {
+        +id_source_stock
+        +libelle
+        +type_source
+    }
+    class Article {
+        +id_article
+        +sku
+        +titre
+        +prix_chf
+        +actif
+    }
+    class Livre {
+        +isbn
+        +auteur
+        +editeur
+        +date_publication
+        +langue
+    }
+    class Stock {
+        +id_stock
+        +quantite_disponible
+        +quantite_reservee
+    }
+    class ScanISBN {
+        +id_scan_isbn
+        +isbn_lu
+        +valide
+    }
+    class Utilisateur {
+        +id_utilisateur
+        +email
+        +mot_de_passe_hash
+        +role
+    }
+    class Commande {
+        +id_commande
+        +numero_commande
+        +montant_total_chf
+        +shipping_method
+        +frais_port_chf
+        +cart_expires_at
+        +statut
+    }
+    class LigneCommande {
+        +id_ligne_commande
+        +quantite
+        +prix_unitaire_chf
+    }
+    class Paiement {
+        +id_paiement
+        +fournisseur_paiement
+        +reference_externe
+        +montant_chf
+        +statut
+    }
+
+    Article <|-- Livre : héritage (PK partagée)
+    Article "*" --> "1" TypeObjet
+    Article "*" --> "1" EtatUsure
+    Article "*" --> "*" Categorie : article_categorie
+    Stock "*" --> "1" Article
+    Stock "*" --> "1" SourceStock
+    Commande "*" --> "1" Utilisateur
+    LigneCommande "*" --> "1" Commande
+    LigneCommande "*" --> "1" Article
+    Paiement "*" --> "1" Commande
+    ScanISBN "*" --> "1" Utilisateur
+    ScanISBN "*" --> "1" Livre

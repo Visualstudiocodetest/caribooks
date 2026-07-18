@@ -1,0 +1,99 @@
+%% Modèle Logique de Données (MLD) — 13 tables MySQL
+erDiagram
+    type_objet ||--o{ article : "id_type_objet"
+    etat_usure ||--o{ article : "id_etat_usure"
+    article ||--o| livre : "id_article (PK partagée)"
+    article ||--o{ article_categorie : ""
+    categorie ||--o{ article_categorie : ""
+    article ||--o{ stock : "id_article"
+    source_stock ||--o{ stock : "id_source_stock"
+    utilisateur ||--o{ commande : "id_utilisateur"
+    commande ||--|{ ligne_commande : "id_commande"
+    article ||--o{ ligne_commande : "id_article"
+    commande ||--o{ paiement : "id_commande"
+    utilisateur ||--o{ scan_isbn : "id_utilisateur"
+    livre ||--o{ scan_isbn : "id_article_livre"
+
+    type_objet {
+        bigint id_type_objet PK
+        string libelle
+        string code
+    }
+    etat_usure {
+        bigint id_etat_usure PK
+        string libelle
+    }
+    categorie {
+        bigint id_categorie PK
+        string libelle
+    }
+    source_stock {
+        bigint id_source_stock PK
+        string libelle
+        string type_source
+    }
+    article {
+        bigint id_article PK
+        bigint id_type_objet FK
+        bigint id_etat_usure FK
+        string sku
+        string titre
+        decimal prix_chf
+        bool actif
+    }
+    livre {
+        bigint id_article PK,FK
+        string isbn
+        string auteur
+        string editeur
+        date date_publication
+        string langue
+    }
+    article_categorie {
+        bigint id_article PK,FK
+        bigint id_categorie PK,FK
+    }
+    stock {
+        bigint id_stock PK
+        bigint id_article FK
+        bigint id_source_stock FK
+        int quantite_disponible
+        int quantite_reservee
+    }
+    utilisateur {
+        bigint id_utilisateur PK
+        string email
+        string mot_de_passe_hash
+        string role
+    }
+    commande {
+        bigint id_commande PK
+        bigint id_utilisateur FK
+        string numero_commande
+        decimal montant_total_chf
+        string shipping_method
+        decimal frais_port_chf
+        datetime cart_expires_at
+        string statut
+    }
+    ligne_commande {
+        bigint id_ligne_commande PK
+        bigint id_commande FK
+        bigint id_article FK
+        int quantite
+        decimal prix_unitaire_chf
+    }
+    paiement {
+        bigint id_paiement PK
+        bigint id_commande FK
+        string reference_externe
+        decimal montant_chf
+        string statut
+    }
+    scan_isbn {
+        bigint id_scan_isbn PK
+        bigint id_utilisateur FK
+        bigint id_article_livre FK
+        string isbn_lu
+        bool valide
+    }

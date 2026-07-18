@@ -1,0 +1,27 @@
+%% Modèle Conceptuel de Données (MCD) — CARIBOOKS
+erDiagram
+    ARTICLE }o--|| TYPE_OBJET : "est de type"
+    ARTICLE }o--|| ETAT_USURE : "a pour état"
+    ARTICLE }o--o{ CATEGORIE : "classé dans"
+    ARTICLE ||--o{ STOCK : "stocké (quantité)"
+    STOCK }o--|| SOURCE_STOCK : "provient de"
+    ARTICLE ||--o| LIVRE : "est un"
+    UTILISATEUR ||--o{ COMMANDE : "passe"
+    COMMANDE ||--|| PAIEMENT : "réglée par"
+    COMMANDE ||--|{ LIGNE_COMMANDE : "contient"
+    LIGNE_COMMANDE }o--|| ARTICLE : "porte sur"
+    UTILISATEUR ||--o{ SCAN_ISBN : "scanne"
+    SCAN_ISBN }o--|| LIVRE : "concerne"
+
+    TYPE_OBJET { string libelle string code }
+    ETAT_USURE { string libelle }
+    CATEGORIE { string libelle }
+    SOURCE_STOCK { string libelle string type_source }
+    ARTICLE { string sku string titre decimal prix_chf }
+    LIVRE { string isbn string auteur string editeur string langue }
+    STOCK { int quantite_disponible int quantite_reservee }
+    UTILISATEUR { string email string role }
+    COMMANDE { string numero decimal montant_total_chf string statut }
+    LIGNE_COMMANDE { int quantite decimal prix_unitaire_chf }
+    PAIEMENT { string reference_externe decimal montant_chf string statut }
+    SCAN_ISBN { string isbn_lu boolean valide }

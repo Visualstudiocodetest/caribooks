@@ -1,0 +1,19 @@
+%% Architecture en couches (Clean Architecture) — Backend FastAPI
+flowchart TB
+    pres["<b>Présentation (Routers)</b><br/>auth · book · catalog · order · scan · user · stock · images"]
+    svc["<b>Services (Métier)</b><br/>jwt_service · order_service · postfinance_service · book_service · image_service"]
+    infra["<b>Infrastructure (Données)</b><br/>SQLAlchemy models · crud_base · crud_user · db.py"]
+    dom["<b>Domaine (Entités)</b><br/>book.py"]
+
+    pres -.->|dépend de| svc
+    svc -.->|dépend de| infra
+    infra -.->|dépend de| dom
+
+    classDef pres fill:#d6f0f5,stroke:#0d6b7d;
+    classDef svc fill:#cfe2ff,stroke:#0d3b66;
+    classDef infra fill:#ffe3c2,stroke:#9a5b0a;
+    classDef dom fill:#d8f5d8,stroke:#2e7d32;
+    class pres pres;
+    class svc svc;
+    class infra infra;
+    class dom dom;

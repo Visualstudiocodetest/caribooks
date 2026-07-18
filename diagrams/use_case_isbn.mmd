@@ -1,0 +1,23 @@
+%% Diagramme des cas d'utilisation — Flux Scan ISBN
+flowchart LR
+    vend["👤 Vendeur<br/>(bénévole)"]
+    ol["👤 API<br/>OpenLibrary"]
+    subgraph S["Ajout d'un livre"]
+        direction TB
+        u1(["Scanner le<br/>code-barres ISBN"])
+        u2(["Récupérer les<br/>métadonnées"])
+        u3(["Saisir manuellement<br/>les informations"])
+        u4(["Compléter état &amp; prix,<br/>publier l'annonce"])
+    end
+
+    vend --- u1
+    vend --- u3
+    vend --- u4
+    u1 -. «include» .-> u2
+    u3 -. «extend» .-> u1
+    u2 --- ol
+
+    classDef actor fill:#e7f0ff,stroke:#333;
+    classDef uc fill:#fff7d6,stroke:#9a7d0a;
+    class vend,ol actor;
+    class u1,u2,u3,u4 uc;

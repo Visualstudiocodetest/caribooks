@@ -1,0 +1,21 @@
+%% Diagramme d'activités — Parcours d'achat complet
+flowchart TD
+    start((" ")) --> a1["Parcourir le catalogue"]
+    a1 --> a2["Rechercher / filtrer<br/>(titre, auteur, prix, état)"]
+    a2 --> a3["Consulter la fiche du livre"]
+    a3 --> a4["Ajouter au panier"]
+    a4 --> d1{"Connecté ?"}
+    d1 -->|non| a5["Se connecter /<br/>s'inscrire"]
+    d1 -->|oui| a6["Valider le panier"]
+    a5 --> a6
+    a6 --> a7["Paiement PostFinance<br/>(TWINT / carte, CHF)"]
+    a7 --> d2{"Paiement<br/>réussi ?"}
+    d2 -->|non| a8["Afficher l'erreur"]
+    a8 --> a6
+    d2 -->|oui| a9["Commande confirmée<br/>(statut PAID)"]
+    a9 --> done(((" ")))
+
+    classDef act fill:#e7f0ff,stroke:#333;
+    classDef dec fill:#ffe3c2,stroke:#9a5b0a;
+    class a1,a2,a3,a4,a5,a6,a7,a8,a9 act;
+    class d1,d2 dec;

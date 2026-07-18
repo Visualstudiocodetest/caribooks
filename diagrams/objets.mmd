@@ -1,0 +1,43 @@
+%% Diagramme d'objets — Exemple d'une commande en cours
+classDiagram
+    direction TB
+
+    class marie["marie : Utilisateur"] {
+        email = marie@example.ch
+        role = "user"
+    }
+    class cmd1024["cmd1024 : Commande"] {
+        numero = CMD-2026-1024
+        montant_total_chf = 27.50
+        statut = "PAID"
+    }
+    class paie1["paie1 : Paiement"] {
+        fournisseur = "POSTFINANCE"
+        montant_chf = 27.50
+        statut = "PAID"
+    }
+    class l1["l1 : LigneCommande"] {
+        quantite = 1
+        prix_unitaire_chf = 12.50
+    }
+    class l2["l2 : LigneCommande"] {
+        quantite = 1
+        prix_unitaire_chf = 15.00
+    }
+    class a1["a1 : Livre"] {
+        titre = L'Étranger
+        isbn = 9782070360024
+        prix_chf = 12.50
+    }
+    class a2["a2 : Livre"] {
+        titre = 1984
+        isbn = 9780451524935
+        prix_chf = 15.00
+    }
+
+    marie --> cmd1024
+    cmd1024 --> paie1
+    cmd1024 --> l1
+    cmd1024 --> l2
+    l1 --> a1
+    l2 --> a2

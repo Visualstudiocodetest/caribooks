@@ -1,0 +1,25 @@
+%% Diagramme de composants — Architecture logicielle CARIBOOKS
+flowchart TB
+    front["<b>Frontend Next.js</b><br/>Pages, composants React,<br/>services API, scan ISBN (JS)"]
+    subgraph API["<b>API FastAPI</b>"]
+        direction TB
+        pres["presentation<br/>(routers, schemas Pydantic)"]
+        svc["services<br/>(JWT, paiement, books)"]
+        infra["infrastructure<br/>(SQLAlchemy, CRUD)"]
+        pres --> svc --> infra
+    end
+    db["<b>Base de données MySQL</b>"]
+    ext["<b>Services externes</b><br/>OpenLibrary<br/>PostFinance<br/>Poste Suisse"]
+
+    front -. "HTTP / REST (JSON)" .-> API
+    API -. "ORM SQLAlchemy" .-> db
+    API -. "HTTPS" .-> ext
+
+    classDef front fill:#d6f0f5,stroke:#0d6b7d;
+    classDef api fill:#cfe2ff,stroke:#0d3b66;
+    classDef db fill:#ffe3c2,stroke:#9a5b0a;
+    classDef ext fill:#ececec,stroke:#555;
+    class front front;
+    class db db;
+    class ext ext;
+    class pres,svc,infra api;

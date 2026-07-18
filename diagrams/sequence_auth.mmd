@@ -1,0 +1,16 @@
+%% Diagramme de séquence — Authentification JWT
+sequenceDiagram
+    autonumber
+    actor Usr as Utilisateur
+    participant Fro as Frontend<br/>Next.js
+    participant API as API FastAPI
+    participant BD as BD MySQL
+
+    Usr->>Fro: saisit email + mot de passe
+    Fro->>API: POST /auth/token
+    API->>BD: SELECT utilisateur (par email)
+    BD-->>API: mot_de_passe_hash (bcrypt)
+    API->>API: vérifie (passlib) + signe JWT<br/>(HS256, exp 480 min)
+    API-->>Fro: access_token (JWT)
+    Fro-->>Usr: connexion établie
+    Fro->>API: requêtes — Authorization: Bearer <token>
