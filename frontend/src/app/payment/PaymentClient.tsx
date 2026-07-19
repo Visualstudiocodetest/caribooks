@@ -255,6 +255,14 @@ export function PaymentClient() {
           // We are back from PostFinance verifying the result — hide the payment
           // form so the customer cannot submit a second payment while we confirm.
           setPhase('confirming')
+          // Timezone-proof remaining time: cart_seconds_left is computed by the DB
+          // clock (attach_seconds_left). We must NOT parse cart_expires_at with
+          // `new Date(...)` — it's a naive timestamp, read as local time, which
+          // wrongly looks expired when the server runs UTC and the client is ahead
+          // of UTC (the false "réservation expirée" seen right after a valid
+          // payment). Count down from the server value using elapsed wall time.
+          const secondsLeftAtStart = cmd.cart_seconds_left ?? null
+          const startedAt = Date.now()
           const MAX_ATTEMPTS = 15
           for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
             if (!mounted) return
@@ -280,17 +288,17 @@ export function PaymentClient() {
               return
             }
             // Reservation ran out while the user was on the PostFinance page.
-            // Use the absolute expiry against the live clock so we catch expiry
-            // that happens during this wait, not just an already-expired landing.
-            const expired = cmd.cart_expires_at
-              ? new Date(cmd.cart_expires_at).getTime() <= Date.now()
-              : (cmd.cart_seconds_left ?? 1) <= 0
-            if (expired) {
-              setError(
-                'Votre réservation a expiré avant la fin du paiement (délai de 20 minutes dépassé). ' +
-                  'Les articles ont été remis en vente — reprenez votre commande depuis le panier.',
-              )
-              return
+            // remaining = server-reported seconds-left minus locally-elapsed time.
+            // A small negative buffer avoids a false positive from minor clock skew.
+            if (secondsLeftAtStart !== null) {
+              const remaining = secondsLeftAtStart - (Date.now() - startedAt) / 1000
+              if (remaining <= -5) {
+                setError(
+                  'Votre réservation a expiré avant la fin du paiement (délai de 20 minutes dépassé). ' +
+                    'Les articles ont été remis en vente — reprenez votre commande depuis le panier.',
+                )
+                return
+              }
             }
             await sleep(2000)
           }
