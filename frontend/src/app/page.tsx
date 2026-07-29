@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { listBooks } from '@/services/books'
-import { listStocks } from '@/services/stocks'
+import { getAvailabilityMap } from '@/services/stocks'
 import { BookGrid } from '@/components/books/BookGrid'
 
 export const dynamic = 'force-dynamic'
@@ -13,12 +13,7 @@ export default async function HomePage() {
   // real remaining quantity instead of allowing unlimited clicks on a book
   // that's out of stock (the home page, unlike /catalog, doesn't filter
   // unavailable books out of the list at all).
-  const stocks = await listStocks().catch(() => [])
-  const availability: Record<number, number> = {}
-  for (const s of stocks) {
-    const avail = (s.quantite_disponible || 0) - (s.quantite_reservee || 0)
-    availability[s.id_article] = (availability[s.id_article] || 0) + avail
-  }
+  const availability = await getAvailabilityMap().catch(() => ({}) as Record<number, number>)
 
   return (
     <div style={{ display: 'grid', gap: 32 }}>

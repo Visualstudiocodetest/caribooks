@@ -1,6 +1,7 @@
 'use client'
 
-import { useRouter, usePathname, useSearchParams, useParams } from 'next/navigation'
+
+import { useParams } from 'next/navigation'
 import { useState } from 'react'
 import { apiFetch } from '@/services/api'
 
@@ -16,7 +17,7 @@ export default function LocalRedirectPage() {
     setErr(null)
     try {
       const payload = { Id: `local-${ref}`, Status: 'PAID', Metadata: { reference: ref } }
-      const r = await apiFetch('/orders/paiements/webhook/local', {
+      await apiFetch('/orders/paiements/webhook/local', {
         method: 'POST',
         body: JSON.stringify(payload),
       })

@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { apiFetch } from '@/services/api'
+import { listCatalog, createCatalogItem, updateCatalogItem, deleteCatalogItem } from '@/services/catalog'
 
 type Etat = { id_etat_usure: number; libelle: string }
 
@@ -14,7 +14,7 @@ export default function EtatUsuresAdmin() {
 
   async function load() {
     try {
-      setList(await apiFetch<Etat[]>('/catalog/etat-usures'))
+      setList(await listCatalog<Etat>('etat-usures'))
     } catch (e) {
       setError((e as Error).message)
     }
@@ -26,7 +26,7 @@ export default function EtatUsuresAdmin() {
     e.preventDefault()
     if (!libelle.trim()) return
     try {
-      await apiFetch('/catalog/etat-usures', { method: 'POST', auth: true, body: JSON.stringify({ libelle: libelle.trim() }) })
+      await createCatalogItem('etat-usures', { libelle: libelle.trim() })
       setLibelle('')
       await load()
     } catch (e) {
@@ -37,7 +37,7 @@ export default function EtatUsuresAdmin() {
   async function saveEdit(id: number) {
     if (!editValue.trim()) return
     try {
-      await apiFetch(`/catalog/etat-usures/${id}`, { method: 'PUT', auth: true, body: JSON.stringify({ libelle: editValue.trim() }) })
+      await updateCatalogItem('etat-usures', id, { libelle: editValue.trim() })
       setEditingId(null)
       await load()
     } catch (e) {
@@ -48,7 +48,7 @@ export default function EtatUsuresAdmin() {
   async function remove(id: number) {
     if (!confirm('Supprimer cet état ?')) return
     try {
-      await apiFetch(`/catalog/etat-usures/${id}`, { method: 'DELETE', auth: true })
+      await deleteCatalogItem('etat-usures', id)
       await load()
     } catch (e) {
       setError((e as Error).message)

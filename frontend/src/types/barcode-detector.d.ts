@@ -31,6 +31,10 @@ declare global {
     static getSupportedFormats?(): Promise<BarcodeFormat[]>
     detect(image: ImageBitmapSource): Promise<DetectedBarcode[]>
   }
+
+  interface Window {
+    BarcodeDetector?: typeof BarcodeDetector
+  }
 }
 
 export {}

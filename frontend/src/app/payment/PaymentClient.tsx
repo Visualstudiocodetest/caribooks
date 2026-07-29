@@ -67,6 +67,231 @@ const FAILURE_STATUSES = new Set(['FAILED', 'DECLINE', 'DECLINED', 'VOIDED', 'VO
 
 const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms))
 
+function LoginRequiredCard() {
+  return (
+    <div className="card" style={{ padding: 16, display: 'grid', gap: 10 }}>
+      <div style={{ fontWeight: 900 }}>Connexion requise</div>
+      <div className="muted">Connectez-vous pour effectuer le paiement.</div>
+      <Link className="btn btnPrimary" href="/login">
+        Se connecter
+      </Link>
+    </div>
+  )
+}
+
+function MissingCommandeCard() {
+  return (
+    <div className="card" style={{ padding: 16, display: 'grid', gap: 10 }}>
+      <div style={{ fontWeight: 900 }}>Commande manquante</div>
+      <div className="muted">Revenez au panier pour relancer une commande.</div>
+      <Link className="btn btnPrimary" href="/cart">
+        Aller au panier
+      </Link>
+    </div>
+  )
+}
+
+// Crystal-clear success confirmation — no pay button anywhere on this screen,
+// so the customer cannot be charged a second time. The cart is already emptied.
+function PaymentSuccessScreen({ commande }: { commande: CommandeRead | null }) {
+  return (
+    <div style={{ display: 'grid', gap: 16, maxWidth: 640, margin: '0 auto' }}>
+      <div className="card" style={{ padding: 24, display: 'grid', gap: 14, textAlign: 'center' }}>
+        <div
+          aria-hidden="true"
+          style={{
+            width: 64, height: 64, borderRadius: '50%', margin: '0 auto',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            background: '#065f4618', color: '#065f46', fontSize: 34, fontWeight: 900,
+          }}
+        >
+          ✓
+        </div>
+        <h1 style={{ margin: 0, color: '#065f46' }}>Paiement réussi</h1>
+        <div style={{ fontWeight: 700 }}>Merci, votre commande est confirmée.</div>
+        {commande ? (
+          <div className="muted">
+            Commande {commande.numero_commande} — <Money amount={commande.montant_total_chf} />
+          </div>
+        ) : null}
+        <div className="banner-success" role="status" style={{ fontWeight: 700 }}>
+          Vous avez été débité une seule fois. Ne relancez pas le paiement.
+        </div>
+        <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap' }}>
+          <Link className="btn btnPrimary" href="/account/orders">Voir mes commandes</Link>
+          <Link className="btn" href="/catalog">Continuer mes achats</Link>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// Returned from PostFinance: verifying the result. Show a clear "in progress"
+// state (or the resolved error) — but NEVER the payment form, so a second
+// payment can't be submitted while we confirm the first.
+function PaymentConfirmingScreen({ error }: { error: string | null }) {
+  return (
+    <div style={{ display: 'grid', gap: 16, maxWidth: 640, margin: '0 auto' }}>
+      <h1 style={{ margin: 0 }}>Paiement</h1>
+      {error ? (
+        <>
+          <div className="banner-error">{error}</div>
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+            <Link className="btn btnPrimary" href="/cart">Retour au panier</Link>
+            <Link className="btn" href="/account/orders">Mes commandes</Link>
+          </div>
+        </>
+      ) : (
+        <div className="card cardPadding" role="status" style={{ display: 'grid', gap: 6 }}>
+          <div style={{ fontWeight: 800 }}>Confirmation de votre paiement en cours…</div>
+          <div className="muted">
+            Merci de patienter, ne fermez pas cette page et ne relancez pas le paiement.
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function PaymentFormCard({
+  commande,
+  loading,
+  error,
+  cartSecondsLeft,
+  paymentMethods,
+  selectedMethodId,
+  onSelectMethod,
+  localMode,
+  iframeHeight,
+  validationErrors,
+  paying,
+  payButtonLabel,
+  iframeReady,
+  onPayClick,
+  cancelling,
+  onCancelOrder,
+  onLeaveCatalog,
+}: {
+  commande: CommandeRead
+  loading: boolean
+  error: string | null
+  cartSecondsLeft: number | null
+  paymentMethods: PostFinancePaymentMethod[]
+  selectedMethodId: number | null
+  onSelectMethod: (id: number) => void
+  localMode: boolean
+  iframeHeight: number
+  validationErrors: string[]
+  paying: boolean
+  payButtonLabel: string
+  iframeReady: boolean
+  onPayClick: () => void
+  cancelling: boolean
+  onCancelOrder: () => void
+  onLeaveCatalog: () => void
+}) {
+  return (
+    <div style={{ display: 'grid', gap: 16, maxWidth: 820, margin: '0 auto' }}>
+      <h1 style={{ margin: 0 }}>Paiement</h1>
+
+      {loading ? <div className="muted">Chargement du formulaire de paiement…</div> : null}
+      {error ? <div className="banner-error">{error}</div> : null}
+      {cartSecondsLeft !== null ? (
+        <div
+          className={cartSecondsLeft === 0 ? 'banner-error' : cartSecondsLeft <= 300 ? 'banner-warning' : 'card cardPadding'}
+          style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 700 }}
+        >
+          {cartSecondsLeft === 0
+            ? 'Votre réservation a expiré. Les articles ont été remis en vente.'
+            : `⏱ Réservation valable encore ${Math.floor(cartSecondsLeft / 60)}:${String(cartSecondsLeft % 60).padStart(2, '0')}`}
+        </div>
+      ) : null}
+
+      <div className="card" style={{ padding: 16, display: 'grid', gap: 12 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+          <div>
+            <div style={{ fontWeight: 900 }}>Commande</div>
+            <div className="muted">{commande.numero_commande}</div>
+          </div>
+          <Money amount={commande.montant_total_chf} />
+        </div>
+
+        <div className="muted">
+          Saisissez vos informations de paiement ci-dessous. Le paiement est traité par PostFinance Checkout.
+        </div>
+
+        {paymentMethods.length > 1 ? (
+          <div style={{ display: 'grid', gap: 8 }}>
+            <div style={{ fontWeight: 700 }}>Méthode de paiement</div>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              {paymentMethods.map((method) => (
+                <button
+                  key={method.id}
+                  type="button"
+                  className={selectedMethodId === method.id ? 'btn btnPrimary' : 'btn'}
+                  onClick={() => onSelectMethod(method.id)}
+                  disabled={paying}
+                >
+                  {paymentMethodLabel(method)}
+                </button>
+              ))}
+            </div>
+          </div>
+        ) : null}
+
+        {localMode ? (
+          <div className="card" style={{ padding: 12 }}>
+            <div style={{ fontWeight: 700 }}>Mode simulation locale</div>
+            <div className="muted">
+              PostFinance n’est pas configuré. Cliquez sur le bouton ci-dessous pour simuler un paiement réussi.
+            </div>
+          </div>
+        ) : (
+          <div
+            id="postfinance-payment-form"
+            style={{ minHeight: iframeHeight, border: '1px solid var(--border, #e5e7eb)', borderRadius: 8 }}
+          />
+        )}
+
+        {validationErrors.length > 0 ? (
+          <div className="banner-error">
+            {validationErrors.map((msg) => (
+              <div key={msg}>{msg}</div>
+            ))}
+          </div>
+        ) : null}
+
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+          <button
+            className="btn btnPrimary"
+            type="button"
+            onClick={onPayClick}
+            disabled={paying || loading || (!localMode && !iframeReady)}
+          >
+            {paying ? 'Traitement…' : payButtonLabel}
+          </button>
+          <button
+            className="btn"
+            type="button"
+            onClick={onCancelOrder}
+            disabled={cancelling || paying}
+          >
+            {cancelling ? 'Annulation…' : 'Annuler la commande'}
+          </button>
+          <button
+            className="btn"
+            type="button"
+            onClick={onLeaveCatalog}
+            disabled={cancelling || paying}
+          >
+            Retour au catalogue
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export function PaymentClient() {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -99,7 +324,6 @@ export function PaymentClient() {
   const [loading, setLoading] = useState(true)
   const [paymentMethods, setPaymentMethods] = useState<PostFinancePaymentMethod[]>([])
   const [selectedMethodId, setSelectedMethodId] = useState<number | null>(null)
-  const [paiementId, setPaiementId] = useState<number | null>(null)
   const [localMode, setLocalMode] = useState(false)
   const [iframeReady, setIframeReady] = useState(false)
   const [iframeHeight, setIframeHeight] = useState(360)
@@ -322,7 +546,6 @@ export function PaymentClient() {
         }
 
         paiementIdRef.current = session.paiement.id_paiement
-        setPaiementId(session.paiement.id_paiement)
         setPaymentMethods(session.payment_methods || [])
         setLocalMode(Boolean(session.local_mode))
 
@@ -403,9 +626,9 @@ export function PaymentClient() {
     setValidationErrors([])
     setError(null)
 
-    if (localMode && paiementId) {
+    if (localMode && paiementIdRef.current) {
       try {
-        await confirmPaiementPostFinance(paiementId)
+        await confirmPaiementPostFinance(paiementIdRef.current)
         markPaymentSucceeded()
       } catch (e: unknown) {
         setPaying(false)
@@ -452,191 +675,42 @@ export function PaymentClient() {
   )
 
   if (!isLoggedIn) {
-    return (
-      <div className="card" style={{ padding: 16, display: 'grid', gap: 10 }}>
-        <div style={{ fontWeight: 900 }}>Connexion requise</div>
-        <div className="muted">Connectez-vous pour effectuer le paiement.</div>
-        <Link className="btn btnPrimary" href="/login">
-          Se connecter
-        </Link>
-      </div>
-    )
+    return <LoginRequiredCard />
   }
 
   if (!Number.isFinite(commandeId) || commandeId <= 0) {
-    return (
-      <div className="card" style={{ padding: 16, display: 'grid', gap: 10 }}>
-        <div style={{ fontWeight: 900 }}>Commande manquante</div>
-        <div className="muted">Revenez au panier pour relancer une commande.</div>
-        <Link className="btn btnPrimary" href="/cart">
-          Aller au panier
-        </Link>
-      </div>
-    )
+    return <MissingCommandeCard />
   }
 
-  // Crystal-clear success confirmation — no pay button anywhere on this screen,
-  // so the customer cannot be charged a second time. The cart is already emptied.
   if (phase === 'success') {
-    return (
-      <div style={{ display: 'grid', gap: 16, maxWidth: 640, margin: '0 auto' }}>
-        <div className="card" style={{ padding: 24, display: 'grid', gap: 14, textAlign: 'center' }}>
-          <div
-            aria-hidden="true"
-            style={{
-              width: 64, height: 64, borderRadius: '50%', margin: '0 auto',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              background: '#065f4618', color: '#065f46', fontSize: 34, fontWeight: 900,
-            }}
-          >
-            ✓
-          </div>
-          <h1 style={{ margin: 0, color: '#065f46' }}>Paiement réussi</h1>
-          <div style={{ fontWeight: 700 }}>Merci, votre commande est confirmée.</div>
-          {commande ? (
-            <div className="muted">
-              Commande {commande.numero_commande} — <Money amount={commande.montant_total_chf} />
-            </div>
-          ) : null}
-          <div className="banner-success" role="status" style={{ fontWeight: 700 }}>
-            Vous avez été débité une seule fois. Ne relancez pas le paiement.
-          </div>
-          <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap' }}>
-            <Link className="btn btnPrimary" href="/account/orders">Voir mes commandes</Link>
-            <Link className="btn" href="/catalog">Continuer mes achats</Link>
-          </div>
-        </div>
-      </div>
-    )
+    return <PaymentSuccessScreen commande={commande} />
   }
 
-  // Returned from PostFinance: verifying the result. Show a clear "in progress"
-  // state (or the resolved error) — but NEVER the payment form, so a second
-  // payment can't be submitted while we confirm the first.
   if (phase === 'confirming') {
-    return (
-      <div style={{ display: 'grid', gap: 16, maxWidth: 640, margin: '0 auto' }}>
-        <h1 style={{ margin: 0 }}>Paiement</h1>
-        {error ? (
-          <>
-            <div className="banner-error">{error}</div>
-            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-              <Link className="btn btnPrimary" href="/cart">Retour au panier</Link>
-              <Link className="btn" href="/account/orders">Mes commandes</Link>
-            </div>
-          </>
-        ) : (
-          <div className="card cardPadding" role="status" style={{ display: 'grid', gap: 6 }}>
-            <div style={{ fontWeight: 800 }}>Confirmation de votre paiement en cours…</div>
-            <div className="muted">
-              Merci de patienter, ne fermez pas cette page et ne relancez pas le paiement.
-            </div>
-          </div>
-        )}
-      </div>
-    )
+    return <PaymentConfirmingScreen error={error} />
   }
+
+  if (!commande) return null
 
   return (
-    <div style={{ display: 'grid', gap: 16, maxWidth: 820, margin: '0 auto' }}>
-      <h1 style={{ margin: 0 }}>Paiement</h1>
-
-      {loading ? <div className="muted">Chargement du formulaire de paiement…</div> : null}
-      {error ? <div className="banner-error">{error}</div> : null}
-      {cartSecondsLeft !== null ? (
-        <div
-          className={cartSecondsLeft === 0 ? 'banner-error' : cartSecondsLeft <= 300 ? 'banner-warning' : 'card cardPadding'}
-          style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 700 }}
-        >
-          {cartSecondsLeft === 0
-            ? 'Votre réservation a expiré. Les articles ont été remis en vente.'
-            : `⏱ Réservation valable encore ${Math.floor(cartSecondsLeft / 60)}:${String(cartSecondsLeft % 60).padStart(2, '0')}`}
-        </div>
-      ) : null}
-
-      {commande ? (
-        <div className="card" style={{ padding: 16, display: 'grid', gap: 12 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
-            <div>
-              <div style={{ fontWeight: 900 }}>Commande</div>
-              <div className="muted">{commande.numero_commande}</div>
-            </div>
-            <Money amount={commande.montant_total_chf} />
-          </div>
-
-          <div className="muted">
-            Saisissez vos informations de paiement ci-dessous. Le paiement est traité par PostFinance Checkout.
-          </div>
-
-          {paymentMethods.length > 1 ? (
-            <div style={{ display: 'grid', gap: 8 }}>
-              <div style={{ fontWeight: 700 }}>Méthode de paiement</div>
-              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                {paymentMethods.map((method) => (
-                  <button
-                    key={method.id}
-                    type="button"
-                    className={selectedMethodId === method.id ? 'btn btnPrimary' : 'btn'}
-                    onClick={() => setSelectedMethodId(method.id)}
-                    disabled={paying}
-                  >
-                    {paymentMethodLabel(method)}
-                  </button>
-                ))}
-              </div>
-            </div>
-          ) : null}
-
-          {localMode ? (
-            <div className="card" style={{ padding: 12 }}>
-              <div style={{ fontWeight: 700 }}>Mode simulation locale</div>
-              <div className="muted">
-                PostFinance n’est pas configuré. Cliquez sur le bouton ci-dessous pour simuler un paiement réussi.
-              </div>
-            </div>
-          ) : (
-            <div
-              id="postfinance-payment-form"
-              style={{ minHeight: iframeHeight, border: '1px solid var(--border, #e5e7eb)', borderRadius: 8 }}
-            />
-          )}
-
-          {validationErrors.length > 0 ? (
-            <div className="banner-error">
-              {validationErrors.map((msg) => (
-                <div key={msg}>{msg}</div>
-              ))}
-            </div>
-          ) : null}
-
-          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-            <button
-              className="btn btnPrimary"
-              type="button"
-              onClick={onPayClick}
-              disabled={paying || loading || (!localMode && !iframeReady)}
-            >
-              {paying ? 'Traitement…' : payButtonLabel}
-            </button>
-            <button
-              className="btn"
-              type="button"
-              onClick={() => leaveCheckout({ clearCart: true })}
-              disabled={cancelling || paying}
-            >
-              {cancelling ? 'Annulation…' : 'Annuler la commande'}
-            </button>
-            <button
-              className="btn"
-              type="button"
-              onClick={() => leaveCheckout({ clearCart: false })}
-              disabled={cancelling || paying}
-            >
-              Retour au catalogue
-            </button>
-          </div>
-        </div>
-      ) : null}
-    </div>
+    <PaymentFormCard
+      commande={commande}
+      loading={loading}
+      error={error}
+      cartSecondsLeft={cartSecondsLeft}
+      paymentMethods={paymentMethods}
+      selectedMethodId={selectedMethodId}
+      onSelectMethod={setSelectedMethodId}
+      localMode={localMode}
+      iframeHeight={iframeHeight}
+      validationErrors={validationErrors}
+      paying={paying}
+      payButtonLabel={payButtonLabel}
+      iframeReady={iframeReady}
+      onPayClick={onPayClick}
+      cancelling={cancelling}
+      onCancelOrder={() => leaveCheckout({ clearCart: true })}
+      onLeaveCatalog={() => leaveCheckout({ clearCart: false })}
+    />
   )
 }

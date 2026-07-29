@@ -11,10 +11,9 @@ All functions expect a SQLAlchemy Session as first argument.
 """
 from sqlalchemy.orm import Session
 from infrastructure import models
-from domain.book import Book
-from typing import List, Optional
+from typing import Any, List, Optional
 
-def _ensure_default_refs(db: Session, book: Book) -> tuple[int, int]:
+def _ensure_default_refs(db: Session, book: Any) -> tuple[int, int]:
     """
     Ensure Article foreign keys exist.
     We keep this very small and deterministic for local/dev DBs:
@@ -99,7 +98,7 @@ def get_book_by_isbn(db: Session, isbn: str) -> Optional[models.Livre]:
     """Return a book by ISBN (exact match)."""
     return db.query(models.Livre).filter(models.Livre.isbn == isbn).first()
 
-def create_book(db: Session, book: Book) -> models.Livre:
+def create_book(db: Session, book: Any) -> models.Livre:
     """Insert a new book and its article.
 
     If a book with the same ISBN already exists, increment its stock by 1

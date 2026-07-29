@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from infrastructure import models
@@ -12,7 +12,14 @@ from presentation.schemas import (
     LigneCommandeAdminRead,
     LigneCommandeRead,
 )
-from services.order_service import cancel_commande, refund_commande
+from services.order_service import (
+    ALL_STATUSES,
+    OPEN_STATUSES,
+    PAID_NOT_ADVANCED_STATUSES,
+    PAID_STATUSES,
+    cancel_commande,
+    refund_commande,
+)
 
 router = APIRouter(prefix="/orders/admin", tags=["orders-admin"])
 
@@ -56,7 +63,10 @@ def admin_set_status(id_commande: int, payload: AdminCommandeStatusUpdate, db: S
     obj = db.query(models.Commande).filter(models.Commande.id_commande == id_commande).first()
     if obj is None:
         raise HTTPException(status_code=404, detail="Commande not found")
-    obj.statut = payload.statut  # type: ignore[assignment]
+    new_status = payload.statut.upper()
+    if new_status not in ALL_STATUSES:
+        raise HTTPException(status_code=400, detail=f"Unknown status {payload.statut}")
+    obj.statut = new_status  # type: ignore[assignment]
     db.commit()
     db.refresh(obj)
     return obj
@@ -70,7 +80,7 @@ def admin_advance(id_commande: int, db: Session = Depends(get_db), _admin=Depend
     # Simple state machine for order progression
     cur = (obj.statut or "").upper()
     sm = (obj.shipping_method or "POST").upper()
-    if cur in ("CREATED", "PENDING"):
+    if cur in OPEN_STATUSES:
         obj.statut = "PAID"
     elif cur == "PAID":
         if sm == "CLICK_COLLECT":
@@ -112,7 +122,7 @@ def admin_refund_commande(id_commande: int, db: Session = Depends(get_db), _admi
     if obj is None:
         raise HTTPException(status_code=404, detail="Commande not found")
     cur = (obj.statut or "").upper()
-    if cur not in ("PAID", "CAPTURED", "COMPLETED", "SENT", "AT_RECEPTION", "FINISHED"):
+    if cur not in PAID_STATUSES:
         raise HTTPException(status_code=400, detail=f"Cannot refund from status {cur}")
     refund_commande(db, id_commande)
     obj.statut = "REFUNDED"  # type: ignore[assignment]
@@ -128,7 +138,7 @@ def admin_set_sent(id_commande: int, db: Session = Depends(get_db), _admin=Depen
     if obj is None:
         raise HTTPException(status_code=404, detail="Commande not found")
     cur = (obj.statut or "").upper()
-    if cur not in ("PAID", "CAPTURED", "COMPLETED"):
+    if cur not in PAID_NOT_ADVANCED_STATUSES:
         raise HTTPException(status_code=400, detail=f"Cannot mark SENT from status {cur}")
     obj.statut = "SENT"  # type: ignore[assignment]
     db.commit()
@@ -142,7 +152,7 @@ def admin_set_at_reception(id_commande: int, db: Session = Depends(get_db), _adm
     if obj is None:
         raise HTTPException(status_code=404, detail="Commande not found")
     cur = (obj.statut or "").upper()
-    if cur not in ("PAID", "CAPTURED", "COMPLETED"):
+    if cur not in PAID_NOT_ADVANCED_STATUSES:
         raise HTTPException(status_code=400, detail=f"Cannot mark AT_RECEPTION from status {cur}")
     obj.statut = "AT_RECEPTION"  # type: ignore[assignment]
     db.commit()

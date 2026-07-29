@@ -2,62 +2,28 @@
 
 import Link from 'next/link'
 import { useMemo, useState } from 'react'
-import { useRouter } from 'next/navigation'
 import { useCart } from '@/components/cart/CartProvider'
 import { useAuth } from '@/components/auth/AuthProvider'
 import { Money } from '@/components/ui/Money'
 import CartItemRow from '@/components/cart/CartItemRow'
-import { ApiError } from '@/services/api'
-import { cancelCommande, createCommande, createLigne } from '@/services/orders'
+import { useCreateOrder } from '@/hooks/useCreateOrder'
+
+// Mirrors backend/services/order_service.py's SHIPPING_FEES_CHF — the server is
+// the source of truth for the actual charge, this is only for display/estimate.
+const SHIPPING_FEES_CHF = { POST: 9.0, CLICK_COLLECT: 1.0 } as const
 
 export default function CartPage() {
-  const router = useRouter()
   const { isLoggedIn } = useAuth()
-  const { items, total, removeItem, setQuantity, clear } = useCart()
+  const { items, total, removeItem, setQuantity } = useCart()
   const [shippingMethod, setShippingMethod] = useState<'POST' | 'CLICK_COLLECT'>('POST')
-  const [status, setStatus] = useState<'idle' | 'loading' | 'error'>('idle')
-  const [error, setError] = useState<string | null>(null)
+  const { createOrder, status, error } = useCreateOrder()
 
-  const shippingFee = shippingMethod === 'CLICK_COLLECT' ? 1.0 : 9.0
+  const shippingFee = SHIPPING_FEES_CHF[shippingMethod]
   const finalTotal = Math.round((total + shippingFee) * 100) / 100
   const canOrder = useMemo(() => isLoggedIn && items.length > 0, [isLoggedIn, items.length])
 
-  async function onOrder() {
-    setStatus('loading')
-    setError(null)
-    let commandeId: number | null = null
-    try {
-      const commande = await createCommande({
-        shipping_method: shippingMethod,
-      })
-      commandeId = commande.id_commande
-      await Promise.all(
-        items.map((it) =>
-          createLigne({
-            id_commande: commande.id_commande,
-            id_article: it.id_article,
-            quantite: it.quantity,
-          }),
-        ),
-      )
-      // The cart is intentionally NOT cleared here — it's only cleared once
-      // payment actually succeeds (see PaymentClient.tsx). Clearing it right
-      // after creating the commande meant that cancelling or abandoning
-      // payment left the user with an empty "panier" and no way to resume,
-      // even though nothing had actually been paid for yet.
-      router.push(`/payment?commandeId=${encodeURIComponent(String(commande.id_commande))}`)
-    } catch (e) {
-      if (commandeId) {
-        // Release any stock a partially-successful line reservation already
-        // grabbed, so a failed checkout attempt doesn't leave the item
-        // reserved (and thus "unavailable") for up to 20 minutes while the
-        // user retries.
-        await cancelCommande(commandeId).catch(() => {})
-      }
-      const err = e as unknown
-      setError(err instanceof ApiError ? err.message : 'Erreur lors de la commande. Réessayez.')
-      setStatus('error')
-    }
+  function onOrder() {
+    void createOrder(shippingMethod, items)
   }
 
   return (
@@ -93,7 +59,7 @@ export default function CartPage() {
                     checked={shippingMethod === 'POST'}
                     onChange={() => setShippingMethod('POST')}
                   />
-                  <span>Livraison par la Poste Suisse — <strong>9.00 CHF</strong></span>
+                  <span>Livraison par la Poste Suisse — <strong>{SHIPPING_FEES_CHF.POST.toFixed(2)} CHF</strong></span>
                 </label>
                 <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
                   <input
@@ -103,7 +69,7 @@ export default function CartPage() {
                     checked={shippingMethod === 'CLICK_COLLECT'}
                     onChange={() => setShippingMethod('CLICK_COLLECT')}
                   />
-                  <span>Retrait en magasin Caritas — <strong>1.00 CHF</strong></span>
+                  <span>Retrait en magasin Caritas — <strong>{SHIPPING_FEES_CHF.CLICK_COLLECT.toFixed(2)} CHF</strong></span>
                 </label>
               </div>
             </div>

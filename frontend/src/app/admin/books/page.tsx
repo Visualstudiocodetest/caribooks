@@ -3,9 +3,9 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import { useEffect, useState } from 'react'
-import type { BookRead, Stock } from '@/types/api'
+import type { BookRead } from '@/types/api'
 import { listBooks, deleteBook } from '@/services/books'
-import { listStocks } from '@/services/stocks'
+import { getAvailabilityMap } from '@/services/stocks'
 import { ApiError } from '@/services/api'
 
 export default function AdminBooksPage() {
@@ -18,14 +18,9 @@ export default function AdminBooksPage() {
 
   useEffect(() => {
     let mounted = true
-    Promise.all([listBooks(), listStocks().catch(() => [] as Stock[])]).then(([b, s]) => {
+    Promise.all([listBooks(), getAvailabilityMap().catch(() => ({}) as Record<number, number>)]).then(([b, map]) => {
       if (!mounted) return
       setBooks(b)
-      const map: Record<number, number> = {}
-      for (const st of s) {
-        const avail = (st.quantite_disponible || 0) - (st.quantite_reservee || 0)
-        map[st.id_article] = (map[st.id_article] || 0) + avail
-      }
       setStockMap(map)
     }).catch((e: unknown) => {
       if (!mounted) return

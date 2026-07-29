@@ -41,14 +41,3 @@ export function persistToken(token: string) {
 export function clearToken() {
   window.localStorage.removeItem('caribooks_token')
 }
-
-export function readToken(): string | null {
-  const raw = window.localStorage.getItem('caribooks_token')
-  if (!raw) return null
-  try {
-    const parsed = JSON.parse(raw) as unknown
-    return typeof parsed === 'string' ? parsed : raw
-  } catch {
-    return raw
-  }
-}

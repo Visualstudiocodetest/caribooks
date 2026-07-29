@@ -80,7 +80,6 @@ export type CommandeRead = CommandeCreate & {
   statut: string
   frais_port_chf: number
   date_commande: string
-  date_creation?: string  // alias for date_commande
   cart_expires_at?: string | null
   cart_seconds_left?: number | null  // timezone-proof countdown (seconds)
 }
@@ -126,8 +125,6 @@ export type PaiementRead = PaiementCreate & {
   montant_chf: number
   statut: string
 }
-
-export type PaiementUpdate = Partial<Omit<PaiementCreate, 'id_commande'>>
 
 export type ScanISBNCreate = {
   id_article_livre: number

@@ -9,6 +9,7 @@ from presentation.catalog_router import router as catalog_router
 from presentation.article_router import router as article_router
 from presentation.stock_router import router as stock_router
 from presentation.order_router import router as order_router
+from presentation.payment_router import router as payment_router
 from presentation.order_admin_router import router as order_admin_router
 from presentation.scan_router import router as scan_router
 from presentation.user_router import router as user_router
@@ -43,9 +44,8 @@ async def root():
 
 @app.get("/health")
 async def health():
-    # This endpoint can be used by load balancers or monitoring tools to check if the application is running.
     return {"status": "ok",
-            "code": 200, 
+            "code": 200,
             "message": "Health check passed"}
 
 app.include_router(book_router)
@@ -54,6 +54,7 @@ app.include_router(catalog_router)
 app.include_router(article_router)
 app.include_router(stock_router)
 app.include_router(order_router)
+app.include_router(payment_router)
 app.include_router(order_admin_router)
 app.include_router(scan_router)
 app.include_router(user_router)

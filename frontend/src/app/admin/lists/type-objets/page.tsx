@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { apiFetch } from '@/services/api'
+import { listCatalog, createCatalogItem, updateCatalogItem, deleteCatalogItem } from '@/services/catalog'
 
 type TypeObjet = { id_type_objet: number; libelle: string; code?: string }
 
@@ -16,7 +16,7 @@ export default function TypeObjetsAdmin() {
 
   async function load() {
     try {
-      setList(await apiFetch<TypeObjet[]>('/catalog/type-objets'))
+      setList(await listCatalog<TypeObjet>('type-objets'))
     } catch (e) {
       setError((e as Error).message)
     }
@@ -28,7 +28,7 @@ export default function TypeObjetsAdmin() {
     e.preventDefault()
     if (!libelle.trim()) return
     try {
-      await apiFetch('/catalog/type-objets', { method: 'POST', auth: true, body: JSON.stringify({ libelle: libelle.trim(), code: code.trim() || undefined }) })
+      await createCatalogItem('type-objets', { libelle: libelle.trim(), code: code.trim() || undefined })
       setLibelle('')
       setCode('')
       await load()
@@ -40,7 +40,7 @@ export default function TypeObjetsAdmin() {
   async function saveEdit(id: number) {
     if (!editLibelle.trim()) return
     try {
-      await apiFetch(`/catalog/type-objets/${id}`, { method: 'PUT', auth: true, body: JSON.stringify({ libelle: editLibelle.trim(), code: editCode.trim() || undefined }) })
+      await updateCatalogItem('type-objets', id, { libelle: editLibelle.trim(), code: editCode.trim() || undefined })
       setEditingId(null)
       await load()
     } catch (e) {
@@ -51,7 +51,7 @@ export default function TypeObjetsAdmin() {
   async function remove(id: number) {
     if (!confirm('Supprimer ce type ?')) return
     try {
-      await apiFetch(`/catalog/type-objets/${id}`, { method: 'DELETE', auth: true })
+      await deleteCatalogItem('type-objets', id)
       await load()
     } catch (e) {
       setError((e as Error).message)
