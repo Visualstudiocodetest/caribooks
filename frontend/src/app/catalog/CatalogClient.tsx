@@ -1,45 +1,30 @@
 'use client'
 
-import { useMemo, useState, useEffect } from 'react'
+import { useMemo, useState } from 'react'
 import type { BookRead } from '@/types/api'
 import { BookGrid } from '@/components/books/BookGrid'
-import { listCatalog } from '@/services/catalog'
 
-type EtatItem = { id_etat_usure: number; libelle: string }
-type CategorieItem = { id_categorie: number; libelle: string }
+export type EtatItem = { id_etat_usure: number; libelle: string }
+export type CategorieItem = { id_categorie: number; libelle: string }
 
 export function CatalogClient({
   books,
   availability,
+  etatList,
+  categorieList,
 }: {
   books: BookRead[]
   availability?: Record<number, number>
+  etatList: EtatItem[]
+  categorieList: CategorieItem[]
 }) {
   const [query, setQuery] = useState('')
-  const [etatList, setEtatList] = useState<EtatItem[]>([])
-  const [categorieList, setCategorieList] = useState<CategorieItem[]>([])
   const [selectedEtat, setSelectedEtat] = useState('')
   const [selectedCategorie, setSelectedCategorie] = useState('')
   const [sortBy, setSortBy] = useState('')
   const [minPrix, setMinPrix] = useState('')
   const [maxPrix, setMaxPrix] = useState('')
   const [showFilters, setShowFilters] = useState(false)
-
-  useEffect(() => {
-    let mounted = true
-    async function load() {
-      try {
-        const etats = await listCatalog<EtatItem>('etat-usures')
-        if (mounted && Array.isArray(etats)) setEtatList(etats)
-      } catch {}
-      try {
-        const cats = await listCatalog<CategorieItem>('categories')
-        if (mounted && Array.isArray(cats)) setCategorieList(cats)
-      } catch {}
-    }
-    void load()
-    return () => { mounted = false }
-  }, [])
 
   const activeFilterCount = [selectedEtat, selectedCategorie, sortBy, minPrix, maxPrix].filter(Boolean).length
   const hasActiveFilters = activeFilterCount > 0

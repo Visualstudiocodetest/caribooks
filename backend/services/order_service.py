@@ -8,6 +8,7 @@ stock reservation, cart expiry, order totals, and finalization/refund/cancel.
 from __future__ import annotations
 
 from decimal import Decimal, ROUND_HALF_UP
+from typing import Any
 
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
@@ -39,6 +40,11 @@ OPEN_STATUSES = {"CREATED", "PENDING"}
 PAID_STATUSES = {"PAID", "CAPTURED", "COMPLETED", "SENT", "AT_RECEPTION", "FINISHED"}
 # Terminal states from which nothing further should be finalized.
 TERMINAL_STATUSES = {"CANCELLED", "REFUNDED"}
+# Every valid commande.statut value — used to validate admin free-text status edits.
+ALL_STATUSES = OPEN_STATUSES | PAID_STATUSES | TERMINAL_STATUSES
+# Paid but not yet advanced to SENT/AT_RECEPTION — the admin actions that mark an
+# order shipped or ready for pickup are only valid from this subset of PAID_STATUSES.
+PAID_NOT_ADVANCED_STATUSES = {"PAID", "CAPTURED", "COMPLETED"}
 
 
 def generate_numero_commande(db: Session) -> str:
@@ -100,6 +106,74 @@ def recompute_commande_total(db: Session, commande: models.Commande) -> None:
     commande.montant_total_chf = _chf(Decimal(str(lignes_total)) + Decimal(str(commande.frais_port_chf or 0)))  # type: ignore[assignment]
 
 
+def _lock_stock_rows(db: Session, id_article: int) -> list[models.Stock]:
+    """Lock (FOR UPDATE) all stock rows for an article, oldest first. Shared by
+    every stock mutation (reserve/release/finalize/refund) so concurrent
+    requests for the same article always serialize on the same row order."""
+    return (
+        db.query(models.Stock)
+        .filter(models.Stock.id_article == id_article)
+        .order_by(models.Stock.id_stock.asc())
+        .with_for_update()
+        .all()
+    )
+
+
+def reserve_stock(db: Session, id_article: int, quantity: int) -> None:
+    """Reserve `quantity` units of an article across its stock rows.
+
+    Raises HTTPException(400) if not enough stock is available. Used when a
+    ligne is created or its quantity is increased.
+    """
+    stocks = _lock_stock_rows(db, id_article)
+    if not stocks:
+        return
+    total_available = sum((s.quantite_disponible or 0) - (s.quantite_reservee or 0) for s in stocks)
+    if quantity > total_available:  # type: ignore[operator]
+        raise HTTPException(status_code=400, detail="Not enough stock")
+    remaining = quantity
+    for s in stocks:
+        if remaining <= 0:  # type: ignore[operator]
+            break
+        avail = (s.quantite_disponible or 0) - (s.quantite_reservee or 0)  # type: ignore[operator]
+        take = min(avail, remaining)  # type: ignore[type-var]
+        if take <= 0:  # type: ignore[operator]
+            continue
+        s.quantite_reservee = (s.quantite_reservee or 0) + take  # type: ignore[assignment]
+        remaining -= take
+
+
+def release_stock(db: Session, id_article: int, quantity: int) -> None:
+    """Release `quantity` previously-reserved units of an article back to
+    availability. Used when a ligne is deleted or its quantity is decreased."""
+    stocks = _lock_stock_rows(db, id_article)
+    remaining = quantity
+    for s in stocks:
+        if remaining <= 0:  # type: ignore[operator]
+            break
+        cur_res = s.quantite_reservee or 0  # type: ignore[operator]
+        give_back = min(cur_res, remaining)  # type: ignore[type-var]
+        if give_back <= 0:  # type: ignore[operator]
+            continue
+        s.quantite_reservee = cur_res - give_back  # type: ignore[assignment]
+        remaining -= give_back
+
+
+def build_pending_paiement(payload: Any, commande: models.Commande) -> models.Paiement:
+    """A payment always starts PENDING with the commande's own server-computed
+    total — never a client-supplied amount/status. It can only ever transition to
+    a paid state via a verified PostFinance callback (see order_router.py)."""
+    return models.Paiement(
+        id_commande=payload.id_commande,
+        fournisseur_paiement=payload.fournisseur_paiement or "POSTFINANCE",
+        reference_externe=payload.reference_externe,
+        montant_chf=float(commande.montant_total_chf),  # type: ignore[arg-type]
+        devise=payload.devise,
+        statut="PENDING",
+        date_paiement=payload.date_paiement,
+    )
+
+
 def _reactivate_article_if_available(db: Session, id_article: int) -> None:
     avail = (
         db.query(func.sum(models.Stock.quantite_disponible - models.Stock.quantite_reservee))
@@ -117,21 +191,7 @@ def release_ligne_reservation(db: Session, ligne: models.LigneCommande) -> None:
     """Reverse the quantite_reservee increment made when this single ligne was
     added to a cart. Used both by release_cart_reservation (whole commande)
     and directly when a single ligne is deleted, so stock is never leaked."""
-    stocks = (
-        db.query(models.Stock)
-        .filter(models.Stock.id_article == ligne.id_article)
-        .order_by(models.Stock.id_stock.asc())
-        .with_for_update()
-        .all()
-    )
-    remaining = int(ligne.quantite)  # type: ignore[arg-type]
-    for s in stocks:
-        if remaining <= 0:
-            break
-        release = min(int(s.quantite_reservee or 0), remaining)
-        if release > 0:
-            s.quantite_reservee = int(s.quantite_reservee or 0) - release  # type: ignore[assignment]
-            remaining -= release
+    release_stock(db, int(ligne.id_article), int(ligne.quantite))  # type: ignore[arg-type]
     _reactivate_article_if_available(db, int(ligne.id_article))  # type: ignore[arg-type]
 
 
@@ -226,14 +286,7 @@ def finalize_commande(db: Session, id_commande: int) -> None:
     # For each ligne in the commande, finalize reserved stock into sold stock
     lignes = db.query(models.LigneCommande).filter(models.LigneCommande.id_commande == id_commande).all()
     for l in lignes:
-        # find stock rows for the article
-        stocks = (
-            db.query(models.Stock)
-            .filter(models.Stock.id_article == l.id_article)
-            .order_by(models.Stock.id_stock.asc())
-            .with_for_update()
-            .all()
-        )
+        stocks = _lock_stock_rows(db, int(l.id_article))  # type: ignore[arg-type]
         if not stocks:
             # nothing to do if no stock rows exist
             continue
@@ -281,13 +334,7 @@ def refund_commande(db: Session, id_commande: int) -> None:
     # When refunding, return sold quantities back to stock
     lignes = db.query(models.LigneCommande).filter(models.LigneCommande.id_commande == id_commande).all()
     for l in lignes:
-        stocks = (
-            db.query(models.Stock)
-            .filter(models.Stock.id_article == l.id_article)
-            .order_by(models.Stock.id_stock.asc())
-            .with_for_update()
-            .all()
-        )
+        stocks = _lock_stock_rows(db, int(l.id_article))  # type: ignore[arg-type]
         if not stocks:  # type: ignore
             continue
         remaining = l.quantite
@@ -297,18 +344,8 @@ def refund_commande(db: Session, id_commande: int) -> None:
                 break
             s.quantite_disponible = (s.quantite_disponible or 0) + remaining  # type: ignore
             remaining = 0
-    # reactivate articles that have stock
     for aid in {l.id_article for l in lignes}:
-        total_left = (
-            db.query(models.Stock)
-            .filter(models.Stock.id_article == aid)
-            .with_entities(func.sum(models.Stock.quantite_disponible))
-            .scalar()
-        )
-        if total_left and total_left > 0:  # type: ignore
-            art = db.query(models.Article).filter(models.Article.id_article == aid).first()
-            if art:
-                art.actif = True  # type: ignore
+        _reactivate_article_if_available(db, int(aid))  # type: ignore[arg-type]
 
 
 def load_commande_context(db: Session, id_commande: int, id_utilisateur: int):

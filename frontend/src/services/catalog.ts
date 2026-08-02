@@ -6,7 +6,7 @@ import { apiFetch } from './api'
 
 export type CatalogItem = { id?: number; libelle: string; code?: string } & Record<string, unknown>
 
-export type CatalogResource = 'type-objets' | 'etat-usures' | 'categories' | 'article-categories'
+export type CatalogResource = 'type-objets' | 'etat-usures' | 'categories'
 
 export function listCatalog<T = CatalogItem>(resource: CatalogResource): Promise<T[]> {
   return apiFetch<T[]>(`/catalog/${resource}`)

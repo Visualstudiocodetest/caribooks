@@ -3,8 +3,9 @@
 import { useEffect, useState, use } from 'react'
 import { useRouter } from 'next/navigation'
 import type { BookRead } from '@/types/api'
-import { ApiError, apiFetch } from '@/services/api'
+import { ApiError } from '@/services/api'
 import { deleteBook, getBook, updateBook } from '@/services/books'
+import { listCatalog } from '@/services/catalog'
 
 type EtatItem = { id_etat_usure: number; libelle: string }
 type CategorieItem = { id_categorie: number; libelle: string }
@@ -27,8 +28,8 @@ export default function AdminEditBookPage({ params }: { params: Promise<{ id: st
     let mounted = true
     Promise.all([
       getBook(id),
-      apiFetch<EtatItem[]>('/catalog/etat-usures').catch(() => []),
-      apiFetch<CategorieItem[]>('/catalog/categories').catch(() => []),
+      listCatalog<EtatItem>('etat-usures').catch(() => []),
+      listCatalog<CategorieItem>('categories').catch(() => []),
     ]).then(([b, e, c]) => {
       if (!mounted) return
       setBook(b)

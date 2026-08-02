@@ -6,7 +6,6 @@ import type {
   LigneCommandeCreate,
   PaiementCreate,
   PaiementRead,
-  PaiementUpdate,
 } from '@/types/api'
 
 export function createCommande(payload: CommandeCreate): Promise<CommandeRead> {
@@ -36,14 +35,6 @@ export function cancelCommande(id_commande: number): Promise<CommandeRead> {
   })
 }
 
-export function createPaiement(payload: PaiementCreate): Promise<PaiementRead> {
-  return apiFetch<PaiementRead>('/orders/paiements', {
-    method: 'POST',
-    auth: true,
-    body: JSON.stringify(payload),
-  })
-}
-
 export function createPaiementPostFinance(payload: PaiementCreate): Promise<PostFinanceIframeSession> {
   return apiFetch<PostFinanceIframeSession>('/orders/paiements/postfinance', {
     method: 'POST',
@@ -65,12 +56,4 @@ export function pollPaiementPostFinance(id_paiement: number): Promise<{ paiement
 
 export function getMyCommandes(): Promise<CommandeRead[]> {
   return apiFetch<CommandeRead[]>('/orders/commandes', { auth: true })
-}
-
-export function updatePaiement(id_paiement: number, payload: PaiementUpdate): Promise<PaiementRead> {
-  return apiFetch<PaiementRead>(`/orders/paiements/${id_paiement}`, {
-    method: 'PUT',
-    auth: true,
-    body: JSON.stringify(payload),
-  })
 }

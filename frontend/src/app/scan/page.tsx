@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useCallback } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { ApiError } from '@/services/api'
@@ -12,6 +12,7 @@ import { lookupIsbn } from '@/services/openlibrary'
 import { fetchRemoteImage } from '@/services/images'
 import { cleanIsbn } from '@/lib/isbn'
 import { isExternalImage } from '@/lib/images'
+import { useBarcodeScanner } from '@/hooks/useBarcodeScanner'
 
 type OpenLibraryPreview = {
   titre: string
@@ -36,12 +37,7 @@ function isbn13To10(isbn13: string): string | null {
 export default function ScanPage() {
   const { isLoggedIn, isAdmin } = useAuth()
   const videoRef = useRef<HTMLVideoElement | null>(null)
-  const streamRef = useRef<MediaStream | null>(null)
-  const intervalRef = useRef<number | null>(null)
-  const lastRawRef = useRef<string>('')
-  const lastAtRef = useRef<number>(0)
 
-  const [running, setRunning] = useState(false)
   const [isbn, setIsbn] = useState('')
   const [book, setBook] = useState<BookRead | null>(null)
   const [openPreview, setOpenPreview] = useState<OpenLibraryPreview | null>(null)
@@ -50,97 +46,16 @@ export default function ScanPage() {
   const [success, setSuccess] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
-  const canUseCamera = useMemo(() => {
-    if (typeof window === 'undefined') return false
-    return Boolean(navigator.mediaDevices?.getUserMedia)
-  }, [])
+  const onDetect = useCallback((raw: string) => setIsbn(cleanIsbn(raw)), [])
+  const { start: startCamera, stop: stopCamera, running, error: cameraError, hasBarcodeDetector } = useBarcodeScanner(videoRef, onDetect)
 
-  const hasBarcodeDetector = useMemo(() => {
-    if (typeof window === 'undefined') return false
-    return typeof (window as any).BarcodeDetector !== 'undefined'
-  }, [])
-
-  function stopCamera() {
-    if (intervalRef.current) {
-      window.clearInterval(intervalRef.current)
-      intervalRef.current = null
-    }
-    if (streamRef.current) {
-      for (const t of streamRef.current.getTracks()) t.stop()
-      streamRef.current = null
-    }
-
-    const video = videoRef.current
-    if (video) {
-      try {
-        video.pause()
-      } catch {
-        // ignore
-      }
-      ;(video as any).srcObject = null
-    }
-    setRunning(false)
-  }
-
-  async function startCamera() {
+  async function toggleCamera() {
     setError(null)
     setSuccess(null)
-
-    stopCamera()
-
-    if (!canUseCamera) {
-      setError("Caméra indisponible. Utilisez la saisie manuelle d’ISBN.")
-      return
-    }
-
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          facingMode: { ideal: 'environment' },
-          width: { ideal: 1280 },
-          height: { ideal: 720 },
-        },
-        audio: false,
-      })
-
-      streamRef.current = stream
-      const video = videoRef.current
-      if (!video) {
-        setError('Aperçu vidéo indisponible.')
-        stopCamera()
-        return
-      }
-      video.srcObject = stream
-      await video.play()
-      setRunning(true)
-
-      if (hasBarcodeDetector) {
-        const formats: BarcodeFormat[] = ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128']
-        const detector = new BarcodeDetector({ formats })
-
-        intervalRef.current = window.setInterval(async () => {
-          const v = videoRef.current
-          if (!v || v.readyState < 2) return
-          try {
-            const codes = await detector.detect(v)
-            if (!codes.length) return
-            const raw = (codes[0]?.rawValue || '').trim()
-            if (!raw) return
-
-            const now = Date.now()
-            if (raw === lastRawRef.current && now - lastAtRef.current < 1500) return
-            lastRawRef.current = raw
-            lastAtRef.current = now
-
-            stopCamera()
-            setIsbn(cleanIsbn(raw))
-          } catch {
-            // ignore transient detection errors
-          }
-        }, 350)
-      }
-    } catch {
-      setError("Accès caméra refusé ou impossible. Vérifiez les permissions du navigateur.")
+    if (running) {
+      stopCamera()
+    } else {
+      await startCamera()
     }
   }
 
@@ -240,10 +155,6 @@ export default function ScanPage() {
   }
 
   useEffect(() => {
-    return () => stopCamera()
-  }, [])
-
-  useEffect(() => {
     if (!isbn) return
     void lookup(isbn)
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -271,7 +182,7 @@ export default function ScanPage() {
             placeholder={lookupLoading ? 'Recherche…' : 'ISBN (manuel ou scanné)'}
             inputMode="numeric"
           />
-          <button className="btn btnPrimary" type="button" onClick={running ? stopCamera : startCamera}>
+          <button className="btn btnPrimary" type="button" onClick={toggleCamera}>
             {running ? 'Stop' : 'Caméra'}
           </button>
         </div>
@@ -377,7 +288,7 @@ export default function ScanPage() {
       ) : null}
 
       {success ? <div className="banner-success">{success}</div> : null}
-      {error ? <div className="banner-error">{error}</div> : null}
+      {error || cameraError ? <div className="banner-error">{error || cameraError}</div> : null}
     </div>
   )
 }

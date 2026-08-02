@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { apiFetch } from '@/services/api'
+import { listCatalog, createCatalogItem, updateCatalogItem, deleteCatalogItem } from '@/services/catalog'
 
 type Categorie = { id_categorie: number; libelle: string }
 
@@ -14,7 +14,7 @@ export default function CategoriesAdmin() {
 
   async function load() {
     try {
-      setList(await apiFetch<Categorie[]>('/catalog/categories'))
+      setList(await listCatalog<Categorie>('categories'))
     } catch (e) {
       setError((e as Error).message)
     }
@@ -26,7 +26,7 @@ export default function CategoriesAdmin() {
     e.preventDefault()
     if (!libelle.trim()) return
     try {
-      await apiFetch('/catalog/categories', { method: 'POST', auth: true, body: JSON.stringify({ libelle: libelle.trim() }) })
+      await createCatalogItem('categories', { libelle: libelle.trim() })
       setLibelle('')
       await load()
     } catch (e) {
@@ -42,7 +42,7 @@ export default function CategoriesAdmin() {
   async function saveEdit(id: number) {
     if (!editValue.trim()) return
     try {
-      await apiFetch(`/catalog/categories/${id}`, { method: 'PUT', auth: true, body: JSON.stringify({ libelle: editValue.trim() }) })
+      await updateCatalogItem('categories', id, { libelle: editValue.trim() })
       setEditingId(null)
       await load()
     } catch (e) {
@@ -53,7 +53,7 @@ export default function CategoriesAdmin() {
   async function remove(id: number) {
     if (!confirm('Supprimer cette catégorie ?')) return
     try {
-      await apiFetch(`/catalog/categories/${id}`, { method: 'DELETE', auth: true })
+      await deleteCatalogItem('categories', id)
       await load()
     } catch (e) {
       setError((e as Error).message)

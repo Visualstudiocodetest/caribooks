@@ -2,9 +2,9 @@
 Unit tests for infrastructure.crud_book
 """
 import unittest
+from types import SimpleNamespace
 from unittest.mock import MagicMock
 from  infrastructure import crud_book
-from  domain.book import Book
 import sys
 import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../../backend')))
@@ -12,8 +12,12 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../.
 class TestCrudBook(unittest.TestCase):
     def setUp(self):
         self.db = MagicMock()
-        self.book = Book(
+        # crud_book only reads attributes off its `book` argument (duck-typed),
+        # so a plain namespace matching BookCreate's shape is enough here.
+        self.book = SimpleNamespace(
             id_article=1,
+            id_type_objet=0,
+            id_etat_usure=0,
             titre="Test Book",
             isbn="1234567890",
             auteur="Author",

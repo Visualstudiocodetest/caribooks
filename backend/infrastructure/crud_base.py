@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Generic, Iterable, Optional, Type, TypeVar
+from typing import Any, Generic, Optional, Type, TypeVar
 
 from sqlalchemy.orm import Session
 

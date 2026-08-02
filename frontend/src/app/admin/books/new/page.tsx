@@ -1,14 +1,19 @@
 'use client'
 
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import { ApiError, apiFetch } from '@/services/api'
+import { ApiError } from '@/services/api'
 import { createBook } from '@/services/books'
+import { listCatalog } from '@/services/catalog'
 import Image from 'next/image'
 import { lookupIsbn } from '@/services/openlibrary'
 import { fetchRemoteImage } from '@/services/images'
 import { cleanIsbn } from '@/lib/isbn'
 import { isExternalImage } from '@/lib/images'
+import { useBarcodeScanner } from '@/hooks/useBarcodeScanner'
+
+type EtatItem = { id_etat_usure: number; libelle: string }
+type TypeObjetItem = { id_type_objet: number; libelle: string; code?: string }
 
 export default function AdminNewBookPage() {
   const router = useRouter()
@@ -18,112 +23,31 @@ export default function AdminNewBookPage() {
   const [prix, setPrix] = useState('')
   const [idEtat, setIdEtat] = useState('')
   const [idType, setIdType] = useState('')
-  const [etatList, setEtatList] = useState<any[]>([])
-  const [typeList, setTypeList] = useState<any[]>([])
+  const [etatList, setEtatList] = useState<EtatItem[]>([])
+  const [typeList, setTypeList] = useState<TypeObjetItem[]>([])
   const [imageLink, setImageLink] = useState('')
   const [description, setDescription] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [autofillLoading, setAutofillLoading] = useState(false)
-  const [scanning, setScanning] = useState(false)
-  const [scanError, setScanError] = useState<string | null>(null)
   const videoRef = useRef<HTMLVideoElement | null>(null)
-  const streamRef = useRef<MediaStream | null>(null)
-  const intervalRef = useRef<number | null>(null)
-  const lastRawRef = useRef<string>('')
-  const lastAtRef = useRef<number>(0)
 
-  async function startScanner() {
-    setScanError(null)
-    try {
-      // stop any existing stream first
-      stopScanner()
-
-      const stream = await (navigator.mediaDevices as any).getUserMedia({
-        video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } },
-      })
-
-      streamRef.current = stream
-
-      // ensure modal/video DOM is present
-      setScanning(true)
-
-      // wait for video element to be mounted
-      for (let i = 0; i < 20 && !videoRef.current; i++) {
-        // eslint-disable-next-line no-await-in-loop
-        await new Promise((r) => setTimeout(r, 100))
-      }
-      const v = videoRef.current
-      if (!v) {
-        setScanError('Caméra introuvable')
-        return
-      }
-      v.autoplay = true
-      v.playsInline = true
-      v.srcObject = stream
-      await v.play()
-
-      const hasDetector = typeof (window as any).BarcodeDetector !== 'undefined'
-      if (hasDetector) {
-        const formats: BarcodeFormat[] = ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128']
-        const detector: any = new (window as any).BarcodeDetector({ formats })
-
-        intervalRef.current = window.setInterval(async () => {
-          const vv = videoRef.current
-          if (!vv || vv.readyState < 2) return
-          try {
-            const codes = await detector.detect(vv)
-            if (!codes || !codes.length) return
-            const raw = (codes[0]?.rawValue || '').trim()
-            if (!raw) return
-
-            const now = Date.now()
-            if (raw === lastRawRef.current && now - lastAtRef.current < 1500) return
-            lastRawRef.current = raw
-            lastAtRef.current = now
-
-            // found
-            const cleaned = cleanIsbn(raw)
-            stopScanner()
-            setIsbn(cleaned)
-            await autofill(cleaned)
-            return
-          } catch (err) {
-            // ignore transient detection errors
-          }
-        }, 350)
-      }
-    } catch (e) {
-      setScanError('Impossible d\u2019acc\u00E9der \u00E0 la cam\u00E9ra')
-      setScanning(false)
-    }
-  }
-
-  function stopScanner() {
-    setScanning(false)
-    try {
-      if (intervalRef.current) {
-        window.clearInterval(intervalRef.current)
-        intervalRef.current = null
-      }
-      const v = videoRef.current
-      if (v && v.srcObject) {
-        const tracks = (v.srcObject as MediaStream).getTracks()
-        tracks.forEach((t) => t.stop())
-        v.srcObject = null
-      }
-      if (streamRef.current) {
-        try {
-          for (const t of streamRef.current.getTracks()) t.stop()
-        } catch {
-          // ignore
-        }
-        streamRef.current = null
-      }
-    } catch (e) {
-      // ignore
-    }
-  }
+  const onDetect = useCallback((raw: string) => {
+    const cleaned = cleanIsbn(raw)
+    setIsbn(cleaned)
+    void autofill(cleaned)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+  const {
+    start: startScanner,
+    stop: stopScanner,
+    running: scanning,
+    error: scanError,
+    setError: setScanError,
+  } = useBarcodeScanner(videoRef, onDetect, {
+    cameraErrorMessage: 'Impossible d’accéder à la caméra',
+    videoUnavailableMessage: 'Caméra introuvable',
+  })
 
   async function autofill(isbnValue: string) {
     setError(null)
@@ -166,9 +90,11 @@ export default function AdminNewBookPage() {
     setScanError(null)
     try {
       const bitmap = await createImageBitmap(f)
-      const detector: any = (window as any).BarcodeDetector ? new (window as any).BarcodeDetector({ formats: ['ean_13', 'ean_8', 'qr_code'] }) : null
+      const detector = typeof window.BarcodeDetector !== 'undefined'
+        ? new BarcodeDetector({ formats: ['ean_13', 'ean_8', 'qr_code'] })
+        : null
       if (detector) {
-        const results = await detector.detect(bitmap as any)
+        const results = await detector.detect(bitmap)
         if (results && results.length) {
           const code = results[0].rawValue
           if (code) {
@@ -186,26 +112,17 @@ export default function AdminNewBookPage() {
   }
 
   useEffect(() => {
-    return () => {
-      stopScanner()
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
-  useEffect(() => {
     async function loadLists() {
       try {
-        const etats = await apiFetch('/catalog/etat-usures')
-        setEtatList(etats as any[])
+        setEtatList(await listCatalog<EtatItem>('etat-usures'))
       } catch {
         // ignore
       }
       try {
-        const types = await apiFetch('/catalog/type-objets')
-        const typesArr = Array.isArray(types) ? types : []
-        setTypeList(typesArr as any[])
+        const typesArr = await listCatalog<TypeObjetItem>('type-objets')
+        setTypeList(typesArr)
         // default TypeObjet to 'Livre' when available
-        const def = typesArr.find((t: any) => t.code === 'BOOK' || ((t.libelle || '') as string).toLowerCase() === 'livre')
+        const def = typesArr.find((t) => t.code === 'BOOK' || (t.libelle || '').toLowerCase() === 'livre')
         if (def && !idType) setIdType(String(def.id_type_objet))
       } catch {
         // ignore

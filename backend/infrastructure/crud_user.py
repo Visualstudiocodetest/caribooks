@@ -5,6 +5,8 @@ import os
 import binascii
 import hashlib
 import hmac
+
+
 def _get_pwd_context():
     try:
         from passlib.context import CryptContext
@@ -22,7 +24,6 @@ def get_password_hash(password: str) -> str:
             # bcrypt backend can be broken/mismatched in some envs; fallback to pbkdf2_hmac
             pass
     # fallback to simple pbkdf2_hmac
-    import hashlib, os, binascii
     salt = os.urandom(16)
     dk = hashlib.pbkdf2_hmac('sha256', password.encode(), salt, 100000)
     return "pbkdf2_sha256$" + binascii.hexlify(salt).decode() + "$" + binascii.hexlify(dk).decode()

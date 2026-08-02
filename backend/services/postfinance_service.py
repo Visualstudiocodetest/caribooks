@@ -1,17 +1,15 @@
 from __future__ import annotations
 
-import base64
 import logging
 import os
 import time
 from typing import Any, Dict, List, Optional
 
-import httpx
-
 logger = logging.getLogger(__name__)
 
 from postfinancecheckout import Configuration, TransactionsService
 from postfinancecheckout.models import AddressCreate, LineItemCreate, TransactionCreate, TransactionPending
+from postfinancecheckout.service.webhook_encryption_keys_service import WebhookEncryptionKeysService
 
 POSTFINANCE_USER_ID = os.getenv("POSTFINANCE_USER_ID")
 POSTFINANCE_AUTH_KEY = os.getenv("POSTFINANCE_AUTH_KEY")
@@ -86,6 +84,26 @@ def build_postfinance_line_items(
             }
         )
     return items
+
+
+def build_postfinance_checkout_data(
+    commande: Any, lignes: List[Any], user: Any
+) -> tuple[List[Dict[str, Any]], Dict[str, str]]:
+    """Build the line items + billing address for a commande, shared by the
+    transaction-create and confirm steps so both send PostFinance an identical
+    request for the same order."""
+    shipping_label = (
+        "Retrait en magasin"
+        if str(getattr(commande, "shipping_method", "POST")).upper() == "CLICK_COLLECT"
+        else "Livraison"
+    )
+    line_items = build_postfinance_line_items(
+        lignes,
+        float(getattr(commande, "frais_port_chf", 0) or 0),
+        shipping_label,
+        int(commande.id_commande),
+    )
+    return line_items, build_postfinance_address(user)
 
 
 def build_postfinance_address(user: Any) -> Dict[str, str]:
@@ -329,8 +347,6 @@ def verify_postfinance_webhook_signature(raw_body: bytes, signature_header: str)
     The SDK fetches the public key automatically from PostFinance using the keyId
     embedded in the x-signature header — no env vars needed."""
     try:
-        from postfinancecheckout.configuration import Configuration
-        from postfinancecheckout.service.webhook_encryption_keys_service import WebhookEncryptionKeysService
         config = Configuration(
             user_id=str(POSTFINANCE_USER_ID or ""),
             authentication_key=str(POSTFINANCE_AUTH_KEY or ""),

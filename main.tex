@@ -789,13 +789,12 @@ Le backend (API FastAPI) et la base de données sont hébergés sur l'offre \tex
 
 \subsection{Organisation du code (architecture en couches)}
 
-Le backend suit une \textbf{architecture en couches} inspirée des principes de l'architecture hexagonale, garantissant la séparation des préoccupations exigée par le bloc 2 du référentiel. Le code est organisé en quatre répertoires :
+Le backend suit une \textbf{architecture en couches} inspirée des principes de l'architecture hexagonale, garantissant la séparation des préoccupations exigée par le bloc 2 du référentiel. Le code est organisé en trois répertoires :
 
 \begin{itemize}
-    \item \texttt{presentation/} — couche de présentation : les \textit{routers} FastAPI (un par domaine fonctionnel : \texttt{auth\_router}, \texttt{book\_router}, \texttt{catalog\_router}, \texttt{article\_router}, \texttt{stock\_router}, \texttt{order\_router}, \texttt{scan\_router}, \texttt{user\_router}, \texttt{images\_router}), les schémas Pydantic de validation (\texttt{schemas.py}, \texttt{auth\_schemas.py}) et les dépendances d'injection (\texttt{deps.py}).
-    \item \texttt{services/} — couche métier : logique applicative isolée des routes (\texttt{jwt\_service}, \texttt{payment\_service}, \texttt{postfinance\_service}, \texttt{book\_service}, \texttt{image\_service}).
+    \item \texttt{presentation/} — couche de présentation : les \textit{routers} FastAPI (un par domaine fonctionnel : \texttt{auth\_router}, \texttt{book\_router}, \texttt{catalog\_router}, \texttt{article\_router}, \texttt{stock\_router}, \texttt{order\_router} pour les commandes/lignes, \texttt{payment\_router} pour les paiements et l'orchestration PostFinance, \texttt{order\_admin\_router}, \texttt{scan\_router}, \texttt{user\_router}, \texttt{images\_router}), les schémas Pydantic de validation (\texttt{schemas.py}, \texttt{auth\_schemas.py}) et les dépendances d'injection (\texttt{deps.py}).
+    \item \texttt{services/} — couche métier : logique applicative isolée des routes (\texttt{jwt\_service}, \texttt{order\_service}, \texttt{postfinance\_service}, \texttt{book\_service}, \texttt{image\_service}, \texttt{rate\_limit}).
     \item \texttt{infrastructure/} — couche d'accès aux données : configuration SQLAlchemy (\texttt{db.py}), modèles ORM (\texttt{models.py}) et opérations CRUD génériques et spécialisées (\texttt{crud\_base}, \texttt{crud\_user}, \texttt{crud\_book}).
-    \item \texttt{domain/} — entités métier (\texttt{book.py}).
 \end{itemize}
 
 \noindent Le point d'entrée \texttt{main.py} instancie l'application FastAPI, enregistre l'ensemble des routers, configure le middleware \textbf{CORS} (origines autorisées : domaine Vercel de production et \texttt{localhost} en développement) et monte le service de fichiers statiques (\texttt{/static}) pour les images. Un endpoint \texttt{/health} est exposé pour les sondes de disponibilité (monitoring). Le frontend Next.js est structuré classiquement en \texttt{pages}, \texttt{components}, \texttt{hooks} et services d'appel à l'API.

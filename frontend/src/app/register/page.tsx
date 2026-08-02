@@ -1,13 +1,14 @@
 'use client'
 
-import { Suspense, useCallback, useState } from 'react'
+import { Suspense, useState } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { ApiError } from '@/services/api'
-import { googleLogin, register, login } from '@/services/auth'
+import { register, login } from '@/services/auth'
 import { useAuth } from '@/components/auth/AuthProvider'
 import { GoogleSignInButton } from '@/components/auth/GoogleSignInButton'
 import { safeReturnTo } from '@/lib/navigation'
+import { useGoogleAuth } from '@/hooks/useGoogleAuth'
 
 function RegisterForm() {
   const router = useRouter()
@@ -21,20 +22,7 @@ function RegisterForm() {
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
 
-  const handleGoogleCredential = useCallback(async (credential: string) => {
-    setError(null)
-    setLoading(true)
-    try {
-      const token = await googleLogin(credential)
-      setToken(token.access_token)
-      router.push(returnTo)
-    } catch (e) {
-      const err = e as unknown
-      setError(err instanceof ApiError ? err.message : 'Connexion Google impossible.')
-    } finally {
-      setLoading(false)
-    }
-  }, [setToken, router, returnTo])
+  const handleGoogleCredential = useGoogleAuth(returnTo, setError, setLoading)
 
   async function onSubmit(e: { preventDefault(): void }) {
     e.preventDefault()

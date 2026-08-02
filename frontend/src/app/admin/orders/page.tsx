@@ -3,8 +3,8 @@
 import { useEffect, useState } from 'react'
 import { listAdminCommandes, adminAdvanceCommande, adminGetLignes, adminCancelCommande, adminSetSent, adminSetAtReception } from '@/services/admin'
 import { Money } from '@/components/ui/Money'
+import { StatusBadge } from '@/components/ui/StatusBadge'
 import type { CommandeAdminRead, LigneCommandeAdminRead } from '@/types/api'
-import { statusColor, statusLabel } from '@/lib/orderStatus'
 
 const PAID_STATUSES = new Set(['PAID', 'CAPTURED', 'COMPLETED'])
 
@@ -20,15 +20,6 @@ const STATUS_FILTER_OPTIONS = [
   { value: 'FINISHED', label: 'Terminées' },
   { value: 'REFUNDED,FAILED,CANCELLED', label: 'Annulées / Remboursées' },
 ]
-
-function StatusBadge({ statut }: { statut: string }) {
-  const color = statusColor(statut)
-  return (
-    <span style={{ display: 'inline-block', padding: '2px 10px', borderRadius: 999, fontSize: 12, fontWeight: 700, background: `${color}18`, color, border: `1px solid ${color}40`, whiteSpace: 'nowrap' }}>
-      {statusLabel(statut)}
-    </span>
-  )
-}
 
 function ShippingBadge({ method }: { method?: string | null }) {
   const isPickup = (method || '').toUpperCase() === 'CLICK_COLLECT'

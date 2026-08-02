@@ -5,29 +5,8 @@ import Link from 'next/link'
 import { getMyCommandes } from '@/services/orders'
 import { useAuth } from '@/components/auth/AuthProvider'
 import { Money } from '@/components/ui/Money'
+import { StatusBadge } from '@/components/ui/StatusBadge'
 import type { CommandeRead } from '@/types/api'
-import { statusColor, statusLabel } from '@/lib/orderStatus'
-
-function StatusBadge({ statut }: { statut: string }) {
-  const label = statusLabel(statut)
-  const color = statusColor(statut)
-  return (
-    <span
-      style={{
-        display: 'inline-block',
-        padding: '2px 10px',
-        borderRadius: '999px',
-        fontSize: 12,
-        fontWeight: 700,
-        background: `${color}18`,
-        color,
-        border: `1px solid ${color}40`,
-      }}
-    >
-      {label}
-    </span>
-  )
-}
 
 export default function AccountOrdersPage() {
   const { isLoggedIn } = useAuth()

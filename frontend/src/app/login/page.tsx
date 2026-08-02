@@ -1,14 +1,15 @@
 'use client'
 
-import { Suspense, useCallback, useEffect, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useAuth } from '@/components/auth/AuthProvider'
 import { ApiError } from '@/services/api'
-import { googleLogin, login } from '@/services/auth'
+import { login } from '@/services/auth'
 import { GoogleSignInButton } from '@/components/auth/GoogleSignInButton'
 import { safeReturnTo } from '@/lib/navigation'
+import { useGoogleAuth } from '@/hooks/useGoogleAuth'
 
 function LoginForm() {
   const router = useRouter()
@@ -44,20 +45,7 @@ function LoginForm() {
     }
   }
 
-  const handleGoogleCredential = useCallback(async (credential: string) => {
-    setError(null)
-    setLoading(true)
-    try {
-      const token = await googleLogin(credential)
-      setToken(token.access_token)
-      router.push(returnTo)
-    } catch (e) {
-      const err = e as unknown
-      setError(err instanceof ApiError ? err.message : 'Connexion Google impossible.')
-    } finally {
-      setLoading(false)
-    }
-  }, [setToken, router, returnTo])
+  const handleGoogleCredential = useGoogleAuth(returnTo, setError, setLoading)
 
   return (
     <div className="content-center" style={{ maxWidth: 440 }}>

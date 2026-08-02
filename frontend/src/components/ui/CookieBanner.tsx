@@ -8,31 +8,26 @@ const STORAGE_KEY = 'caribooks_cookie_consent'
 type ConsentState = 'accepted' | 'refused' | null
 
 export function CookieBanner() {
-  const [consent, setConsent] = useState<ConsentState>(null)
   const [visible, setVisible] = useState(false)
 
   useEffect(() => {
     const stored = localStorage.getItem(STORAGE_KEY) as ConsentState | null
     if (!stored) {
       setVisible(true)
-    } else {
-      setConsent(stored)
     }
   }, [])
 
   function handleAccept() {
     localStorage.setItem(STORAGE_KEY, 'accepted')
-    setConsent('accepted')
     setVisible(false)
   }
 
   function handleRefuse() {
     localStorage.setItem(STORAGE_KEY, 'refused')
-    setConsent('refused')
     setVisible(false)
   }
 
-  if (!visible || consent !== null) return null
+  if (!visible) return null
 
   return (
     <div

@@ -302,7 +302,7 @@ def test_postfinance_webhook_requires_valid_signature(client: TestClient, regist
     r = client.post("/orders/paiements/webhook/postfinance", json={"id": "x"})
     assert r.status_code == 403  # missing signature
 
-    with patch("presentation.order_router.verify_postfinance_webhook_signature", return_value=False):
+    with patch("presentation.payment_router.verify_postfinance_webhook_signature", return_value=False):
         r = client.post(
             "/orders/paiements/webhook/postfinance",
             json={"id": "x"},
@@ -332,7 +332,7 @@ def test_postfinance_webhook_finalizes_and_is_idempotent(client: TestClient, reg
     pay_id = r.json()["id_paiement"]
 
     webhook_body = {"id": f"REF_PFWH_{uniq}", "merchantReference": f"REF_PFWH_{uniq}", "state": "FULFILL"}
-    with patch("presentation.order_router.verify_postfinance_webhook_signature", return_value=True):
+    with patch("presentation.payment_router.verify_postfinance_webhook_signature", return_value=True):
         r = client.post(
             "/orders/paiements/webhook/postfinance",
             json=webhook_body,
@@ -388,7 +388,7 @@ def test_postfinance_iframe_session_and_confirm_local_mode(client: TestClient, r
         "local_mode": True,
         "error": None,
     }
-    with patch("presentation.order_router.create_postfinance_iframe_session", return_value=fake_session):
+    with patch("presentation.payment_router.create_postfinance_iframe_session", return_value=fake_session):
         r = client.post(
             "/orders/paiements/postfinance",
             json={
@@ -405,8 +405,8 @@ def test_postfinance_iframe_session_and_confirm_local_mode(client: TestClient, r
     pay_id = session["paiement"]["id_paiement"]
 
     fake_confirm = {"id": f"local-{uniq}", "status": "CONFIRMED", "state": "CONFIRMED", "version": 1, "local": True}
-    with patch("presentation.order_router.get_postfinance_transaction", return_value={"version": 1}), \
-         patch("presentation.order_router.confirm_postfinance_transaction", return_value=fake_confirm):
+    with patch("presentation.payment_router.get_postfinance_transaction", return_value={"version": 1}), \
+         patch("presentation.payment_router.confirm_postfinance_transaction", return_value=fake_confirm):
         r = client.post(f"/orders/paiements/{pay_id}/confirm-postfinance", headers=headers)
         assert r.status_code == 200, r.text
         assert r.json()["paiement"]["statut"] == "AUTHORIZED"
