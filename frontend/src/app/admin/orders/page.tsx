@@ -42,6 +42,14 @@ function OrderRow({ commande, onAdvanced, defaultExpanded }: { commande: Command
   const isTerminal = TERMINAL_STATUSES.has(key)
   const [overrideStatus, setOverrideStatus] = useState(key)
 
+  // commande.statut can change from other actions on this row (Expédier,
+  // Terminer, Annuler…) — without this, the dropdown kept showing whatever
+  // status was selected at mount, so "Appliquer" could look enabled/disabled
+  // against a status that was no longer current.
+  useEffect(() => {
+    setOverrideStatus(key)
+  }, [key])
+
   async function runAction(fn: () => Promise<Partial<CommandeAdminRead> & { id_commande: number }>) {
     setBusy(true)
     try { onAdvanced(await fn()) } finally { setBusy(false) }

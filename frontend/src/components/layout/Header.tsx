@@ -30,6 +30,7 @@ export function Header() {
               <>
                 <Link className="muted" href="/scan">Scanner</Link>
                 <Link className="muted" href="/admin/books">Admin</Link>
+                <Link className="muted" href="/admin/orders">Commandes</Link>
               </>
             ) : null}
             {isLoggedIn ? (
@@ -96,6 +97,7 @@ export function Header() {
           <Link href="/catalog" onClick={closeMenu}>Catalogue</Link>
           {isAdmin ? <Link href="/scan" onClick={closeMenu}>Scanner un ISBN</Link> : null}
           {isAdmin ? <Link href="/admin/books" onClick={closeMenu}>Interface admin</Link> : null}
+          {isAdmin ? <Link href="/admin/orders" onClick={closeMenu}>Commandes (admin)</Link> : null}
           {isLoggedIn ? <Link href="/account" onClick={closeMenu}>Mon compte</Link> : null}
           {isLoggedIn ? <Link href="/account/orders" onClick={closeMenu}>Mes commandes</Link> : null}
           <Link href="/cart" onClick={closeMenu}>
