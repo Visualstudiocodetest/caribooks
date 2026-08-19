@@ -24,26 +24,17 @@ def _chf(value) -> float:
     the JSON API contract (numbers, not strings) is unchanged."""
     return float(Decimal(str(value or 0)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP))
 
-# Server-side source of truth for shipping fees — the client only chooses a
-# shipping_method, never the fee itself (previously the fee was accepted
-# directly from the client, allowing e.g. shipping_method=POST with
-# frais_port_chf=0 to skip the real fee).
+
 SHIPPING_FEES_CHF = {"POST": 9.0, "CLICK_COLLECT": 1.0}
 
-# Single source of truth for the commande status vocabulary. Kept here (the
-# order-domain service) so routers, cleanup and finalize all agree instead of
-# each hard-coding its own tuple of magic strings.
-# OPEN: cart still mutable and still subject to the 20-min expiry.
+
 OPEN_STATUSES = {"CREATED", "PENDING"}
-# PAID+: payment captured; stock has been (or is being) finalized. An order in
-# any of these must never be auto-cancelled by the cart-expiry cleanup.
+
 PAID_STATUSES = {"PAID", "CAPTURED", "COMPLETED", "SENT", "AT_RECEPTION", "FINISHED"}
-# Terminal states from which nothing further should be finalized.
+
 TERMINAL_STATUSES = {"CANCELLED", "REFUNDED"}
-# Every valid commande.statut value — used to validate admin free-text status edits.
 ALL_STATUSES = OPEN_STATUSES | PAID_STATUSES | TERMINAL_STATUSES
-# Paid but not yet advanced to SENT/AT_RECEPTION — the admin actions that mark an
-# order shipped or ready for pickup are only valid from this subset of PAID_STATUSES.
+
 PAID_NOT_ADVANCED_STATUSES = {"PAID", "CAPTURED", "COMPLETED"}
 
 
@@ -183,7 +174,7 @@ def _reactivate_article_if_available(db: Session, id_article: int) -> None:
     )
     if avail > 0:
         art = db.query(models.Article).filter(models.Article.id_article == id_article).first()
-        if art and not art.actif:
+        if art and not art.actif: # type: ignore[assignment]
             art.actif = True  # type: ignore[assignment]
 
 
@@ -219,7 +210,7 @@ def cleanup_expired_carts(db: Session) -> None:
         .all()
     )
     for c in expired:
-        release_cart_reservation(db, int(c.id_commande))
+        release_cart_reservation(db, int(c.id_commande)) # type: ignore[assignment]
         c.statut = "CANCELLED"  # type: ignore[assignment]
     if expired:
         db.commit()
