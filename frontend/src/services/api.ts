@@ -2,6 +2,12 @@ type ApiErrorPayload = {
   detail?: string
 }
 
+// Dispatched on window whenever an authenticated request comes back 401, so
+// AuthProvider can clear the dead token and flip isLoggedIn immediately —
+// instead of the UI still showing "connected" until the user happens to
+// navigate somewhere else that also calls the API.
+export const UNAUTHORIZED_EVENT = 'caribooks:unauthorized'
+
 export class ApiError extends Error {
   status: number
   payload?: unknown
@@ -77,6 +83,9 @@ export async function apiFetch<T>(
   const payload = isJson ? await res.json().catch(() => undefined) : await res.text().catch(() => undefined)
 
   if (!res.ok) {
+    if (auth && res.status === 401 && typeof window !== 'undefined') {
+      window.dispatchEvent(new Event(UNAUTHORIZED_EVENT))
+    }
     const maybeDetail = (payload as ApiErrorPayload | undefined)?.detail
     throw new ApiError(maybeDetail || `API error (${res.status})`, res.status, payload)
   }

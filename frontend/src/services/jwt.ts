@@ -28,3 +28,15 @@ export function getJwtRole(token: string | null): string | null {
   const role = payload?.role
   return typeof role === 'string' ? role : null
 }
+
+// Backend tokens always carry an `exp` claim (see jwt_service.create_access_token).
+// Without this check, a token left in localStorage past its 8h lifetime still
+// reads as "logged in" client-side until an API call 401s — showing a stale
+// "connected" header while every authenticated request fails underneath it.
+export function isTokenExpired(token: string | null): boolean {
+  if (!token) return true
+  const payload = decodeJwtPayload(token) as { exp?: unknown } | null
+  const exp = typeof payload?.exp === 'number' ? payload.exp : null
+  if (exp == null) return false
+  return Date.now() >= exp * 1000
+}

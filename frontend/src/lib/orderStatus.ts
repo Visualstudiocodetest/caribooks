@@ -37,3 +37,18 @@ export function statusLabel(statut: string | null | undefined): string {
 export function statusColor(statut: string | null | undefined): string {
   return STATUS_COLORS[(statut || '').toUpperCase()] || '#6b7280'
 }
+
+// Mirrors backend ALL_STATUSES (services/order_service.py) — the full set the
+// admin override endpoint (PUT /orders/admin/commandes/{id}/status) accepts.
+export const ALL_STATUSES = [
+  'CREATED',
+  'PENDING',
+  'PAID',
+  'CAPTURED',
+  'COMPLETED',
+  'SENT',
+  'AT_RECEPTION',
+  'FINISHED',
+  'CANCELLED',
+  'REFUNDED',
+] as const
