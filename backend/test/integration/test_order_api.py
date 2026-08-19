@@ -648,3 +648,77 @@ def test_stock_increment_rejects_invalid_qty(client: TestClient, register_and_lo
     # negative / zero quantities are rejected by the bounded StockQtyChange model
     assert client.post(f"/stock/{id_stock}/increment", json={"qty": -5}, headers=admin_headers).status_code == 422
     assert client.post(f"/stock/{id_stock}/decrement", json={"qty": 0}, headers=admin_headers).status_code == 422
+
+
+def test_orders_cross_user_isolation(client: TestClient, register_and_login, uniq: str):
+    """A customer must never be able to read or mutate another customer's
+    commande/ligne/paiement, and the admin order back-office must reject a
+    non-admin token outright."""
+    owner_headers = register_and_login(f"iso_owner_{uniq}@example.com")
+    other_headers = register_and_login(f"iso_other_{uniq}@example.com")
+    admin_headers = register_and_login(f"iso_admin_{uniq}@example.com", role="admin")
+    article_id = _make_article(client, admin_headers, uniq, prix_chf=15.0)
+    _make_stock(client, admin_headers, uniq, article_id, qty=5)
+
+    cmd = client.post(
+        "/orders/commandes", json={"numero_commande": f"CMD_ISO_{uniq}"}, headers=owner_headers
+    ).json()
+    ligne = client.post(
+        "/orders/lignes",
+        json={"id_commande": cmd["id_commande"], "id_article": article_id, "quantite": 1},
+        headers=owner_headers,
+    ).json()
+    pay = client.post(
+        "/orders/paiements",
+        json={"id_commande": cmd["id_commande"], "reference_externe": f"REF_ISO_{uniq}"},
+        headers=owner_headers,
+    ).json()
+
+    # Another authenticated customer can't read the owner's commande/ligne/paiement...
+    assert client.get(f"/orders/commandes/{cmd['id_commande']}", headers=other_headers).status_code == 404
+    assert client.get(f"/orders/lignes/{ligne['id_ligne_commande']}", headers=other_headers).status_code == 404
+    assert client.get(f"/orders/paiements/{pay['id_paiement']}", headers=other_headers).status_code == 404
+
+    # ...nor list it indirectly...
+    assert cmd["id_commande"] not in [c["id_commande"] for c in client.get("/orders/commandes", headers=other_headers).json()]
+    assert ligne["id_ligne_commande"] not in [
+        l["id_ligne_commande"] for l in client.get("/orders/lignes", headers=other_headers).json()
+    ]
+    assert pay["id_paiement"] not in [p["id_paiement"] for p in client.get("/orders/paiements", headers=other_headers).json()]
+
+    # ...nor mutate it: add/edit/delete a ligne on someone else's commande, cancel/
+    # update/delete the commande itself, or edit/delete the payment.
+    assert client.post(
+        "/orders/lignes",
+        json={"id_commande": cmd["id_commande"], "id_article": article_id, "quantite": 1},
+        headers=other_headers,
+    ).status_code == 404
+    assert client.put(
+        f"/orders/lignes/{ligne['id_ligne_commande']}", json={"quantite": 2}, headers=other_headers
+    ).status_code == 404
+    assert client.delete(f"/orders/lignes/{ligne['id_ligne_commande']}", headers=other_headers).status_code == 404
+    assert client.put(
+        f"/orders/commandes/{cmd['id_commande']}", json={"shipping_method": "CLICK_COLLECT"}, headers=other_headers
+    ).status_code == 404
+    assert client.post(f"/orders/commandes/{cmd['id_commande']}/cancel", headers=other_headers).status_code == 404
+    assert client.delete(f"/orders/commandes/{cmd['id_commande']}", headers=other_headers).status_code == 404
+    assert client.put(
+        f"/orders/paiements/{pay['id_paiement']}", json={"reference_externe": "TAMPERED"}, headers=other_headers
+    ).status_code == 403  # admin-only, not owner-scoped — see update_paiement
+    assert client.delete(f"/orders/paiements/{pay['id_paiement']}", headers=other_headers).status_code == 403
+
+    # A non-admin (even the owner) is rejected by the admin back-office outright.
+    assert client.get("/orders/admin/commandes", headers=owner_headers).status_code == 403
+    assert client.get(f"/orders/admin/commandes/{cmd['id_commande']}/lignes", headers=owner_headers).status_code == 403
+    assert client.put(
+        f"/orders/admin/commandes/{cmd['id_commande']}/status", json={"statut": "PAID"}, headers=owner_headers
+    ).status_code == 403
+
+    # The admin back-office, by contrast, can see and override it.
+    admin_ids = [c["id_commande"] for c in client.get("/orders/admin/commandes", headers=admin_headers).json()]
+    assert cmd["id_commande"] in admin_ids
+    r = client.put(
+        f"/orders/admin/commandes/{cmd['id_commande']}/status", json={"statut": "PAID"}, headers=admin_headers
+    )
+    assert r.status_code == 200, r.text
+    assert r.json()["statut"] == "PAID"

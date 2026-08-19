@@ -1,9 +1,10 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { listAdminCommandes, adminAdvanceCommande, adminGetLignes, adminCancelCommande, adminSetSent, adminSetAtReception } from '@/services/admin'
+import { listAdminCommandes, adminAdvanceCommande, adminGetLignes, adminCancelCommande, adminSetSent, adminSetAtReception, adminSetCommandeStatus } from '@/services/admin'
 import { Money } from '@/components/ui/Money'
 import { StatusBadge } from '@/components/ui/StatusBadge'
+import { ALL_STATUSES, statusLabel } from '@/lib/orderStatus'
 import type { CommandeAdminRead, LigneCommandeAdminRead } from '@/types/api'
 
 const PAID_STATUSES = new Set(['PAID', 'CAPTURED', 'COMPLETED'])
@@ -30,7 +31,7 @@ function ShippingBadge({ method }: { method?: string | null }) {
   )
 }
 
-function OrderRow({ commande, onAdvanced, defaultExpanded }: { commande: CommandeAdminRead; onAdvanced: (c: CommandeAdminRead) => void; defaultExpanded?: boolean }) {
+function OrderRow({ commande, onAdvanced, defaultExpanded }: { commande: CommandeAdminRead; onAdvanced: (c: Partial<CommandeAdminRead> & { id_commande: number }) => void; defaultExpanded?: boolean }) {
   const [busy, setBusy] = useState(false)
   const [expanded, setExpanded] = useState(defaultExpanded ?? false)
   const [lignes, setLignes] = useState<LigneCommandeAdminRead[] | null>(null)
@@ -39,10 +40,25 @@ function OrderRow({ commande, onAdvanced, defaultExpanded }: { commande: Command
   const isPaid = PAID_STATUSES.has(key)
   const isPost = (commande.shipping_method || 'POST').toUpperCase() === 'POST'
   const isTerminal = TERMINAL_STATUSES.has(key)
+  const [overrideStatus, setOverrideStatus] = useState(key)
 
-  async function runAction(fn: () => Promise<CommandeAdminRead>) {
+  // commande.statut can change from other actions on this row (Expédier,
+  // Terminer, Annuler…) — without this, the dropdown kept showing whatever
+  // status was selected at mount, so "Appliquer" could look enabled/disabled
+  // against a status that was no longer current.
+  useEffect(() => {
+    setOverrideStatus(key)
+  }, [key])
+
+  async function runAction(fn: () => Promise<Partial<CommandeAdminRead> & { id_commande: number }>) {
     setBusy(true)
     try { onAdvanced(await fn()) } finally { setBusy(false) }
+  }
+
+  function applyOverride() {
+    if (overrideStatus === key) return
+    if (!confirm(`Forcer le statut de ${commande.numero_commande} à « ${statusLabel(overrideStatus)} » ?\nCette action ignore le circuit normal de traitement.`)) return
+    runAction(() => adminSetCommandeStatus(commande.id_commande, { statut: overrideStatus }))
   }
 
   async function toggleExpand() {
@@ -103,6 +119,29 @@ function OrderRow({ commande, onAdvanced, defaultExpanded }: { commande: Command
             {expanded ? 'Masquer' : 'Articles'}
           </button>
         </div>
+      </div>
+
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '0 8px 12px', flexWrap: 'wrap' }}>
+        <span className="muted" style={{ fontSize: 11 }}>Forcer le statut :</span>
+        <select
+          className="input"
+          style={{ fontSize: 12, padding: '3px 6px' }}
+          value={overrideStatus}
+          disabled={busy}
+          onChange={(e) => setOverrideStatus(e.target.value)}
+        >
+          {ALL_STATUSES.map((s) => (
+            <option key={s} value={s}>{statusLabel(s)}</option>
+          ))}
+        </select>
+        <button
+          className="btn"
+          style={{ fontSize: 12, padding: '3px 10px' }}
+          disabled={busy || overrideStatus === key}
+          onClick={applyOverride}
+        >
+          Appliquer
+        </button>
       </div>
 
       {expanded ? (
@@ -225,7 +264,7 @@ export default function AdminOrdersPage() {
               key={c.id_commande}
               commande={c}
               defaultExpanded={statusFilter === 'prepare'}
-              onAdvanced={(updated) => setCommandes((s) => s.map((x) => x.id_commande === updated.id_commande ? updated : x))}
+              onAdvanced={(updated) => setCommandes((s) => s.map((x) => x.id_commande === updated.id_commande ? { ...x, ...updated } : x))}
             />
           ))
         )}
