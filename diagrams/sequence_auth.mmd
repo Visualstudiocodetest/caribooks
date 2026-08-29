@@ -1,16 +1,29 @@
-%% Diagramme de séquence — Authentification JWT
+%% Diagramme de séquence — Authentification (mot de passe et Google)
 sequenceDiagram
     autonumber
     actor Usr as Utilisateur
     participant Fro as Frontend<br/>Next.js
     participant API as API FastAPI
     participant BD as BD MySQL
+    participant Goog as Google<br/>oauth2.googleapis.com
 
-    Usr->>Fro: saisit email + mot de passe
-    Fro->>API: POST /auth/token
-    API->>BD: SELECT utilisateur (par email)
-    BD-->>API: mot_de_passe_hash (bcrypt)
-    API->>API: vérifie (passlib) + signe JWT<br/>(HS256, exp 480 min)
-    API-->>Fro: access_token (JWT)
+    alt Connexion par mot de passe
+        Usr->>Fro: saisit email + mot de passe
+        Fro->>API: POST /auth/token
+        API->>BD: SELECT utilisateur (par email)
+        BD-->>API: mot_de_passe_hash (bcrypt)
+        API->>API: vérifie (passlib) + signe JWT<br/>(HS256, exp 480 min)
+        API-->>Fro: access_token (JWT)
+    else Connexion via Google Sign-In
+        Usr->>Fro: clique "Se connecter avec Google"
+        Fro->>Goog: obtient un jeton d'identité (credential)
+        Fro->>API: POST /auth/google {credential}
+        API->>Goog: GET /tokeninfo?id_token=...
+        Goog-->>API: email, email_verified, sub (google_id)
+        API->>API: vérifie email_verified = true
+        API->>BD: SELECT par google_id, sinon par email (liaison), sinon création
+        API->>API: signe JWT (HS256, exp 480 min)
+        API-->>Fro: access_token (JWT)
+    end
     Fro-->>Usr: connexion établie
     Fro->>API: requêtes — Authorization: Bearer <token>

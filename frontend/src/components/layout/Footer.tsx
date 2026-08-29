@@ -11,6 +11,9 @@ export function Footer() {
           © {new Date().getFullYear()} Caribooks — Devise: CHF · Livraison: Suisse
         </div>
         <div style={{ display: 'flex', gap: 16 }}>
+          <Link href="/mentions-legales" className="muted" style={{ fontSize: '0.85rem' }}>
+            Mentions légales
+          </Link>
           <Link href="/conditions-utilisation" className="muted" style={{ fontSize: '0.85rem' }}>
             Conditions d&apos;utilisation
           </Link>

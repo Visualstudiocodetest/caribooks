@@ -171,7 +171,7 @@
 % Commandes utilitaires
 \newcommand{\tech}[1]{\textcolor{myblue}{\textbf{#1}}}
 \newcommand{\yes}{\textcolor{mysuccess}{\textbf{\checkmark}}}
-\newcommand{\no}{\textcolor{red}{\textbf{$\times$}}}
+\newcommand{\nomark}{\textcolor{red}{\textbf{$\times$}}}
 \newcommand{\badge}[1]{\tikz[baseline=-1mm]{\node[tag]{#1};}}
 \newcommand{\badgegreen}[1]{\tikz[baseline=-1mm]{\node[taggreen]{#1};}}
 \newcommand{\badgeorange}[1]{\tikz[baseline=-1mm]{\node[tagorange]{#1};}}
@@ -290,8 +290,8 @@ ESTIAM --- Promotion E3 DAD --- Encadrant : Mhand Boufala}
       \node[tag] at (1.7,0)   {CHF uniquement};
       \node[tag] at (3.8,0)   {JWT Auth};
       \node[tag] at (0,-0.52)  {PostFinance};
-      \node[tag] at (1.9,-0.52){Docker};
-      \node[tag] at (3.2,-0.52){CI/CD};
+      \node[tag] at (1.9,-0.52){Google OAuth};
+      \node[tag] at (3.6,-0.52){CI/CD};
     \end{tikzpicture}
     \end{center}
   \end{columns}
@@ -313,11 +313,11 @@ ESTIAM --- Promotion E3 DAD --- Encadrant : Mhand Boufala}
     \textbf{Solution} & \textbf{Devise CHF} & \textbf{Scan ISBN}
       & \textbf{Back-office} & \textbf{Coût} & \textbf{Personnali\-sable} \\
     \midrule
-    Momox       & \no  & \yes & \no     & Gratuit & \no \\
-    Vinted      & \no  & \no  & Partiel & Gratuit & \no \\
-    Shopify     & \yes & \no  & \yes    & Élevé   & Partiel \\
-    WooCommerce & \yes & \no  & \no     & Moyen   & \yes \\
-    Ricardo.ch  & \yes & \no  & \no     & Moyen   & \no \\
+    Momox       & \nomark  & \yes & \nomark     & Gratuit & \nomark \\
+    Vinted      & \nomark  & \nomark  & Partiel & Gratuit & \nomark \\
+    Shopify     & \yes & \nomark  & \yes    & Élevé   & Partiel \\
+    WooCommerce & \yes & \nomark  & \nomark     & Moyen   & \yes \\
+    Ricardo.ch  & \yes & \nomark  & \nomark     & Moyen   & \nomark \\
     \midrule
     \rowcolor{mybluepale}
     \textbf{CARIBOOKS} & \textbf{\yes} & \textbf{\yes} & \textbf{\yes}
@@ -358,8 +358,9 @@ ESTIAM --- Promotion E3 DAD --- Encadrant : Mhand Boufala}
       \item \tech{Next.js} : SSR pour le SEO vitrine, SPA pour le back-office
       \item \tech{MySQL} : relationnel éprouvé, transactions ACID
       \item \tech{SQLAlchemy} : requêtes paramétrées $\Rightarrow$ anti-injections SQL
+      \item \tech{SQL vs NoSQL} : besoin fondamentalement relationnel (FK, contraintes d'intégrité stock/commande) $\Rightarrow$ pas de NoSQL au MVP ; \textbf{Redis} (cache clé-valeur) identifié comme accès NoSQL pertinent si la charge catalogue/sessions le justifie
       \item \tech{PostFinance} : TWINT natif, sandbox accessible, 100\% suisse \quad\badgeorange{Migration depuis Payrexx}
-      \item \tech{Docker} + \tech{GitHub Actions} : reproductibilité et CI/CD
+      \item \tech{GitHub Actions} : tests puis déploiement continu (SSH, systemd)
       \item \tech{Vercel} : déploiement frontend CDN global, gratuit
     \end{itemize}
   \end{block}
@@ -395,7 +396,7 @@ ESTIAM --- Promotion E3 DAD --- Encadrant : Mhand Boufala}
     \begin{center}
     \begin{tikzpicture}[every node/.style={font=\tiny}]
       \node[tag,fill=myblue,minimum width=5.4cm,text width=5.0cm,align=left]
-        at (0, 0.00) {\textbf{Sprint 1} \; Env. Docker -- BDD -- Modélisation};
+        at (0, 0.00) {\textbf{Sprint 1} \; Env. GitHub/CI -- BDD -- Modélisation};
       \node[tag,fill=myblue,minimum width=5.4cm,text width=5.0cm,align=left]
         at (0,-0.54) {\textbf{Sprint 2} \; Authentification JWT -- Rôles};
       \node[tag,fill=myblue,minimum width=5.4cm,text width=5.0cm,align=left]
@@ -422,9 +423,41 @@ ESTIAM --- Promotion E3 DAD --- Encadrant : Mhand Boufala}
     \end{block}
     \vspace{6pt}
     \begin{center}
-    \badgegreen{20/20 tests passants}\quad\badgegreen{70\% couverture code}\quad\badge{Déployé en ligne}
+    \badgegreen{99/99 tests passants}\quad\badgegreen{79\% couverture backend}\quad\badge{Déployé en ligne}
     \end{center}
   \end{columns}
+\end{frame}
+
+% ─────────────────────────────────────────
+%  SLIDE 7b — ENVIRONNEMENT DE DÉVELOPPEMENT
+% ─────────────────────────────────────────
+\begin{frame}{Installation et configuration de l'environnement de travail}
+  \begin{columns}[T]
+    \column{0.48\textwidth}
+    \begin{block}{Poste de développement}
+      \begin{itemize}\small
+        \item \textbf{OS} : macOS (puce Intel)
+        \item \textbf{Éditeur} : VS Code + GitHub Copilot
+        \item \textbf{Versionning} : Git / GitHub (licence Students Pro)
+        \item \textbf{Backend} : venv Python 3.12, dépendances épinglées (\texttt{requirements.txt})
+        \item \textbf{Frontend} : Node.js, \texttt{npm}
+      \end{itemize}
+    \end{block}
+    \column{0.48\textwidth}
+    \begin{block}{Outils par tâche}
+      \begin{itemize}\small
+        \item \textbf{Test API manuel} : Thunder Client (VS Code)
+        \item \textbf{Documentation API} : Swagger UI (auto, FastAPI)
+        \item \textbf{Suivi de projet} : Microsoft Planner
+        \item \textbf{CI/CD} : GitHub Actions
+        \item \textbf{Diagrammes} : Mermaid CLI (rendu PDF versionné)
+      \end{itemize}
+    \end{block}
+  \end{columns}
+  \vspace{6pt}
+  \begin{exampleblock}{\small Adapté au projet}
+    \small Environnement configuré dès le sprint 1 pour permettre tests + CI dès les premiers commits (pas d'attente jusqu'au sprint 6) : \texttt{startapp.sh} lance backend + frontend en une commande pour tout collaborateur.
+  \end{exampleblock}
 \end{frame}
 
 % ══════════════════════════════════════════════════════════════════════
@@ -492,7 +525,7 @@ ESTIAM --- Promotion E3 DAD --- Encadrant : Mhand Boufala}
 def create_access_token(payload: dict,
     secret_key: str, expires_minutes: int) -> str:
     to_encode = payload.copy()
-    expire = datetime.utcnow() + timedelta(
+    expire = datetime.now(timezone.utc) + timedelta(
         minutes=expires_minutes)
     to_encode.update({"exp": expire})
     return jwt.encode(to_encode, secret_key,
@@ -500,12 +533,13 @@ def create_access_token(payload: dict,
 
 # presentation/deps.py
 ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
-_WEAK = {"", "dev-secret-key", "changeme", "secret"}
+_WEAK_SECRET_KEYS = {"", "dev-secret-key", "changeme",
+                     "secret", "change-me"}
 _env_secret = os.getenv("SECRET_KEY")
 
 # Refuse un secret connu/placeholder, quel que soit
 # ENVIRONMENT (pas seulement en "production")
-if _env_secret and _env_secret.lower() in _WEAK:
+if _env_secret and _env_secret.lower() in _WEAK_SECRET_KEYS:
     raise RuntimeError(
         "SECRET_KEY placeholder refuse")
 
@@ -514,11 +548,13 @@ if _env_secret and _env_secret.lower() in _WEAK:
 SECRET_KEY = _env_secret or secrets.token_urlsafe(32)
 
 def get_current_user(
-    credentials = Depends(HTTPBearer()),
+    credentials = Depends(security),
     db: Session = Depends(get_db),
 ) -> models.Utilisateur:
-    payload = decode_access_token(
-        credentials.credentials, SECRET_KEY)
+    token = credentials.credentials.strip()
+    if token.lower().startswith("bearer "):
+        token = token[7:].strip()
+    payload = decode_access_token(token, SECRET_KEY)
     user = crud_user.get_user_by_email(
         db, payload["sub"])
     if user is None:
@@ -538,7 +574,7 @@ def require_admin(user=Depends(get_current_user)):
         \item Génération \textbf{JWT HS256}\\
           \texttt{\{sub, role, exp: 480 min\}}
         \item Stockage client → \texttt{Bearer token}
-        \item Middleware \texttt{get\_current\_user} sur chaque route protégée
+        \item Dépendance FastAPI \texttt{get\_current\_user} sur chaque route protégée
         \item \texttt{require\_admin} pour le back-office
       \end{enumerate}
     \end{block}
@@ -551,10 +587,48 @@ def require_admin(user=Depends(get_current_user)):
     \end{tikzpicture}
     \vspace{5pt}
     \begin{alertblock}{\small Sécurité de démarrage}
-      \small L'API \textbf{refuse de démarrer} si la \texttt{SECRET\_KEY} par défaut
-      est détectée en environnement de production.
+      \small L'API \textbf{refuse de démarrer} (tout environnement confondu) si
+      \texttt{SECRET\_KEY} vaut une valeur faible/placeholder connue ; si elle est
+      absente, une clé aléatoire est générée pour le processus.
     \end{alertblock}
   \end{columns}
+\end{frame}
+
+% ─────────────────────────────────────────
+%  SLIDE 10b — GOOGLE OAUTH
+% ─────────────────────────────────────────
+\begin{frame}{Authentification --- Connexion via Google (second flux)}
+  \begin{columns}[T]
+    \column{0.46\textwidth}
+    \begin{block}{Pourquoi un second flux ?}
+      \begin{itemize}\small
+        \item Réduit la friction d'inscription (pas de mot de passe à créer/retenir)
+        \item \texttt{POST /auth/google} reçoit le jeton d'identité Google
+        \item L'API vérifie elle-même le jeton auprès de Google \\
+          (\texttt{oauth2.googleapis.com/tokeninfo}) --- jamais de confiance aveugle envers le frontend
+        \item Compte retrouvé/lié par \texttt{google\_id}, sinon créé
+      \end{itemize}
+    \end{block}
+    \column{0.50\textwidth}
+    \begin{alertblock}{\small Contrôle de sécurité critique}
+      \small Si \texttt{email\_verified} = \textit{false} côté Google, la connexion est
+      \textbf{refusée (400)}. Sans ce contrôle, un compte Google avec un email non
+      vérifié identique à celui d'une victime permettrait une prise de contrôle
+      de compte.
+    \end{alertblock}
+    \vspace{4pt}
+    \begin{exampleblock}{\small Compte hybride}
+      \small \texttt{mot\_de\_passe\_hash} reste \texttt{NULL} pour un compte
+      créé via Google --- la connexion par mot de passe échoue proprement (401),
+      sans jamais tenter de vérifier un hash inexistant.
+    \end{exampleblock}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Authentification --- Diagramme de séquence (mot de passe + Google)}
+  \begin{center}
+  \includegraphics[width=\linewidth,height=0.82\textheight,keepaspectratio]{diagrams/sequence_auth.pdf}
+  \end{center}
 \end{frame}
 
 % ─────────────────────────────────────────
@@ -600,8 +674,8 @@ def get_isbn_metadata(isbn: str):
         \item \textbf{TWINT} natif (paiement mobile dominant CH)
         \item \textbf{Sandbox} sans CB réelle en développement
         \item PostCard, Visa, Mastercard en \textbf{CHF}
-        \item Synergie \textbf{Poste Suisse} (livraison PostPac)
         \item Acteur 100\% suisse, réglementation conforme
+        \item Évolution future envisagée : API PostPac (même groupe)
       \end{itemize}
     \end{block}
     \column{0.48\textwidth}
@@ -624,9 +698,81 @@ def get_isbn_metadata(isbn: str):
 \end{frame}
 
 % ─────────────────────────────────────────
+%  SLIDE 12b — LIVRAISON ET CONCURRENCE
+% ─────────────────────────────────────────
+\begin{frame}[fragile]{Module Commande --- Livraison et accès concurrent au stock}
+  \begin{columns}[T]
+    \column{0.46\textwidth}
+    \begin{block}{Choix du mode de livraison}
+      \begin{itemize}\small
+        \item \texttt{POST} : envoi postal, \textbf{9 CHF}
+        \item \texttt{CLICK\_COLLECT} : retrait en magasin, \textbf{1 CHF}
+        \item Stocké sur la commande : \texttt{shipping\_method}, \texttt{frais\_port\_chf}
+      \end{itemize}
+    \end{block}
+    \vspace{5pt}
+    \begin{block}{Réservation temporaire de stock}
+      \begin{itemize}\small
+        \item Fenêtre de \textbf{20 minutes} (\texttt{cart\_expires\_at})
+        \item Expiration $\Rightarrow$ relibération automatique du stock
+      \end{itemize}
+    \end{block}
+    \column{0.50\textwidth}
+\begin{lstlisting}[style=pysmall,caption={}]
+# services/order_service.py
+SHIPPING_FEES_CHF = {
+    "POST": 9.0,
+    "CLICK_COLLECT": 1.0,
+}
+
+def _lock_stock_rows(db, ids_article):
+    return db.query(models.Stock).filter(
+        models.Stock.id_article.in_(ids_article)
+    ).with_for_update().all()
+\end{lstlisting}
+    \begin{exampleblock}{\small Pourquoi \texttt{FOR UPDATE} ?}
+      \small Si deux clients achètent le dernier exemplaire au même
+      instant, la seconde transaction attend la première puis relit un
+      stock à 0 --- MySQL/InnoDB garantit l'atomicité, pas le code applicatif.
+    \end{exampleblock}
+  \end{columns}
+\end{frame}
+
+% ─────────────────────────────────────────
+%  SLIDE 12c — BACK-OFFICE ADMIN COMMANDES
+% ─────────────────────────────────────────
+\begin{frame}{Back-office --- Gestion admin des commandes}
+  \begin{columns}[T]
+    \column{0.48\textwidth}
+    \begin{block}{\texttt{order\_admin\_router}}
+      \begin{itemize}\small
+        \item Avancer / annuler / rembourser une commande
+        \item Marquer \og envoyée \fg{} / \og à réception \fg{}
+        \item \textbf{Surcharge manuelle} du statut vers n'importe quelle valeur (cas exceptionnels)
+        \item Toutes les routes protégées par \texttt{require\_admin}
+      \end{itemize}
+    \end{block}
+    \column{0.48\textwidth}
+    \begin{exampleblock}{\small Test d'isolation dédié}
+      \small \texttt{test\_orders\_cross\_user\_isolation} vérifie qu'un client ne peut
+      ni lire ni modifier les commandes d'un autre client (\textbf{404}), et
+      qu'un non-admin reçoit \textbf{403} sur toutes les routes \texttt{/orders/admin/*}.
+    \end{exampleblock}
+    \vspace{4pt}
+    \badgegreen{Dropdown de statut synchronisé avec le statut réel de la commande}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Back-office --- Diagramme de séquence}
+  \begin{center}
+  \includegraphics[width=\linewidth,height=0.82\textheight,keepaspectratio]{diagrams/sequence_admin_commande.pdf}
+  \end{center}
+\end{frame}
+
+% ─────────────────────────────────────────
 %  SLIDE 13 — ARCHITECTURE EN COUCHES
 % ─────────────────────────────────────────
-\begin{frame}{Architecture hexagonale --- Séparation des préoccupations}
+\begin{frame}{Architecture en couches --- Séparation des préoccupations}
   \begin{columns}[T]
     \column{0.48\textwidth}
     \begin{block}{\texttt{CrudBase<T>} --- Pattern générique}
@@ -652,7 +798,7 @@ def get_isbn_metadata(isbn: str):
   \end{columns}
 \end{frame}
 
-\begin{frame}{Architecture hexagonale --- Diagramme en couches}
+\begin{frame}{Architecture en couches --- Diagramme}
   \begin{center}
   \vspace{-4pt}
   \includegraphics[width=\linewidth,height=0.82\textheight,keepaspectratio]{diagrams/architecture_couches.pdf}
@@ -664,7 +810,7 @@ def get_isbn_metadata(isbn: str):
 % ─────────────────────────────────────────
 \begin{frame}{Interface utilisateur --- Maquette Catalogue}
   \begin{center}
-  \resizebox{!}{0.88\textheight}{%
+  \resizebox{!}{0.74\textheight}{%
   \begin{tikzpicture}
     % Fenêtre navigateur
     \fill[gray!20] (0,5.4) rectangle (6,6.0);
@@ -700,7 +846,8 @@ def get_isbn_metadata(isbn: str):
     \fill[myblue!80] (0,0) rectangle (6,0.5);
     \node[font=\tiny,text=white] at (3,0.25) {Livraison Suisse uniquement \textbullet{} Paiement CHF};
   \end{tikzpicture}}\\[4pt]
-  \scriptsize\textit{Maquette --- Page catalogue}
+  \scriptsize\textit{Maquette --- Page catalogue}\\[2pt]
+  \scriptsize\textcolor{mygray}{Conception guidée par le \textbf{RGAA} : contraste texte/fond $\geq$ 4.5:1 sur les prix, zones cliquables $\geq$ 44px, ordre de focus clavier cohérent avec l'ordre visuel}
   \end{center}
 \end{frame}
 
@@ -709,7 +856,7 @@ def get_isbn_metadata(isbn: str):
 % ─────────────────────────────────────────
 \begin{frame}{Interface utilisateur --- Maquette Scan ISBN (mobile)}
   \begin{center}
-  \resizebox{!}{0.88\textheight}{%
+  \resizebox{!}{0.74\textheight}{%
   \begin{tikzpicture}
     % Téléphone
     \fill[gray!30] (0.8,0) rectangle (4.4,7.5);
@@ -740,8 +887,22 @@ def get_isbn_metadata(isbn: str):
     % Home bar
     \fill[gray!50,rounded corners=2pt] (2.1,0.2) rectangle (3.1,0.35);
   \end{tikzpicture}}\\[4pt]
-  \scriptsize\textit{Maquette --- Scan ISBN (mobile)}
+  \scriptsize\textit{Maquette --- Scan ISBN (mobile)}\\[2pt]
+  \scriptsize\textcolor{mygray}{Conception guidée par le \textbf{RGAA} : libellés de champs explicites (pas de placeholder seul), bouton d'action $\geq$ 44px, alternative de saisie manuelle pour les utilisateurs ne pouvant pas utiliser la caméra}
   \end{center}
+\end{frame}
+
+% ─────────────────────────────────────────
+%  SLIDE 14c — DIFFICULTÉS RENCONTRÉES
+% ─────────────────────────────────────────
+\begin{frame}{Difficultés rencontrées et démarche de résolution}
+  \begin{itemize}\small
+    \item \textbf{Changement de technologie backend} : première version en Express.js (Node.js), abandonnée pour FastAPI face aux exigences de robustesse et de validation automatique du projet --- coûteux en temps, mais gain net en productivité.
+    \item \textbf{Performance du scan de code-barres} : latence et taux de reconnaissance insuffisants en première implémentation ; optimisation de l'algorithme de détection.
+    \item \textbf{Changement de prestataire de paiement} : Payrexx envisagé puis remplacé par PostFinance, dont la sandbox ne nécessite pas de carte bancaire réelle --- a considérablement facilité les tests.
+    \item \textbf{Gestion du périmètre fonctionnel} : la commanditaire (Product Owner informelle) souhaitait régulièrement ajouter des fonctionnalités (favoris, chat) ; application stricte du MVP et report au backlog.
+    \item \textbf{Conciliation apprentissage / projet personnel} : développement uniquement en soirée (17h--20h, 3 jours/semaine) en parallèle de la formation en alternance --- discipline de planification stricte.
+  \end{itemize}
 \end{frame}
 
 % ══════════════════════════════════════════════════════════════════════
@@ -831,23 +992,23 @@ def get_isbn_metadata(isbn: str):
 % ─────────────────────────────────────────
 %  SLIDE 16 — TESTS
 % ─────────────────────────────────────────
-\begin{frame}{Tests et couverture --- 20/20, 70\,\%}
+\begin{frame}{Tests et couverture --- 99/99, 79\,\%}
   \begin{columns}[T]
     \column{0.48\textwidth}
     \begin{block}{Stratégie de test à 3 niveaux}
       \begin{itemize}\small
-        \item \textbf{Tests unitaires} : JWT, bcrypt, ISBN, calculs CHF
-        \item \textbf{Tests d'intégration} : \texttt{TestClient} FastAPI + MySQL
+        \item \textbf{Tests unitaires} : JWT, bcrypt, ISBN, calculs CHF, SSRF, rate limiting
+        \item \textbf{Tests d'intégration} : \texttt{TestClient} FastAPI + MySQL, isolation inter-utilisateurs
         \item \textbf{Test fonctionnel E2E} : parcours achat complet
         \item \textbf{Sandbox PostFinance} : scénarios succès / échec
         \item Tests manuels : \textbf{Swagger UI} + \textbf{Thunder Client}
       \end{itemize}
     \end{block}
     \vspace{5pt}
-    \badgegreen{20 / 20 tests passants (pytest)}
+    \badgegreen{99 / 99 tests passants (68 pytest + 31 Vitest)}
     \vspace{5pt}
     \begin{alertblock}{\small Axes de renforcement (Phase 2)}
-      \texttt{order\_router} (17\,\%) et \texttt{image\_service} (23\,\%) identifiés comme prioritaires.
+      \texttt{image\_service} (36\,\%), \texttt{order\_admin\_router} (40\,\%) et \texttt{user\_router} (51\,\%) identifiés comme prioritaires.
     \end{alertblock}
     \column{0.50\textwidth}
     \begin{center}
@@ -858,23 +1019,44 @@ def get_isbn_metadata(isbn: str):
       \textbf{Module} & \textbf{Couverture} \\
       \midrule
       \texttt{infrastructure/models.py}    & 100\,\% \\
-      \texttt{presentation/schemas.py}     & 96\,\% \\
-      \texttt{scan\_router.py}             & 91\,\% \\
+      \texttt{presentation/schemas.py}     & 97\,\% \\
+      \texttt{presentation/deps.py}        & 93\,\% \\
       \texttt{catalog\_router.py}          & 89\,\% \\
-      \texttt{services/jwt\_service.py}    & 86\,\% \\
-      \texttt{presentation/auth\_router.py}& 83\,\% \\
-      \texttt{services/book\_service.py}   & 77\,\% \\
-      \texttt{presentation/book\_router.py}& 68\,\% \\
-      \texttt{postfinance\_service.py}     & 64\,\% \\
-      \texttt{services/image\_service.py}  & 23\,\% \\
+      \texttt{presentation/auth\_router.py}& 90\,\% \\
+      \texttt{order\_router.py}            & 81\,\% \\
+      \texttt{postfinance\_service.py}     & 79\,\% \\
+      \texttt{presentation/payment\_router.py}& 74\,\% \\
+      \texttt{presentation/user\_router.py}& 51\,\% \\
       \rowcolor{myaccent!20}
-      \texttt{presentation/order\_router.py}&17\,\% \\
+      \texttt{presentation/order\_admin\_router.py}&40\,\% \\
+      \rowcolor{myaccent!20}
+      \texttt{services/image\_service.py}  & 36\,\% \\
       \midrule
-      \textbf{TOTAL (2\,326 instructions)} & \textbf{70\,\%} \\
+      \textbf{TOTAL (2\,099 instructions)} & \textbf{79\,\%} \\
       \bottomrule
     \end{tabular}
     \end{center}
   \end{columns}
+\end{frame}
+
+% ─────────────────────────────────────────
+%  SLIDE 16b — DÉMONSTRATION (PLAN B)
+% ─────────────────────────────────────────
+\begin{frame}{Démonstration --- Captures d'écran (application réelle)}
+  \begin{columns}[T]
+    \column{0.38\textwidth}
+    \centering
+    \includegraphics[width=\linewidth]{vue_telephone.png}\\
+    \scriptsize\textit{Vitrine mobile --- caribooks.vercel.app}
+    \column{0.60\textwidth}
+    \centering
+    \includegraphics[width=\linewidth]{SWAGGER_LOGIN_DETAIL.png}\\
+    \scriptsize\textit{Documentation Swagger générée automatiquement --- POST /auth/token}
+  \end{columns}
+  \vspace{4pt}
+  \begin{center}
+  \scriptsize\textcolor{mygray}{Captures issues de l'application en fonctionnement réel --- à utiliser en secours si la démonstration en direct n'est pas possible}
+  \end{center}
 \end{frame}
 
 % ─────────────────────────────────────────
@@ -886,18 +1068,19 @@ def get_isbn_metadata(isbn: str):
     \begin{block}{Pipeline CI/CD --- GitHub Actions}
       \begin{enumerate}\small
         \item Push sur branche \texttt{main}
-        \item Exécution \textbf{pytest} (20/20 requis)
-        \item Build image \textbf{Docker}
-        \item Deploy sur \textbf{Oracle Cloud} (VM AMD)
+        \item Exécution \textbf{pytest + Vitest} (99/99 requis)
+        \item \textit{Rolling deploy} SSH séquentiel vers \textbf{VM1} puis \textbf{VM2}
+        \item Migrations SQL appliquées automatiquement
         \item \textbf{Vercel} auto-deploy frontend
       \end{enumerate}
     \end{block}
     \column{0.48\textwidth}
     \begin{block}{Backend \& API --- Oracle Cloud (Always Free)}
       \begin{itemize}\small
-        \item \textbf{1 VM AMD Micro} (Ubuntu 22.04) : API \textbf{FastAPI} via \textbf{Uvicorn} derrière \textbf{Nginx}
+        \item \textbf{2 VMs AMD Micro} (Ubuntu 22.04) : \textbf{VM1} en production, \textbf{VM2} en secours à chaud
+        \item API \textbf{FastAPI} via \textbf{Uvicorn} derrière \textbf{Nginx}
         \item \textbf{HTTPS} (TLS Let's Encrypt) sur \texttt{caribooks.duckdns.org}
-        \item Service \textbf{systemd} (redémarrage auto), conteneur \textbf{Docker}
+        \item Service \textbf{systemd} (redémarrage auto), sans conteneurisation
         \item \textbf{MySQL} en sous-réseau \textbf{privé} (VCN, port 3306 fermé)
         \item \textbf{Vercel} : frontend Next.js, CDN global, gratuit
       \end{itemize}
@@ -923,25 +1106,25 @@ def get_isbn_metadata(isbn: str):
 \begin{frame}{Couverture des 3 blocs de compétences CDA}
   \begin{block}{Bloc 1 --- Développer une application sécurisée}
     \begin{itemize}\small
-      \item Auth \textbf{JWT HS256} + \textbf{bcrypt rounds=12} + rôles admin/user + middleware FastAPI
+      \item Auth \textbf{JWT HS256} + \textbf{bcrypt} + Google OAuth + rôles admin/user (dépendance FastAPI)
       \item \textbf{SQLAlchemy ORM} : requêtes paramétrées, protection injections SQL
-      \item Validation \textbf{Pydantic}, gestion des sessions, variables d'environnement
+      \item Validation \textbf{Pydantic}, rate limiting, protection SSRF, variables d'environnement
     \end{itemize}
   \end{block}
   \vspace{3pt}
   \begin{block}{Bloc 2 --- Concevoir et développer une application multicouche}
     \begin{itemize}\small
-      \item Modélisation \textbf{MCD/MLD} MySQL (13 tables) + architecture hexagonale (4 couches)
+      \item Modélisation \textbf{MCD/MLD} MySQL (13 tables) + architecture en 3 couches
       \item \textbf{REST API} FastAPI + frontend découplé \textbf{Next.js}/TypeScript
-      \item Intégration APIs tierces : \textbf{OpenLibrary} (ISBN), \textbf{PostFinance} (CHF)
+      \item Intégration APIs tierces : \textbf{OpenLibrary} (ISBN), \textbf{PostFinance} (CHF), \textbf{Google OAuth}
       \item UML complet : contexte, cas d'utilisation, activités, séquence, classes, composants, déploiement
     \end{itemize}
   \end{block}
   \vspace{3pt}
   \begin{block}{Bloc 3 --- Préparer le déploiement}
     \begin{itemize}\small
-      \item Conteneurisation \textbf{Docker} + \textbf{docker-compose} (API + BDD + frontend)
-      \item Pipeline \textbf{CI/CD GitHub Actions} : 20/20 tests $\rightarrow$ build $\rightarrow$ deploy
+      \item \textit{Rolling deploy} SSH vers deux VMs (systemd, sans conteneurisation)
+      \item Pipeline \textbf{CI/CD GitHub Actions} : 99/99 tests $\rightarrow$ déploiement continu
       \item Déploiement hybride \textbf{Vercel} + \textbf{Oracle Cloud}, Swagger/OpenAPI auto-généré
     \end{itemize}
   \end{block}
@@ -961,18 +1144,18 @@ def get_isbn_metadata(isbn: str):
       \begin{itemize}\small
         \item Ajout livre par scan ISBN en \textbf{$<$ 2 min}
         \item Paiement \textbf{CHF} via PostFinance (TWINT + carte)
-        \item Livraison restreinte à la \textbf{Suisse}
-        \item Back-office bénévole opérationnel
-        \item \textbf{20/20 tests}, 70\,\% couverture
+        \item Livraison restreinte à la \textbf{Suisse} (envoi postal ou Click \& Collect)
+        \item Back-office bénévole opérationnel, incl. gestion admin des statuts de commande
+        \item \textbf{99/99 tests}, 79\,\% couverture backend
         \item Déployé sur \texttt{caribooks.vercel.app}
       \end{itemize}
     \end{exampleblock}
     \vspace{4pt}
     \begin{alertblock}{Limites identifiées}
       \begin{itemize}\small
-        \item Tunnel de paiement à fiabiliser (17\,\% couv.)
+        \item Tunnel de paiement à surveiller (74\,\% couv.)
         \item Interface mobile à affiner (responsive)
-        \item Suivi des commandes admin à compléter
+        \item Traitement d'images (36\,\%) et routeur admin (40\,\%) à renforcer
       \end{itemize}
     \end{alertblock}
     \column{0.48\textwidth}
@@ -1014,7 +1197,7 @@ def get_isbn_metadata(isbn: str):
     {\color{white}\textbf{Alexandre REY}}\\[5pt]
     {\color{white!70}\small alexandre.rey@qiminfo.ch}\\[8pt]
     {\color{white!70}\small caribooks.vercel.app}\\[4pt]
-    {\color{white!70}\small github.com/Visualstudiocodetest/plobooks}
+    {\color{white!70}\small github.com/Visualstudiocodetest/caribooks}
   \end{center}
 \end{frame}
 

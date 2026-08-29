@@ -36,14 +36,14 @@ Le projet suit les principes **SOLID**, **Clean Architecture** et **KISS**, et e
 Architecture cloud hybride à coût nul (offres gratuites) :
 
 - **Frontend (Next.js)** : hébergé sur **Vercel** (CDN global, auto-deploy).
-- **Backend / API (FastAPI)** : **une VM Oracle Cloud** (AMD Micro, *Always Free*, Ubuntu 22.04).
-  - Servi par **Uvicorn** derrière **Nginx** (reverse proxy + terminaison TLS).
-  - Exposé en **HTTPS** sur **https://caribooks.duckdns.org** (DNS dynamique + certificat Let's Encrypt).
-  - Lancé en service **systemd** (redémarrage automatique) et conteneurisé avec **Docker**.
-- **Base de données (MySQL)** : sur **Oracle Cloud**, accessible uniquement depuis la VM via le réseau privé (VCN, port `3306` fermé à l'extérieur).
-- **CI/CD** : **GitHub Actions** (tests `pytest` → build Docker → déploiement).
+- **Backend / API (FastAPI)** : **deux VMs Oracle Cloud** (AMD Micro, *Always Free*, Ubuntu 22.04) — `VM1` sert le trafic de production, `VM2` est maintenue à jour en parallèle comme instance de secours à chaud (bascule manuelle en cas de panne de `VM1`).
+  - Servies par **Uvicorn** derrière **Nginx** (reverse proxy + terminaison TLS).
+  - Exposées en **HTTPS** sur **https://caribooks.duckdns.org** (DNS dynamique + certificat Let's Encrypt, pointant sur `VM1`).
+  - Lancées en service **systemd** (redémarrage automatique), sans conteneurisation.
+- **Base de données (MySQL)** : sur **Oracle Cloud**, accessible uniquement depuis les VMs via le réseau privé (VCN, port `3306` fermé à l'extérieur).
+- **CI/CD** : **GitHub Actions** (tests `pytest`/`vitest` → *rolling deploy* SSH séquentiel vers `VM1` puis `VM2`).
 
-> ℹ️ Pas de load balancer ni de seconde VM : une seule instance backend. Une configuration redondante (plusieurs VMs + répartiteur de charge) reste une évolution possible en cas de montée en charge.
+> ℹ️ Pas de répartiteur de charge actif : `VM2` est une instance de secours, pas un second nœud servant du trafic simultanément. Le passage à une configuration pleinement redondante (bascule automatique) reste une évolution possible en cas de montée en charge.
 
 ---
 
