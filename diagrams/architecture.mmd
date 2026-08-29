@@ -1,14 +1,14 @@
-%% Architecture technique — FastAPI / Next.js / MySQL / PostFinance / Docker
+%% Architecture technique — FastAPI / Next.js / MySQL / PostFinance
 flowchart TB
     client["<b>Client</b><br/>Navigateur web / mobile"]
     front["<b>Frontend — Next.js (React / TypeScript)</b><br/>SSR/SSG · scan ISBN · déployé sur Vercel"]
-    subgraph docker["Docker / docker-compose · CI-CD GitHub Actions"]
+    subgraph vms["VM1 (prod) + VM2 (secours à chaud) · systemd · CI/CD GitHub Actions"]
         direction TB
         api["<b>Backend — API FastAPI (Python)</b><br/>Pydantic · JWT · SQLAlchemy · Swagger"]
         db["<b>Base de données — MySQL</b>"]
         api -->|ORM| db
     end
-    ext["<b>Services externes</b><br/>OpenLibrary / Google Books<br/>PostFinance (CHF)<br/>Poste Suisse"]
+    ext["<b>Services externes</b><br/>OpenLibrary (ISBN)<br/>PostFinance (CHF)<br/>Google OAuth (connexion)"]
 
     client -->|HTTPS| front
     front -->|REST / JSON| api

@@ -7,7 +7,7 @@ erDiagram
     STOCK }o--|| SOURCE_STOCK : "provient de"
     ARTICLE ||--o| LIVRE : "est un"
     UTILISATEUR ||--o{ COMMANDE : "passe"
-    COMMANDE ||--|| PAIEMENT : "réglée par"
+    COMMANDE ||--o{ PAIEMENT : "réglée par (retries possibles)"
     COMMANDE ||--|{ LIGNE_COMMANDE : "contient"
     LIGNE_COMMANDE }o--|| ARTICLE : "porte sur"
     UTILISATEUR ||--o{ SCAN_ISBN : "scanne"
@@ -20,7 +20,7 @@ erDiagram
     ARTICLE { string sku string titre decimal prix_chf }
     LIVRE { string isbn string auteur string editeur string langue }
     STOCK { int quantite_disponible int quantite_reservee }
-    UTILISATEUR { string email string role }
+    UTILISATEUR { string email string role string google_id }
     COMMANDE { string numero decimal montant_total_chf string statut }
     LIGNE_COMMANDE { int quantite decimal prix_unitaire_chf }
     PAIEMENT { string reference_externe decimal montant_chf string statut }

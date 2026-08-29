@@ -191,7 +191,7 @@ Les plateformes de revente existantes fonctionnant principalement en euros et sa
 \vspace{20pt}
 
 \textbf{Objectif et résultats attendus :} \\
-L'objectif principal est de concevoir et déployer une plateforme e-commerce solidaire (nommée CARIBOOKS), facile d'utilisation pour les bénévoles de Caritas. Elle doit offrir une gestion simplifiée des ventes — de l'ajout rapide de produits grâce à l'API ISBN jusqu'au suivi des commandes — le tout en respectant les contraintes locales (devise CHF, livraison suisse, et paiement via PostFinance, prestataire suisse intégré au service de livraison de la Poste Suisse).
+L'objectif principal est de concevoir et déployer une plateforme e-commerce solidaire (nommée CARIBOOKS), facile d'utilisation pour les bénévoles de Caritas. Elle doit offrir une gestion simplifiée des ventes — de l'ajout rapide de produits grâce à l'API ISBN jusqu'au suivi des commandes — le tout en respectant les contraintes locales (devise CHF, livraison suisse, et paiement via PostFinance, prestataire de paiement suisse).
 
 \vspace{20pt}
 
@@ -203,11 +203,11 @@ L'objectif principal est de concevoir et déployer une plateforme e-commerce sol
 This project was carried out as part of the French CDA professional qualification (Application Designer-Developer). It originates from a real request by a volunteer of the Caritas charity recycling shop, a non-profit supporting professional reintegration through the sale of second-hand goods. Facing a stock of unsold books, the need was to build a dedicated online sales platform tailored to Swiss local constraints.
 
 \textbf{Objective and expected results:} \\
-The main goal is to design and deploy a solidarity-driven e-commerce platform (CARIBOOKS), easy to use for Caritas volunteers. It provides simplified sales management — from quick product creation via the ISBN API to order tracking — while enforcing local constraints (CHF currency, Swiss-only delivery, and payment through PostFinance, a Swiss provider integrated with Swiss Post delivery services). The application is built on a layered architecture (FastAPI, Next.js, MySQL), secured with JWT authentication, containerised with Docker and deployed through a GitHub Actions CI/CD pipeline.
+The main goal is to design and deploy a solidarity-driven e-commerce platform (CARIBOOKS), easy to use for Caritas volunteers. It provides simplified sales management — from quick product creation via the ISBN API to order tracking — while enforcing local constraints (CHF currency, Swiss-only delivery, and payment through PostFinance, a Swiss payment provider). The application is built on a layered architecture (FastAPI, Next.js, MySQL), secured with JWT and Google OAuth authentication, and deployed through a GitHub Actions CI/CD pipeline (continuous testing, then continuous rolling deployment to two VMs).
 
 \vspace{6pt}
 
-\noindent\textit{Keywords: e-commerce, FastAPI, Next.js, MySQL, JWT, ISBN scanning, PostFinance, Switzerland, GDPR/nLPD, Docker, CI/CD.}
+\noindent\textit{Keywords: e-commerce, FastAPI, Next.js, MySQL, JWT, OAuth, ISBN scanning, PostFinance, Switzerland, GDPR/nLPD, CI/CD.}
 
 \newpage
 
@@ -256,13 +256,13 @@ Ce projet couvre l'intégralité des trois blocs de compétences du référentie
 \textbf{Bloc} & \textbf{Intitulé} & \textbf{Compétences mobilisées dans CARIBOOKS} \\
 \midrule
 1 & Développer une application sécurisée &
-  Authentification JWT avec \texttt{python-jose} et hashage \texttt{bcrypt}, validation des données avec Pydantic, contrôle des permissions par rôle (admin / user), requêtes SQL préparées via SQLAlchemy (ORM), gestion des sessions sécurisées, protection des routes FastAPI avec middleware d'autorisation, conformité \textbf{RGPD / nLPD} (export et effacement des données personnelles), interfaces \textbf{accessibles} (WCAG / RGAA). \\
+  Authentification JWT avec \texttt{python-jose} et hashage \texttt{bcrypt}, connexion \textbf{Google Sign-In} en complément de l'authentification par mot de passe, validation des données avec Pydantic, contrôle des permissions par rôle (admin / user) et isolation inter-utilisateurs testée, requêtes SQL préparées via SQLAlchemy (ORM), gestion des sessions sécurisées, protection des routes FastAPI avec la dépendance \texttt{Depends(require\_admin)}, limitation du taux de requêtes sur l'authentification, protection SSRF sur la récupération d'images distantes, conformité \textbf{RGPD / nLPD} (export et effacement des données personnelles), interfaces \textbf{accessibles} (WCAG / RGAA). \\
 \midrule
 2 & Concevoir et développer une application multicouche &
-  Modélisation de la base de données (MCD/MLD MySQL), architecture REST API (FastAPI), frontend découplé (Next.js / React / TypeScript), séparation stricte des couches métier, données et présentation, accès aux données via SQLAlchemy (composant générique \texttt{CrudBase}), choix relationnel justifié (cf. absence de NoSQL), intégration d'APIs tierces (OpenLibrary, PostFinance), conteneurisation Docker avec \texttt{docker-compose}. \\
+  Modélisation de la base de données (MCD/MLD MySQL), architecture REST API (FastAPI) en couches \texttt{presentation}/\texttt{services}/\texttt{infrastructure}, frontend découplé (Next.js / React / TypeScript), accès aux données via SQLAlchemy (composant générique \texttt{CrudBase}), choix relationnel justifié (cf. absence de NoSQL), intégration d'APIs tierces (OpenLibrary, PostFinance, Google OAuth). \\
 \midrule
 3 & Préparer le déploiement d'une application &
-  Conteneurisation complète de l'application (API + frontend + BDD), pipeline CI/CD via GitHub Actions, déploiement sur environnement cloud (frontend sur Vercel, backend et base MySQL sur Oracle Cloud), gestion des variables d'environnement, documentation API Swagger générée automatiquement par FastAPI. \\
+  Pipeline CI/CD via GitHub Actions (tests à chaque push, puis déploiement continu par \textit{rolling deploy} SSH vers deux VMs Oracle Cloud exécutant l'API sous \texttt{systemd}, derrière Nginx), déploiement du frontend sur Vercel, gestion des variables d'environnement et des secrets, documentation API Swagger générée automatiquement par FastAPI. \\
 \bottomrule
 \end{tabular}
 \caption{Couverture des trois blocs de compétences CDA}
@@ -278,9 +278,8 @@ Ce projet couvre l'intégralité des trois blocs de compétences du référentie
     \item Modélisation et gestion d'une base de données \textbf{MySQL} : conception MCD/MLD, rédaction du DDL SQL, utilisation de l'ORM SQLAlchemy.
     \item \textbf{Authentification JWT} : génération et validation de tokens, gestion des rôles utilisateurs, hashage des mots de passe avec bcrypt.
     \item \textbf{Scan ISBN} via librairie JavaScript de lecture de codes-barres dans le navigateur, avec appel à l'API OpenLibrary pour le préremplissage des métadonnées.
-    \item Intégration de l'\textbf{API PostFinance} pour le paiement en CHF (TWINT, Visa, Mastercard), compatible avec le service de livraison de la Poste Suisse.
-    \item \textbf{Conteneurisation} avec Docker et docker-compose : orchestration multi-services (API, frontend, MySQL).
-    \item Mise en place d'un pipeline \textbf{CI/CD} avec GitHub Actions.
+    \item Intégration de l'\textbf{API PostFinance} pour le paiement en CHF (TWINT, Visa, Mastercard).
+    \item Mise en place d'un pipeline \textbf{CI/CD} avec GitHub Actions (tests puis déploiement continu par SSH).
     \item Rédaction de \textbf{tests unitaires et d'intégration} avec pytest.
 \end{itemize}
 
@@ -351,7 +350,7 @@ Face à ces limites, le choix s'est porté sur un développement sur-mesure de l
     \item L'intégration d'un module de scan ISBN conçu spécifiquement pour la saisie rapide des ouvrages par les bénévoles.
     \item Le contrôle total sur le tunnel d'achat (devise CHF uniquement, expéditions limitées à la Suisse).
     \item La création d'une interface d'administration (back-office) épurée, allant à l'essentiel.
-    \item Un coût de maintenance faible grâce à une architecture open-source (FastAPI + Next.js) sans abonnement tiers obligatoire, et un paiement géré par \textbf{PostFinance}, prestataire suisse intégré à l'écosystème de la Poste Suisse, permettant notamment une gestion native des étiquettes de livraison PostPac.
+    \item Un coût de maintenance faible grâce à une architecture open-source (FastAPI + Next.js) sans abonnement tiers obligatoire, et un paiement géré par \textbf{PostFinance}, prestataire suisse de paiement.
 \end{itemize}
 
 \section{Justification du choix de PostFinance}
@@ -360,7 +359,7 @@ Le choix de PostFinance comme prestataire de paiement s'est imposé pour plusieu
 
 \begin{itemize}
     \item \textbf{Environnement de test accessible :} PostFinance met à disposition un environnement sandbox complet ne nécessitant pas d'inscription avec une carte bancaire réelle avant la mise en production, ce qui facilite grandement le développement et les tests.
-    \item \textbf{Intégration native avec la Poste Suisse :} La synergie entre le paiement PostFinance et le service de livraison PostPac/Swiss Post permet d'envisager une gestion unifiée des commandes et des expéditions, particulièrement pertinente pour une plateforme à destination exclusive du marché suisse.
+    \item \textbf{Évolution possible vers la Poste Suisse :} PostFinance et la Poste Suisse appartiennent au même groupe ; une intégration future de l'API PostPac pour la génération d'étiquettes d'expédition est envisagée (voir \og Perspectives d'évolution \fg{}), mais n'est \textbf{pas implémentée dans le MVP} — le mode de livraison \texttt{POST} n'y est aujourd'hui qu'un tarif fixe, sans appel à une API de livraison.
     \item \textbf{Support des moyens de paiement suisses :} PostFinance supporte nativement TWINT (paiement mobile dominant en Suisse), PostCard, Visa et Mastercard, ce qui couvre l'ensemble des préférences de paiement du public cible.
     \item \textbf{Conformité locale :} Acteur 100\% suisse, PostFinance garantit une conformité avec les réglementations financières helvétiques et inspire confiance auprès des utilisateurs locaux.
 \end{itemize}
@@ -401,7 +400,7 @@ L'acheteur peut parcourir le catalogue et filtrer les livres disponibles selon l
 
 \vspace{6pt}
 \noindent\textbf{Objectif 3 — Gestion des annonces et espace utilisateur :}\\
-L'association dispose d'un espace de gestion de ses annonces (création, modification, suppression). Les acheteurs peuvent gérer leur liste de favoris et, dans une version future, laisser des avis sur les livres et contacter le vendeur pour négocier.
+L'association dispose d'un espace de gestion de ses annonces (création, modification, suppression). Une liste de favoris pour les acheteurs a été envisagée mais reportée au backlog (voir \og Perspectives d'évolution \fg{}), de même que la possibilité, dans une version future, de laisser des avis sur les livres et de contacter le vendeur pour négocier.
 
 \subsection{Fonctionnalités du MVP (Phase 1)}
 
@@ -439,7 +438,7 @@ Du point de vue utilisateur, le MVP est considéré comme réussi si l'applicati
 \midrule
 Administrateur du site & Assurer le bon fonctionnement et la qualité des annonces & CRUD sur les annonces, modération, gestion des comptes utilisateurs \\
 Vendeur (bénévole Caritas) & Mettre en vente rapidement les livres du stock & Ajouter un livre (scan ISBN ou saisie manuelle), fixer un prix en CHF, modifier ou supprimer ses annonces \\
-Acheteur & Trouver et acheter un livre d'occasion à bon prix & Rechercher, filtrer, consulter les fiches, ajouter en favoris, acheter via PostFinance \\
+Acheteur & Trouver et acheter un livre d'occasion à bon prix & Rechercher, filtrer, consulter les fiches, choisir un mode de livraison (envoi postal ou retrait en magasin), acheter via PostFinance \\
 Modérateur & Garantir la qualité et la conformité des contenus & Vérifier, masquer ou supprimer les annonces non conformes \\
 \bottomrule
 \end{tabular}
@@ -452,10 +451,10 @@ Modérateur & Garantir la qualité et la conformité des contenus & Vérifier, m
 \begin{itemize}
     \item \textbf{Délai :} Environ 3 mois, développement réalisé en solo sur la partie technique, le soir (17h–20h, 3 jours par semaine).
     \item \textbf{Sécurité :} Authentification sécurisée (JWT), validation côté serveur via Pydantic, contrôle strict des permissions par rôle.
-    \item \textbf{Scalabilité :} Architecture conteneurisée (Docker) permettant la montée en charge si le nombre d'utilisateurs augmente.
+    \item \textbf{Scalabilité :} Le déploiement sur deux VMs (une active, une en secours à chaud) permet une bascule rapide ; le passage à un répartiteur de charge reste une évolution possible en cas de montée en charge.
     \item \textbf{Dépendance API :} La fonctionnalité de scan ISBN repose sur OpenLibrary. Une saisie manuelle est prévue en secours en cas d'indisponibilité.
-    \item \textbf{Devise et territoire :} Tous les prix sont affichés en CHF ; la livraison est restreinte à la Suisse.
-    \item \textbf{Coût minimal :} L'association ne doit pas supporter de frais d'abonnement mensuels élevés. PostFinance a été retenu pour ses frais de transaction transparents et son intégration avec la Poste Suisse.
+    \item \textbf{Devise et territoire :} Tous les prix sont affichés en CHF ; les deux modes de livraison proposés (envoi postal, retrait en magasin) sont réservés au territoire suisse.
+    \item \textbf{Coût minimal :} L'association ne doit pas supporter de frais d'abonnement mensuels élevés. PostFinance a été retenu pour ses frais de transaction transparents.
 \end{itemize}
 
 \subsection{Risques identifiés}
@@ -509,12 +508,15 @@ Le suivi des tâches a été réalisé via \textbf{Microsoft Planner}, permettan
 
 
 
-\begin{figure}
-    \centering
-    \includegraphics[width=1\linewidth]{Planning_MVP1_caribooks.png}
-    \caption{Dashboard de suivi du projet sur Microsoft Planner}
-    \label{fig:placeholder}
-\end{figure}
+% TODO(alexandre) : réinsérer une capture d'écran à jour du tableau Microsoft Planner
+% avant l'impression du dossier — le fichier Planning_MVP1_caribooks.png n'est pas
+% versionné dans le dépôt (export d'un outil externe, non régénérable automatiquement).
+% \begin{figure}
+%     \centering
+%     \includegraphics[width=1\linewidth]{Planning_MVP1_caribooks.png}
+%     \caption{Dashboard de suivi du projet sur Microsoft Planner}
+%     \label{fig:placeholder}
+% \end{figure}
 
 
 \subsection{Planning des sprints}
@@ -527,7 +529,7 @@ Le tableau ci-dessous présente le découpage en sprints du projet, planifié su
 \midrule
 \endhead
 Sprint 1 & Semaines 1–2 &
-  Mise en place de l'environnement (Docker, GitHub, CI/CD), modélisation de la base de données MySQL, création du DDL, configuration FastAPI de base &
+  Mise en place de l'environnement (GitHub, CI/CD), modélisation de la base de données MySQL, création du DDL, configuration FastAPI de base &
   Environnement de dev opérationnel, schéma BDD validé \\[6pt]
 Sprint 2 & Semaines 3–4 &
   Authentification : inscription, connexion, JWT, rôles (admin / user), hashage bcrypt, protection des routes &
@@ -536,7 +538,7 @@ Sprint 3 & Semaines 5–6 &
   Module scan ISBN : intégration librairie de scan dans le frontend, appel API OpenLibrary, préremplissage du formulaire, saisie manuelle en secours &
   Formulaire d'ajout de livre opérationnel, scan ISBN fonctionnel \\[6pt]
 Sprint 4 & Semaines 7–8 &
-  Catalogue et recherche : affichage des livres disponibles, filtres (titre, auteur, catégorie, état, prix), fiche détaillée, liste de favoris &
+  Catalogue et recherche : affichage des livres disponibles, filtres (titre, auteur, catégorie, état, fourchette de prix), fiche détaillée ; la liste de favoris initialement prévue a été reportée au backlog &
   Pages catalogue et fiche livre, moteur de recherche avec filtres \\[6pt]
 Sprint 5 & Semaines 9–10 &
   Intégration PostFinance : tunnel de paiement, gestion des webhooks, mise à jour des statuts de commande, tests sur sandbox PostFinance &
@@ -560,7 +562,7 @@ Sprint 6 & Semaines 11–12 &
     \label{fig:contexte}
 \end{figure}
 
-\noindent Le diagramme de contexte positionne CARIBOOKS au centre de ses interactions avec les acteurs externes : les utilisateurs (acheteurs, vendeurs bénévoles, administrateurs), l'API ISBN externe (OpenLibrary), le prestataire de paiement (PostFinance) et le service de livraison (Poste Suisse).
+\noindent Le diagramme de contexte positionne CARIBOOKS au centre de ses interactions avec les acteurs externes : les utilisateurs (acheteurs, vendeurs bénévoles, administrateurs), l'API ISBN externe (OpenLibrary), le prestataire de paiement (PostFinance) et le fournisseur d'identité pour la connexion Google (Google OAuth). La livraison postale n'est, à ce stade, qu'un tarif fixe côté commande : aucune API de la Poste Suisse n'est intégrée dans le MVP.
 
 \subsection{Diagramme de cas d'utilisation}
 
@@ -622,11 +624,20 @@ Sprint 6 & Semaines 11–12 &
 \begin{figure}[h]
     \centering
     \includegraphics[width=\linewidth,height=0.82\textheight,keepaspectratio]{diagrams/sequence_auth.pdf}
-    \caption{Diagramme de séquence — Authentification JWT}
+    \caption{Diagramme de séquence — Authentification par mot de passe et via Google}
     \label{fig:sequence_auth}
 \end{figure}
 
-\noindent Le diagramme de séquence d'authentification décrit le flux suivant : l'utilisateur soumet ses identifiants → FastAPI valide l'email/mot de passe en base (SQLAlchemy + bcrypt) → si valide, un JWT signé est généré et retourné → le frontend stocke le token → chaque requête protégée envoie le token dans l'en-tête \texttt{Authorization: Bearer <token>} → le middleware FastAPI vérifie la signature et extrait le rôle.
+\noindent Le diagramme de séquence d'authentification décrit deux flux alternatifs. Par mot de passe : l'utilisateur soumet ses identifiants → FastAPI valide l'email/mot de passe en base (SQLAlchemy + bcrypt) → si valide, un JWT signé est généré et retourné. Via Google Sign-In : le frontend obtient un jeton d'identité Google → l'API le fait vérifier par \texttt{oauth2.googleapis.com/tokeninfo} → l'email vérifié est utilisé pour retrouver ou créer le compte via son \texttt{google\_id} → un JWT est émis de la même façon. Dans les deux cas, le frontend stocke le token, chaque requête protégée envoie le token dans l'en-tête \texttt{Authorization: Bearer <token>}, et la dépendance FastAPI \texttt{get\_current\_user} vérifie la signature et extrait le rôle.
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=\linewidth,height=0.82\textheight,keepaspectratio]{diagrams/sequence_admin_commande.pdf}
+    \caption{Diagramme de séquence — Gestion admin du statut d'une commande}
+    \label{fig:sequence_admin_commande}
+\end{figure}
+
+\noindent Ce diagramme illustre le fonctionnement du \texttt{order\_admin\_router} : l'administrateur consulte l'ensemble des commandes, puis déclenche soit une action prédéfinie (avancement, annulation, remboursement, marquage \og envoyée \fg{} / \og à réception \fg{}), soit une surcharge manuelle du statut vers une valeur arbitraire. Chaque route est protégée par \texttt{require\_admin}, et un test dédié garantit qu'un client ne peut jamais accéder aux commandes d'un autre client.
 
 \subsection{Diagramme de classes}
 
@@ -657,7 +668,7 @@ Sprint 6 & Semaines 11–12 &
     \label{fig:composants}
 \end{figure}
 
-\noindent Le diagramme de composants illustre les quatre composants principaux de l'application : le \textbf{Frontend Next.js} (composants React, pages, services API), l'\textbf{API FastAPI} (routers, services, modèles Pydantic, couche SQLAlchemy), la \textbf{Base de données MySQL}, et les \textbf{Services externes} (OpenLibrary API, PostFinance API, Poste Suisse). Les dépendances entre composants respectent le principe de séparation des préoccupations.
+\noindent Le diagramme de composants illustre les quatre composants principaux de l'application : le \textbf{Frontend Next.js} (composants React, pages, services API), l'\textbf{API FastAPI} (routers, services, modèles Pydantic, couche SQLAlchemy), la \textbf{Base de données MySQL}, et les \textbf{Services externes} (OpenLibrary API, PostFinance API, Google OAuth). Les dépendances entre composants respectent le principe de séparation des préoccupations.
 
 \subsection{Modélisation de la base de données (MCD / MLD)}
 
@@ -705,7 +716,7 @@ Le référentiel CDA mentionne le développement de composants d'accès aux donn
 \begin{figure}[h]
     \centering
     \includegraphics[width=\linewidth,height=0.82\textheight,keepaspectratio]{diagrams/architecture.pdf}
-    \caption{Architecture technique — FastAPI / Next.js / MySQL / PostFinance / Docker}
+    \caption{Architecture technique — FastAPI / Next.js / MySQL / PostFinance}
     \label{fig:architecture}
 \end{figure}
 
@@ -714,13 +725,13 @@ Le référentiel CDA mentionne le développement de composants d'accès aux donn
     \item \textbf{Frontend :} Développé avec \textbf{Next.js} (React / TypeScript). Ce framework permet un rendu côté serveur (SSR) ou statique (SSG), offrant d'excellentes performances SEO pour la vitrine en ligne, tout en proposant une interface fluide (SPA) pour le back-office des bénévoles.
     \item \textbf{Base de données :} \textbf{MySQL}. SGBD relationnel robuste, adapté à la structure de données du catalogue de livres.
     \item \textbf{ORM :} \textbf{SQLAlchemy}. Permet une abstraction de la base de données, des requêtes paramétrées automatiques (protection contre les injections SQL) et une gestion fluide des transactions.
-    \item \textbf{Paiement :} Intégration de l'API \textbf{PostFinance}, prestataire suisse supportant TWINT, Visa et Mastercard en CHF, avec synergie native avec la Poste Suisse pour la livraison.
-    \item \textbf{Conteneurisation :} L'ensemble de l'application est conteneurisé avec \textbf{Docker} et orchestré via \texttt{docker-compose}, garantissant la reproductibilité de l'environnement du développement au déploiement.
+    \item \textbf{Paiement :} Intégration de l'API \textbf{PostFinance}, prestataire suisse supportant TWINT, Visa et Mastercard en CHF.
+    \item \textbf{Déploiement :} Backend déployé sans conteneurisation, via un pipeline GitHub Actions qui installe les dépendances Python dans un environnement virtuel et exécute le service sous \texttt{systemd} sur les VMs de production ; le frontend est déployé sur Vercel.
 \end{itemize}
 
 \subsection{Diagramme de déploiement (vue physique)}
 
-Le diagramme de déploiement décrit la répartition physique des composants logiciels sur les n\oe{}uds d'exécution : le poste client (navigateur), le frontend hébergé sur \textbf{Vercel}, le backend conteneurisé (API FastAPI) et la base MySQL hébergés sur \textbf{Oracle Cloud}, et les services tiers consommés en HTTPS.
+Le diagramme de déploiement décrit la répartition physique des composants logiciels sur les n\oe{}uds d'exécution : le poste client (navigateur), le frontend hébergé sur \textbf{Vercel}, le backend (API FastAPI sous systemd, sur deux VMs) et la base MySQL hébergés sur \textbf{Oracle Cloud}, et les services tiers consommés en HTTPS.
 
 \begin{figure}[h]
     \centering
@@ -738,7 +749,7 @@ Le backend (API FastAPI) et la base de données sont hébergés sur l'offre \tex
 \begin{itemize}
     \item Une \textbf{machine virtuelle} AMD Micro (Always Free, Ubuntu~22.04) exécute l'API FastAPI servie par \textbf{Uvicorn}, derrière \textbf{Nginx} utilisé comme reverse proxy.
     \item Nginx assure la \textbf{terminaison TLS} : l'API est exposée en \textbf{HTTPS} sur le domaine \texttt{https://caribooks.duckdns.org} (DNS dynamique, certificat Let's Encrypt).
-    \item L'API est gérée comme un service \textbf{systemd} (redémarrage automatique au boot ou après incident) et conteneurisée avec \textbf{Docker}.
+    \item L'API est gérée comme un service \textbf{systemd} (redémarrage automatique au boot ou après incident), sans conteneurisation en production.
 \end{itemize}
 
 \noindent\textbf{Couche de données et réseau :}
@@ -748,11 +759,11 @@ Le backend (API FastAPI) et la base de données sont hébergés sur l'offre \tex
     \item Les communications client $\rightarrow$ API et API $\rightarrow$ services tiers se font en \textbf{HTTPS/TLS}.
 \end{itemize}
 
-\noindent Cette topologie (frontend sur \textbf{Vercel} + API sur une VM \textbf{Oracle Cloud} en HTTPS + base MySQL privée) illustre une architecture \textbf{multicouche et sécurisée}, déployable à coût nul. Le passage à une configuration redondante (plusieurs VMs derrière un répartiteur de charge) constitue une évolution naturelle en cas de montée en charge.
+\noindent Cette topologie (frontend sur \textbf{Vercel} + API sur des VMs \textbf{Oracle Cloud} en HTTPS + base MySQL privée) illustre une architecture \textbf{multicouche et sécurisée}, déployable à coût nul. Le déploiement continu (\texttt{deploy.yml}) effectue un \textit{rolling deploy} séquentiel vers deux VMs (\texttt{VM1} et \texttt{VM2}) : \texttt{VM1} sert le trafic de production (DNS dynamique DuckDNS), tandis que \texttt{VM2} est maintenue à jour en parallèle comme instance de secours à chaud (bascule manuelle en cas de panne de \texttt{VM1}), sans répartiteur de charge actif entre les deux. Le passage à une configuration pleinement redondante (répartiteur de charge, bascule automatique) constitue une évolution naturelle en cas de montée en charge.
 
 \subsection{Conception UI/UX}
 
-\includegraphics[with=\textwidth]{vue_telephone.png}
+\includegraphics[width=\textwidth]{vue_telephone.png}
 
 % --- CHAPITRE 3 ---
 \chapter{Réalisation et mise en \oe{}uvre}
@@ -763,12 +774,11 @@ Le backend (API FastAPI) et la base de données sont hébergés sur l'offre \tex
     \item \textbf{Système d'exploitation :} macOS (puce Intel)
     \item \textbf{Éditeur de code :} Visual Studio Code (VS Code) avec GitHub Copilot
     \item \textbf{Gestion de versions :} Git avec GitHub (licence GitHub for Students Pro)
-    \item \textbf{Conteneurisation :} Docker — l'application complète (API + frontend + base de données MySQL) est conteneurisée via \texttt{docker-compose}
     \item \textbf{CI/CD :} Pipeline d'intégration et de déploiement continus via GitHub Actions
     \item \textbf{Test API :} Thunder Client (extension VS Code, alternative à Postman)
     \item \textbf{Documentation API :} Swagger UI (généré automatiquement par FastAPI)
     \item \textbf{Suivi de projet :} Microsoft Planner (tableau Kanban, backlog)
-    \item \textbf{Dépôt GitHub :} \url{https://github.com/Visualstudiocodetest/plobooks}
+    \item \textbf{Dépôt GitHub :} \url{https://github.com/Visualstudiocodetest/caribooks}
 \end{itemize}
 
 \section{Technologies utilisées}
@@ -778,10 +788,9 @@ Le backend (API FastAPI) et la base de données sont hébergés sur l'offre \tex
     \item \textbf{Backend :} FastAPI (Python) — avec Pydantic pour la validation des données
     \item \textbf{ORM :} SQLAlchemy
     \item \textbf{Base de données :} MySQL
-    \item \textbf{Authentification :} JWT (\texttt{python-jose}), hashage \texttt{bcrypt} via \texttt{passlib}
+    \item \textbf{Authentification :} JWT (\texttt{python-jose}), hashage \texttt{bcrypt} via \texttt{passlib}, Google Sign-In (OAuth)
     \item \textbf{Paiement :} API PostFinance (TWINT, Visa/Mastercard en CHF)
     \item \textbf{API externe :} OpenLibrary (récupération des métadonnées ISBN)
-    \item \textbf{Conteneurisation :} Docker + docker-compose
     \item \textbf{CI/CD :} GitHub Actions
 \end{itemize}
 
@@ -801,7 +810,7 @@ Le backend suit une \textbf{architecture en couches} inspirée des principes de 
 
 \subsection{Module authentification}
 
-Le module d'authentification expose deux endpoints : \texttt{POST /auth/register} (création de compte, renvoie un \texttt{201} ou un \texttt{400} si l'email existe déjà) et \texttt{POST /auth/token} (connexion, convention OAuth2). À la connexion, l'utilisateur est récupéré par email via \texttt{crud\_user}, et le mot de passe est vérifié avec \texttt{passlib} (bcrypt). Si les identifiants sont valides, un JWT signé en \textbf{HS256} est généré (\texttt{jwt\_service.create\_access\_token}), contenant l'email (\texttt{sub}), le rôle et une expiration de \textbf{480 minutes}. La protection des routes repose sur des dépendances FastAPI : \texttt{get\_current\_user} (décode et valide le token via le schéma \texttt{HTTPBearer}), \texttt{require\_admin} et \texttt{require\_user} (contrôle du rôle). En environnement de production, l'application refuse de démarrer si la \texttt{SECRET\_KEY} n'est pas configurée de façon sécurisée.
+Le module d'authentification expose trois endpoints : \texttt{POST /auth/register} (création de compte, renvoie un \texttt{201} ou un \texttt{400} si l'email existe déjà), \texttt{POST /auth/token} (connexion par email/mot de passe, convention OAuth2) et \texttt{POST /auth/google} (connexion via \textbf{Google Sign-In} : le jeton d'identité Google est vérifié auprès de \texttt{oauth2.googleapis.com/tokeninfo}, l'email doit être vérifié côté Google, puis le compte est retrouvé ou créé via son \texttt{google\_id}). Pour la connexion par mot de passe, l'utilisateur est récupéré par email via \texttt{crud\_user}, et le mot de passe est vérifié avec \texttt{passlib} (bcrypt) ; le champ \texttt{mot\_de\_passe\_hash} est nullable, car les comptes créés via Google n'en possèdent pas. Si les identifiants sont valides, un JWT signé en \textbf{HS256} est généré (\texttt{jwt\_service.create\_access\_token}), contenant l'email (\texttt{sub}), le rôle et une expiration de \textbf{480 minutes}. Les trois routes d'authentification sont protégées par un \textit{rate limiting} applicatif (\texttt{services/rate\_limit.py}) contre le \textit{credential stuffing}. La protection des routes repose sur deux dépendances FastAPI : \texttt{get\_current\_user} (décode et valide le token via le schéma \texttt{HTTPBearer}) et \texttt{require\_admin} (contrôle du rôle \texttt{admin}) — il n'existe que deux rôles, \texttt{admin} et \texttt{user}. Au démarrage, l'application refuse de fonctionner avec une \texttt{SECRET\_KEY} correspondant à une valeur faible ou de type \og placeholder \fg{} connue (quel que soit l'environnement) ; en son absence totale, une clé aléatoire est générée pour la session en cours.
 
 \subsection{Module catalogue, articles et stock}
 
@@ -813,11 +822,11 @@ Côté frontend, le code-barres est décodé directement dans le navigateur, pui
 
 \subsection{Module commande et paiement PostFinance}
 
-Le \texttt{order\_router} gère le cycle de vie des commandes (\texttt{commande}, \texttt{ligne\_commande}, \texttt{paiement}). À la validation, une transaction PostFinance est créée (\texttt{create\_postfinance\_iframe\_session}) à partir des lignes et de l'adresse de facturation, et l'utilisateur est redirigé vers le tunnel de paiement. Le retour est traité par \textbf{webhook} : la signature est vérifiée (\texttt{verify\_postfinance\_webhook\_signature}) avant toute mise à jour, puis le statut de paiement est interprété (\texttt{is\_postfinance\_success\_status}). En cas de succès, la commande passe au statut payé et la fonction \texttt{\_finalize\_commande} transforme le stock réservé en stock vendu (avec verrou \texttt{with\_for\_update} pour éviter les accès concurrents). Un prestataire alternatif (Payrexx) avait été initialement intégré puis abandonné au profit de PostFinance.
+Le \texttt{order\_router} gère le cycle de vie des commandes (\texttt{commande}, \texttt{ligne\_commande}, \texttt{paiement}). À l'ajout au panier, le stock est \textbf{réservé temporairement} (verrou \texttt{with\_for\_update} pour éviter les accès concurrents) pour une durée de \textbf{20 minutes} (\texttt{cart\_expires\_at}) ; passé ce délai, la réservation expire et le stock est automatiquement relibéré. Le client choisit un mode de livraison — \texttt{POST} (envoi postal, 9 CHF) ou \texttt{CLICK\_COLLECT} (retrait en magasin, 1 CHF) — enregistré dans \texttt{shipping\_method} et \texttt{frais\_port\_chf}. À la validation, une transaction PostFinance est créée (\texttt{create\_postfinance\_iframe\_session}) à partir des lignes et de l'adresse de facturation, et l'utilisateur est redirigé vers le tunnel de paiement. Le retour est traité par \textbf{webhook} : la signature est vérifiée (\texttt{verify\_postfinance\_webhook\_signature}) avant toute mise à jour, puis le statut de paiement est interprété (\texttt{is\_postfinance\_success\_status}). Un endpoint de \textbf{polling} (\texttt{GET /orders/paiements/\{id\}/poll-postfinance}) permet en complément au frontend d'interroger activement le statut après la redirection, pour couvrir les cas où le webhook est retardé ou la session navigateur expirée. En cas de succès, la commande passe au statut payé et la fonction \texttt{\_finalize\_commande} transforme le stock réservé en stock vendu. Un prestataire alternatif (Payrexx) avait été initialement intégré puis abandonné au profit de PostFinance.
 
 \subsection{Back-office bénévole}
 
-Le back-office réutilise les mêmes endpoints sécurisés pour offrir aux bénévoles une interface de gestion des annonces (création via scan ISBN ou saisie manuelle, modification, suppression) et de suivi du stock, sans exposer la complexité technique sous-jacente.
+Le back-office réutilise les mêmes endpoints sécurisés pour offrir aux bénévoles une interface de gestion des annonces (création via scan ISBN ou saisie manuelle, modification, suppression) et de suivi du stock, sans exposer la complexité technique sous-jacente. Un module dédié, \texttt{order\_admin\_router}, permet en outre à un administrateur de piloter le cycle de vie d'une commande : avancement au statut suivant, annulation, remboursement, marquage \og envoyée \fg{} / \og à réception \fg{}, ainsi qu'une \textbf{surcharge manuelle du statut} vers n'importe quelle valeur (\texttt{PUT /orders/admin/commandes/\{id\}/status}) pour les cas exceptionnels. L'ensemble de ces routes est réservé au rôle \texttt{admin} et fait l'objet d'un test d'isolation inter-utilisateurs dédié (\texttt{test\_orders\_cross\_user\_isolation}), qui vérifie qu'un client ne peut ni consulter ni modifier les commandes d'un autre client, et qu'un utilisateur non-administrateur reçoit un \texttt{403} sur toutes les routes \texttt{/orders/admin/*}.
 
 \section{Sécurité et architecture logicielle}
 
@@ -836,7 +845,7 @@ L'authentification repose sur le standard \textbf{JSON Web Token (JWT)}, implém
 \noindent Les rôles définis dans le système sont :
 \begin{itemize}
     \item \texttt{admin} : accès complet, CRUD sur toutes les entités, modération.
-    \item \texttt{user} : consultation, favoris, passage de commande.
+    \item \texttt{user} : consultation, passage de commande, connexion par mot de passe ou via Google.
 \end{itemize}
 
 \subsection{Hashage des mots de passe avec bcrypt}
@@ -921,9 +930,9 @@ Paiement & Webhook échec & Callback PostFinance fail & Statut commande = ÉCHEC
 
 \section{Résultats obtenus}
 
-La suite de tests automatisés a été exécutée avec \textbf{pytest} et l'extension \texttt{pytest-cov}. L'intégralité des tests passe : \textbf{20 tests sur 20 réussis, soit 100\,\% de réussite}, répartis entre tests unitaires, tests d'intégration (via \texttt{TestClient}) et un test fonctionnel de bout en bout.
+La suite de tests automatisés a été exécutée avec \textbf{pytest} et l'extension \texttt{pytest-cov} côté backend, et avec \textbf{Vitest} côté frontend. L'intégralité des tests passe : \textbf{68 tests backend sur 68} (unitaires, d'intégration via \texttt{TestClient}, et un test fonctionnel de bout en bout) et \textbf{31 tests frontend sur 31}, soit \textbf{99 tests au total, 100\,\% de réussite}.
 
-\noindent La \textbf{couverture de code globale atteint 70\,\%} (2\,326 instructions analysées, 708 non couvertes). Le tableau ci-dessous synthétise la couverture des principaux modules :
+\noindent Sur le code de production backend (hors fichiers de tests), la \textbf{couverture atteint 79\,\%} (2\,099 instructions analysées, 439 non couvertes) ; en incluant les fichiers de tests eux-mêmes dans le calcul, \texttt{pytest-cov} rapporte 85\,\% sur l'ensemble du dépôt \texttt{backend/}. Le tableau ci-dessous synthétise la couverture des principaux modules :
 
 \vspace{5pt}
 
@@ -934,45 +943,50 @@ La suite de tests automatisés a été exécutée avec \textbf{pytest} et l'exte
 \toprule
 \textbf{Module} & \textbf{Instructions} & \textbf{Couverture} \\
 \midrule
-\texttt{infrastructure/models.py}       & 135 & 100\,\% \\
-\texttt{presentation/schemas.py}        & 197 & 96\,\% \\
-\texttt{presentation/scan\_router.py}    & 45  & 91\,\% \\
-\texttt{presentation/catalog\_router.py} & 83  & 89\,\% \\
-\texttt{presentation/auth\_router.py}    & 36  & 83\,\% \\
-\texttt{services/jwt\_service.py}        & 14  & 86\,\% \\
-\texttt{services/book\_service.py}       & 39  & 77\,\% \\
-\texttt{presentation/book\_router.py}    & 139 & 68\,\% \\
-\texttt{services/postfinance\_service.py}& 234 & 64\,\% \\
-\texttt{services/image\_service.py}      & 56  & 23\,\% \\
-\texttt{presentation/order\_router.py}   & 412 & 17\,\% \\
+\texttt{infrastructure/models.py}         & 137 & 100\,\% \\
+\texttt{infrastructure/db.py}             & 13  & 100\,\% \\
+\texttt{presentation/auth\_schemas.py}    & 45  & 100\,\% \\
+\texttt{services/jwt\_service.py}         & 14  & 100\,\% \\
+\texttt{services/rate\_limit.py}          & 18  & 100\,\% \\
+\texttt{presentation/schemas.py}          & 205 & 97\,\% \\
+\texttt{presentation/article\_router.py}  & 52  & 94\,\% \\
+\texttt{presentation/deps.py}             & 41  & 93\,\% \\
+\texttt{presentation/auth\_router.py}     & 71  & 90\,\% \\
+\texttt{presentation/catalog\_router.py}  & 83  & 89\,\% \\
+\texttt{presentation/order\_router.py}    & 159 & 81\,\% \\
+\texttt{services/postfinance\_service.py} & 146 & 79\,\% \\
+\texttt{services/order\_service.py}       & 164 & 76\,\% \\
+\texttt{presentation/payment\_router.py}  & 183 & 74\,\% \\
+\texttt{presentation/user\_router.py}     & 69  & 51\,\% \\
+\texttt{presentation/order\_admin\_router.py} & 103 & 40\,\% \\
+\texttt{services/image\_service.py}       & 78  & 36\,\% \\
 \midrule
-\textbf{TOTAL} & \textbf{2\,326} & \textbf{70\,\%} \\
+\textbf{TOTAL (code de production)} & \textbf{2\,099} & \textbf{79\,\%} \\
 \bottomrule
 \end{tabular}
 \caption{Couverture de code par module (\texttt{pytest --cov})}
 \label{tab:couverture}
 \end{table}
 
-\noindent Les modèles de données, les schémas de validation et les modules d'authentification et de catalogue sont très bien couverts (83\,\% à 100\,\%). Les modules les moins couverts sont le routeur de commande et de paiement (\texttt{order\_router}, 17\,\%) et le service de traitement d'images (23\,\%) : 
+\noindent Les modèles de données, les schémas de validation et les modules d'authentification et de catalogue sont très bien couverts (89\,\% à 100\,\%). Après la refactorisation SOLID/KISS qui a scindé l'ancien \texttt{order\_router} monolithique en trois modules (\texttt{order\_router}, \texttt{payment\_router}, \texttt{order\_admin\_router}), le routeur de commandes proprement dit atteint désormais 81\,\% de couverture. Les modules les moins couverts sont désormais le service de traitement d'images (\texttt{image\_service}, 36\,\%), le nouveau routeur d'administration des commandes (\texttt{order\_admin\_router}, 40\,\%, ajouté récemment et dont les chemins de succès sont couverts mais pas encore tous les cas d'erreur) et le routeur utilisateur (\texttt{user\_router}, 51\,\%) :
 \vspace{5px}
-ce sont précisément les parties identifiées comme prioritaires pour la consolidation (voir la section \og Limites et bugs restants \fg{}). Aucun test de charge ni de performance n'a été réalisé dans le cadre de ce MVP.
+ce sont les parties identifiées comme prioritaires pour la consolidation (voir la section \og Limites et bugs restants \fg{}). Aucun test de charge ni de performance n'a été réalisé dans le cadre de ce MVP.
 
 \includegraphics[width=\textwidth]{PYTEST_RESULT_SCREENSHOT.png}
 
 \section{Analyse des performances}
 
-Aucune campagne formelle de tests de performance ou de charge (\textit{benchmark}, montée en charge, \textit{stress test}) n'a été menée durant cette première itération : la priorité du MVP portait sur la couverture fonctionnelle et la sécurité. L'architecture retenue offre néanmoins de bonnes bases de performance : FastAPI repose sur un serveur ASGI asynchrone (Uvicorn) reconnu pour ses temps de réponse faibles, l'ORM SQLAlchemy s'appuie sur des index dédiés (voir le script DDL en annexe~\ref{lst:ddl}) pour accélérer les requêtes fréquentes du catalogue, et la conteneurisation Docker garantit la reproductibilité des conditions d'exécution. La mise en place de tests de charge (par exemple avec \texttt{locust} ou \texttt{k6}) et d'un audit Lighthouse du frontend constitue un axe d'amélioration identifié pour la phase suivante.
+Aucune campagne formelle de tests de performance ou de charge (\textit{benchmark}, montée en charge, \textit{stress test}) n'a été menée durant cette première itération : la priorité du MVP portait sur la couverture fonctionnelle et la sécurité. L'architecture retenue offre néanmoins de bonnes bases de performance : FastAPI repose sur un serveur ASGI asynchrone (Uvicorn) reconnu pour ses temps de réponse faibles, l'ORM SQLAlchemy s'appuie sur des index dédiés (voir le script DDL en annexe~\ref{lst:ddl}) pour accélérer les requêtes fréquentes du catalogue, et l'épinglage des dépendances (\texttt{requirements.txt}) garantit la reproductibilité de l'environnement d'exécution entre les VMs de production. La mise en place de tests de charge (par exemple avec \texttt{locust} ou \texttt{k6}) et d'un audit Lighthouse du frontend constitue un axe d'amélioration identifié pour la phase suivante.
 
 \section{Limites et bugs restants}
 
 À l'issue de cette première itération, plusieurs limites et points de consolidation ont été identifiés :
 
 \begin{itemize}
-    \item \textbf{Fiabilisation du paiement :} la fonctionnalité de paiement (intégration PostFinance, gestion des webhooks et mise à jour des statuts de commande) reste à corriger et à fiabiliser. C'est le module le moins couvert par les tests automatisés (\texttt{order\_router} à 17\,\%).
-    \item \textbf{Fluidité du tunnel d'achat :} le flux de paiement doit être amélioré afin de rendre le passage à l'achat puis au paiement plus simple et plus intuitif pour l'acheteur.
+    \item \textbf{Fiabilisation du paiement :} plusieurs correctifs ont déjà été apportés (bug de fuseau horaire provoquant de fausses expirations de réservation, session de paiement obsolète après redirection, en-tête CSP bloquant les scripts PostFinance/Google) mais le module reste celui dont la couverture de tests est la plus faible parmi les routeurs (\texttt{payment\_router} à 74\,\%) et mérite une consolidation continue.
     \item \textbf{Interface mobile :} certains écrans de l'interface mobile restent à affiner pour une expérience pleinement responsive.
-    \item \textbf{Suivi des commandes côté administrateur :} le suivi et la gestion des commandes par l'administrateur doivent être complétés et améliorés.
-    \item \textbf{Couverture de tests :} la couverture des modules de commande/paiement et de traitement d'images est à renforcer.
+    \item \textbf{Suivi des commandes côté administrateur :} la fonctionnalité de base (avancement, annulation, remboursement, surcharge de statut) est désormais implémentée et testée ; il reste à enrichir l'ergonomie (filtres avancés, export) et le traitement d'erreurs plus fin (\texttt{order\_admin\_router} à 40\,\% de couverture).
+    \item \textbf{Couverture de tests :} le service de traitement d'images (36\,\%) et le routeur utilisateur (51\,\%) restent les modules à renforcer en priorité.
 \end{itemize}
 
 % ==========================================
@@ -991,11 +1005,14 @@ Aucune campagne formelle de tests de performance ou de charge (\textit{benchmark
 \midrule
 Injections SQL & Requêtes paramétrées & SQLAlchemy ORM \\
 Mots de passe compromis & Hashage fort & bcrypt via passlib \\
-Accès non autorisé aux routes & Authentification obligatoire & JWT + middleware FastAPI \\
-Élévation de privilèges & Contrôle des rôles & Rôles admin / seller / user \\
+Accès non autorisé aux routes & Authentification obligatoire & JWT + dépendance FastAPI \texttt{Depends()} \\
+Élévation de privilèges / BOLA & Contrôle des rôles (admin / user) et isolation inter-utilisateurs & \texttt{require\_admin}, tests d'isolation dédiés \\
 Données invalides côté serveur & Validation stricte & Pydantic (schémas FastAPI) \\
 Tokens interceptés & Expiration courte + HTTPS & JWT \texttt{exp}, TLS en prod \\
 Informations sensibles en clair & Variables d'environnement & Fichiers \texttt{.env}, \texttt{python-dotenv} \\
+Force brute / credential stuffing & Limitation du nombre de tentatives & \texttt{services/rate\_limit.py} sur \texttt{/auth/*} \\
+SSRF via récupération d'images distantes & Validation de l'URL et de la cible réseau & \texttt{image\_service.py}, testé (\texttt{test\_image\_service\_ssrf.py}) \\
+Clé secrète faible ou par défaut & Refus des valeurs \og placeholder \fg{} connues au démarrage & Garde dans \texttt{deps.py}, testée (\texttt{test\_secret\_key\_guard.py}) \\
 \bottomrule
 \end{tabular}
 \caption{Mesures de cybersécurité implémentées dans CARIBOOKS}
@@ -1102,7 +1119,7 @@ Le projet CARIBOOKS a été développé en totalité par une seule personne, san
 
 \section*{Apports du projet}
 
-Ce projet a permis de concevoir et de déployer une application e-commerce full-stack répondant à un besoin utilisateur réel. Sur le plan technique, il a approfondi la maîtrise du déploiement d'applications conteneurisées (Docker, CI/CD GitHub Actions), de l'intégration d'un système de paiement suisse (PostFinance) et du développement d'une API REST avec FastAPI. Il représente également une progression significative par rapport à une première tentative de projet plus simple, avec une architecture plus robuste et une démarche de développement plus rigoureuse.
+Ce projet a permis de concevoir et de déployer une application e-commerce full-stack répondant à un besoin utilisateur réel. Sur le plan technique, il a approfondi la maîtrise du déploiement continu via CI/CD (GitHub Actions, \textit{rolling deploy} SSH vers des VMs sous systemd), de l'intégration d'un système de paiement suisse (PostFinance) et de la connexion tierce (Google OAuth), et du développement d'une API REST avec FastAPI. Il représente également une progression significative par rapport à une première tentative de projet plus simple, avec une architecture plus robuste et une démarche de développement plus rigoureuse.
 
 \noindent Sur le plan professionnel, ce projet a été l'occasion d'apprendre à gérer les attentes d'un client non technique (refus de certaines fonctionnalités hors périmètre, conduite de démos adaptées), à travailler en méthodologie Agile en autonomie complète, et à prendre des décisions architecturales motivées (abandon d'Express.js au profit de FastAPI, choix de PostFinance plutôt que Payrexx, adoption de SQLAlchemy comme ORM).
 
@@ -1113,12 +1130,11 @@ Ce projet a permis de concevoir et de déployer une application e-commerce full-
 Malgré l'atteinte des objectifs du MVP, plusieurs limites subsistent à la fin de cette première itération :
 
 \begin{itemize}
-    \item \textbf{Paiement à fiabiliser :} le tunnel de paiement PostFinance (webhooks, mise à jour des statuts) doit encore être corrigé et consolidé ; c'est le module le moins couvert par les tests (17\,\%).
-    \item \textbf{Parcours d'achat :} le passage à l'achat et au paiement reste à fluidifier pour l'acheteur.
-    \item \textbf{Suivi des commandes :} la gestion et le suivi des commandes côté administrateur sont à compléter.
+    \item \textbf{Paiement à consolider :} plusieurs bugs de production ont été corrigés en cours de route (fuseau horaire, session obsolète, CSP) ; le tunnel PostFinance reste le module le plus critique à surveiller, avec la couverture de tests la plus faible parmi les routeurs (\texttt{payment\_router}, 74\,\%).
+    \item \textbf{Suivi des commandes :} la gestion des commandes côté administrateur (avancement, annulation, remboursement, surcharge de statut) est implémentée et testée ; son ergonomie et sa couverture de tests (40\,\%) restent perfectibles.
     \item \textbf{Interface mobile :} certains écrans restent à affiner pour une expérience pleinement responsive.
-    \item \textbf{Fonctionnalités hors MVP :} la messagerie acheteur-vendeur, les avis et l'estimation automatique de prix n'ont pas été implémentés (renvoyés aux phases 2 et 3).
-    \item \textbf{Couverture de tests :} à renforcer sur les modules de commande/paiement et de traitement d'images.
+    \item \textbf{Fonctionnalités hors MVP :} la messagerie acheteur-vendeur, les favoris, les avis et l'estimation automatique de prix n'ont pas été implémentés (renvoyés aux phases 2 et 3).
+    \item \textbf{Couverture de tests :} à renforcer en priorité sur le service de traitement d'images (36\,\%) et le routeur utilisateur (51\,\%).
 \end{itemize}
 
 \section*{Perspectives d'évolution}
@@ -1149,7 +1165,7 @@ Plusieurs axes d'évolution sont envisagés pour les phases suivantes du projet 
     \item \textbf{Ministère de la Culture / SOFIA} — \textit{Étude sur le marché du livre d'occasion}, 2024 — \url{https://www.la-sofia.org/action-interprofessionnelle/etude-sur-le-livre-doccasion/}
     \item \textbf{DPD} — \textit{Sondage sur la seconde main en Europe}, 2024 — \url{https://www.20min.ch/fr/story/economie-circulaire-les-suisses-champions-d-europe-de-la-seconde-main-103192492}
     \item \textbf{pytest documentation} — \url{https://docs.pytest.org/}
-    \item \textbf{Docker documentation} — \url{https://docs.docker.com/}
+    \item \textbf{Google Identity Services (Sign In With Google)} — \url{https://developers.google.com/identity/gsi/web}
     \item \textbf{Outils d'intelligence artificielle utilisés} (assistance au développement et à la rédaction, sous supervision et relecture de l'auteur) :
     \begin{itemize}
         \item \textbf{GitHub Copilot} — complétion de code dans l'IDE.
@@ -1168,7 +1184,7 @@ Plusieurs axes d'évolution sont envisagés pour les phases suivantes du projet 
 
 Le code source complet du projet est disponible sur GitHub :
 \begin{center}
-    \url{https://github.com/Visualstudiocodetest/plobooks}
+    \url{https://github.com/Visualstudiocodetest/caribooks}
 \end{center}
 
 \noindent L'application est déployée et accessible en ligne à l'adresse suivante :
@@ -1213,6 +1229,7 @@ CREATE TABLE article (
     titre VARCHAR(255) NOT NULL,
     description TEXT,
     prix_chf DECIMAL(10,2) NOT NULL CHECK (prix_chf >= 0),
+    image_link VARCHAR(500) NULL,
     actif BOOLEAN NOT NULL DEFAULT TRUE,
     date_creation TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (id_type_objet)
@@ -1278,7 +1295,8 @@ CREATE TABLE utilisateur (
     nom VARCHAR(100) NOT NULL,
     prenom VARCHAR(100) NOT NULL,
     email VARCHAR(255) NOT NULL UNIQUE,
-    mot_de_passe_hash VARCHAR(255) NOT NULL,
+    mot_de_passe_hash VARCHAR(255) NULL, -- NULL pour les comptes crees via Google Sign-In
+    google_id VARCHAR(255) NULL UNIQUE,
     role VARCHAR(50) NOT NULL DEFAULT 'user',
     date_creation TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     billing_address_line1 VARCHAR(255) NULL,
@@ -1297,8 +1315,9 @@ CREATE TABLE commande (
     montant_total_chf DECIMAL(10,2) NOT NULL
         CHECK (montant_total_chf >= 0),
     statut VARCHAR(50) NOT NULL,
-    shipping_method VARCHAR(50) NOT NULL DEFAULT 'POST',
+    shipping_method VARCHAR(50) NOT NULL DEFAULT 'POST', -- 'POST' (9 CHF) ou 'CLICK_COLLECT' (1 CHF)
     frais_port_chf DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+    cart_expires_at TIMESTAMP NULL DEFAULT NULL, -- fin de la reservation de stock (20 min)
     FOREIGN KEY (id_utilisateur)
         REFERENCES utilisateur(id_utilisateur)
         ON DELETE RESTRICT ON UPDATE CASCADE
@@ -1368,13 +1387,13 @@ CREATE INDEX idx_livre_isbn ON livre(isbn);
 
 \begin{lstlisting}[style=pythonstyle, caption={Service JWT (HS256) et endpoint POST /auth/token}, label={lst:auth}]
 # services/jwt_service.py
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from jose import jwt
 
 def create_access_token(payload: dict, secret_key: str,
                         expires_minutes: int) -> str:
     to_encode = payload.copy()
-    expire = datetime.utcnow() + timedelta(minutes=expires_minutes)
+    expire = datetime.now(timezone.utc) + timedelta(minutes=expires_minutes)
     to_encode.update({"exp": expire})
     return jwt.encode(to_encode, secret_key, algorithm="HS256")
 
@@ -1397,9 +1416,14 @@ def login_for_access_token(payload: LoginRequest,
     rate_key = f"token:{str(payload.username).lower()}"
     check_rate_limit(rate_key, max_attempts=10, window_seconds=300)
     user = crud_user.get_user_by_email(db, str(payload.username))
-    verified = bool(user) and crud_user.verify_password(
-        str(payload.password), str(user.mot_de_passe_hash)
-    )
+    verified = False
+    if user and user.mot_de_passe_hash:  # None for Google-only accounts
+        try:
+            verified = crud_user.verify_password(
+                str(payload.password), str(user.mot_de_passe_hash)
+            )
+        except Exception:
+            verified = False
     if not user or not verified:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -1410,6 +1434,46 @@ def login_for_access_token(payload: LoginRequest,
     access_token = create_access_token(
         to_encode, SECRET_KEY, ACCESS_TOKEN_EXPIRE_MINUTES
     )
+    return Token(access_token=access_token)
+\end{lstlisting}
+
+\subsection*{C.1bis — Connexion via Google Sign-In}
+
+\begin{lstlisting}[style=pythonstyle, caption={Endpoint POST /auth/google — vérification du jeton et liaison de compte}, label={lst:google-auth}]
+# presentation/auth_router.py
+@router.post("/google", response_model=Token)
+def google_auth(payload: GoogleAuthRequest, request: Request,
+                db: Session = Depends(get_db)):
+    """Verify a Google ID token and return a JWT."""
+    check_rate_limit(f"google:{request.client.host}",
+                     max_attempts=20, window_seconds=300)
+    r = httpx.get("https://oauth2.googleapis.com/tokeninfo",
+                  params={"id_token": payload.credential}, timeout=10)
+    r.raise_for_status()
+    info = r.json()
+
+    if GOOGLE_CLIENT_ID and info.get("aud") != GOOGLE_CLIENT_ID:
+        raise HTTPException(400, "Token Google invalide (audience)")
+
+    google_id, email = info.get("sub", ""), info.get("email", "")
+    # email_verified must be checked: otherwise an unverified Google email
+    # matching a victim's registered email would grant a JWT for that account.
+    email_verified = str(info.get("email_verified")).lower() == "true"
+    if not email_verified:
+        raise HTTPException(400, "Email Google non verifie")
+
+    user = crud_user.get_user_by_google_id(db, google_id)
+    if user is None:
+        user = crud_user.get_user_by_email(db, email)
+        if user is not None:
+            user = crud_user.link_google_id(db, user, google_id)
+        else:
+            user = crud_user.create_oauth_user(db, google_id=google_id,
+                                               email=email, ...)
+
+    to_encode = {"sub": user.email, "role": user.role}
+    access_token = create_access_token(to_encode, SECRET_KEY,
+                                       ACCESS_TOKEN_EXPIRE_MINUTES)
     return Token(access_token=access_token)
 \end{lstlisting}
 
@@ -1461,7 +1525,7 @@ L'ensemble des diagrammes UML et Merise du projet est présenté directement dan
     \item Diagramme de contexte (figure~\ref{fig:contexte}) ;
     \item Diagrammes de cas d'utilisation : scan ISBN (figure~\ref{fig:use_case_isbn}), paiement (figure~\ref{fig:use_case_payment}), vue globale (figure~\ref{fig:use_case_global}) ;
     \item Diagrammes d'activités : parcours d'achat (figure~\ref{fig:activites_achat}) et scan ISBN (figure~\ref{fig:activites_isbn}) ;
-    \item Diagrammes de séquence : scan ISBN (figure~\ref{fig:sequence_isbn}), paiement (figure~\ref{fig:sequence_paiement}), authentification (figure~\ref{fig:sequence_auth}) ;
+    \item Diagrammes de séquence : scan ISBN (figure~\ref{fig:sequence_isbn}), paiement (figure~\ref{fig:sequence_paiement}), authentification (figure~\ref{fig:sequence_auth}), gestion admin des commandes (figure~\ref{fig:sequence_admin_commande}) ;
     \item Diagramme de classes (figure~\ref{fig:classes}) et diagramme d'objets (figure~\ref{fig:objets}) ;
     \item Diagramme de composants (figure~\ref{fig:composants}) et diagramme de déploiement (figure~\ref{fig:deploiement}) ;
     \item Modélisation Merise : MCD (figure~\ref{fig:mcd}) et MLD (figure~\ref{fig:mld}).

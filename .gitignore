@@ -17,3 +17,6 @@ frontend/.pytest_cache/
 # Track the Mermaid diagram SOURCES + render script (the CDA dossier references
 # them and must be reproducible); only the generated PDFs are build artifacts.
 diagrams/*.pdf
+
+# Personal jury-prep notes (repo is public) — local only.
+docs/

@@ -57,15 +57,15 @@ le mémoire de projet (\texttt{main.tex}).}
 \textbf{Compétence} & \textbf{Mise en œuvre dans CARIBOOKS} \\
 \midrule
 \endhead
-Environnement de développement sécurisé & Docker / docker-compose, secrets via \texttt{.env} \\
-Authentification & Inscription, connexion, JWT, rôles utilisateur/administrateur \\
-Stockage sécurisé des identifiants & Hashage des mots de passe (bcrypt) \\
+Environnement de développement sécurisé & Secrets via \texttt{.env} (jamais versionnés), garde au démarrage contre une \texttt{SECRET\_KEY} faible ou par défaut (\texttt{test\_secret\_key\_guard.py}) \\
+Authentification & Inscription, connexion par mot de passe et via Google Sign-In (OAuth), JWT, rôles utilisateur/administrateur \\
+Stockage sécurisé des identifiants & Hashage des mots de passe (bcrypt), champ nullable pour les comptes Google \\
 Validation des données entrantes & Schémas Pydantic sur toutes les routes FastAPI \\
-Contrôle des permissions & Middleware d'autorisation par rôle \\
+Contrôle des permissions & Dépendance FastAPI \texttt{Depends(require\_admin)}, isolation inter-utilisateurs testée (\texttt{test\_orders\_cross\_user\_isolation}) \\
 Prévention des injections SQL & Requêtes paramétrées via SQLAlchemy \\
-Prévention des vulnérabilités OWASP & Application des recommandations OWASP Top 10 \\
-Conformité RGPD / nLPD & Export et effacement des données personnelles \\
-Accessibilité de l'interface & Contraste, navigation clavier, alt textuelles \\
+Prévention des vulnérabilités OWASP & Limitation du taux de requêtes sur l'authentification (\texttt{rate\_limit.py}), protection SSRF sur la récupération d'images distantes (\texttt{test\_image\_service\_ssrf.py}) \\
+Conformité RGPD / nLPD & Export et effacement (anonymisation) des données personnelles \\
+Accessibilité de l'interface & Attributs \texttt{alt}, \texttt{aria-label} sur les composants principaux (couverture partielle, cf. mémoire) \\
 \bottomrule
 \caption{Compétences Bloc 1}
 \end{longtable}
@@ -80,12 +80,12 @@ Accessibilité de l'interface & Contraste, navigation clavier, alt textuelles \\
 Analyse et formalisation du besoin & Cahier des charges, échanges avec la Product Owner \\
 Modélisation UML & Cas d'utilisation, séquence, classes, déploiement \\
 Modèle de données relationnel & Modélisation Merise (MCD/MLD), base MySQL \\
-Architecture logicielle en couches & Présentation / Services / Domaine / Infrastructure \\
-Accès aux données & Couche SQLAlchemy, CRUD générique réutilisable \\
+Architecture logicielle en couches & Présentation / Services / Infrastructure (\texttt{backend/presentation}, \texttt{services}, \texttt{infrastructure}) \\
+Accès aux données & Couche SQLAlchemy, CRUD générique réutilisable (\texttt{CrudBase}) \\
 API REST & Endpoints FastAPI documentés, validés par Pydantic \\
 Interface web découplée du back-end & Frontend Next.js / React / TypeScript \\
-Intégration de services tiers & OpenLibrary (métadonnées), PostFinance (paiement) \\
-Cohérence en environnement concurrent & Réservation temporaire de stock, libération automatique \\
+Intégration de services tiers & OpenLibrary (métadonnées), PostFinance (paiement), Google OAuth (connexion) \\
+Cohérence en environnement concurrent & Réservation temporaire de stock (verrou \texttt{with\_for\_update}), libération automatique à expiration \\
 \bottomrule
 \caption{Compétences Bloc 2}
 \end{longtable}
@@ -97,12 +97,12 @@ Cohérence en environnement concurrent & Réservation temporaire de stock, libé
 \textbf{Compétence} & \textbf{Mise en œuvre dans CARIBOOKS} \\
 \midrule
 \endhead
-Conteneurisation & API, frontend et base de données sous Docker \\
-Intégration continue & Pipeline GitHub Actions, tests à chaque changement \\
-Déploiement continu & Déploiement automatisé du frontend, images de production \\
-Choix et configuration de l'hébergement & Frontend Vercel, backend/MySQL sur VM Oracle Cloud \\
-Sécurisation de la production & HTTPS, variables d'environnement séparées du code \\
-Plan et campagne de tests & Cas nominaux/limites, pytest, analyse de couverture \\
+Automatisation du déploiement & Pipeline GitHub Actions : SSH \textit{rolling deploy} vers deux VMs, service \texttt{systemd}, migrations SQL appliquées automatiquement \\
+Intégration continue & Pipeline GitHub Actions, tests (pytest + Vitest) à chaque changement \\
+Déploiement continu & Backend redéployé automatiquement sur \texttt{VM1} (production) et \texttt{VM2} (secours à chaud) à chaque \textit{push} sur \texttt{main} ; frontend déployé sur Vercel \\
+Choix et configuration de l'hébergement & Frontend Vercel, backend/MySQL sur VMs Oracle Cloud, reverse proxy Nginx (TLS) \\
+Sécurisation de la production & HTTPS, variables d'environnement séparées du code, base MySQL isolée sur réseau privé (VCN) \\
+Plan et campagne de tests & 99 tests automatisés (68 backend + 31 frontend), couverture pytest par module \\
 Documentation du déploiement & Procédure documentée et reproductible \\
 \bottomrule
 \caption{Compétences Bloc 3}

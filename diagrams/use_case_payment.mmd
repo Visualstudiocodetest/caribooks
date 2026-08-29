@@ -8,14 +8,17 @@ flowchart LR
         p2(["Choisir le moyen<br/>(TWINT / carte)"])
         p3(["Initier le<br/>paiement"])
         p4(["Recevoir la confirmation<br/>(webhook)"])
+        p5(["Interroger le statut<br/>(polling, si webhook en retard)"])
     end
 
     ach --- p1
     ach --- p2
     ach --- p3
     p3 -. «include» .-> p4
+    p3 -. «extend» .-> p5
     p3 --- pf
     p4 --- pf
+    p5 --- pf
 
     classDef actor fill:#e7f0ff,stroke:#333;
     classDef uc fill:#fff7d6,stroke:#9a7d0a;

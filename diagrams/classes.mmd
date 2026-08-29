@@ -48,6 +48,7 @@ classDiagram
         +id_utilisateur
         +email
         +mot_de_passe_hash
+        +google_id
         +role
     }
     class Commande {
@@ -81,6 +82,6 @@ classDiagram
     Commande "*" --> "1" Utilisateur
     LigneCommande "*" --> "1" Commande
     LigneCommande "*" --> "1" Article
-    Paiement "*" --> "1" Commande
+    Paiement "*" --> "1" Commande : plusieurs paiements possibles (retries)
     ScanISBN "*" --> "1" Utilisateur
     ScanISBN "*" --> "1" Livre

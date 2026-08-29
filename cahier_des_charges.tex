@@ -88,7 +88,7 @@ F05 & Catalogue et recherche & Filtres combinés (titre, auteur, genre, prix, é
 F06 & Fiche détaillée & Informations complètes du livre et du vendeur. \\
 F07 & Panier et réservation de stock & Réservation temporaire, libération automatique en cas d'abandon. \\
 F08 & Paiement sécurisé & CHF via PostFinance (TWINT, Visa, Mastercard). \\
-F09 & Livraison Suisse & Poste Suisse ou Click \& Collect. \\
+F09 & Livraison Suisse & Envoi postal (tarif fixe) ou retrait en magasin (Click \& Collect). \\
 F10 & Back-office bénévole & Gestion des annonces et des commandes. \\
 F11 & Conformité RGPD / nLPD & Export et effacement des données personnelles. \\
 \bottomrule
@@ -98,8 +98,9 @@ F11 & Conformité RGPD / nLPD & Export et effacement des données personnelles. 
 \noindent\textbf{Hors périmètre :} messagerie acheteur/vendeur, suivi logistique détaillé,
 estimation automatique du prix de revente, recommandations et avis.
 
-\noindent\textbf{Frontières :} intègre OpenLibrary (métadonnées) et PostFinance (paiement) ;
-ne gère ni comptabilité ni logistique physique ; système mono-tenant réservé à Caritas.
+\noindent\textbf{Frontières :} intègre OpenLibrary (métadonnées), PostFinance (paiement) et
+Google OAuth (connexion optionnelle) ; ne gère ni comptabilité ni logistique physique
+(aucune API de transporteur intégrée) ; système mono-tenant réservé à Caritas.
 
 \section{Acteurs}
 
@@ -132,10 +133,10 @@ assurer la traçabilité besoin $\rightarrow$ test.
 SF-01 & Authentification et rôles, mot de passe haché & Aucune route de gestion accessible sans authentification. \\
 SF-02 & Ajout d'un livre par scan ISBN, saisie manuelle en secours & Livre reconnu ajouté en moins de 2 minutes. \\
 SF-03 & Catalogue et recherche multicritère & Résultat cohérent en moins d'une seconde perçue. \\
-SF-04 & Fiche détaillée et favoris & Informations essentielles visibles sans action supplémentaire. \\
+SF-04 & Fiche détaillée & Informations essentielles visibles sans action supplémentaire (la liste de favoris a été reportée au backlog, hors MVP). \\
 SF-05 & Panier avec réservation temporaire du stock & Livre jamais vendu deux fois ; panier abandonné libère le stock automatiquement. \\
 SF-06 & Paiement CHF via PostFinance & Paiement réussi en sandbox déclenche le statut \og payée \fg{}. \\
-SF-07 & Livraison restreinte à la Suisse & Adresse hors Suisse rejetée par le système. \\
+SF-07 & Livraison restreinte à la Suisse & Seuls deux modes de livraison sont proposés (envoi postal, retrait en magasin), tous deux réservés au territoire suisse ; l'adresse de facturation n'est pas validée côté serveur (limite connue, voir recette). \\
 SF-08 & Back-office bénévole & Gestion d'une annonce sans assistance technique. \\
 SF-09 & Conformité RGPD / nLPD & Demande d'effacement supprime effectivement les données. \\
 SF-10 & Accessibilité de base & Parcours critiques utilisables au clavier. \\
@@ -156,7 +157,7 @@ Disponibilité & Dégradation en saisie manuelle si la source de métadonnées e
 Performance & Catalogue et recherche réactifs (< 1 s perçue). \\
 Ergonomie & Utilisable par des bénévoles non technophiles, sans formation. \\
 Conformité légale & Respect du RGPD (UE) et de la nLPD (Suisse). \\
-Maintenabilité & Architecture en couches (présentation, service, domaine, infrastructure). \\
+Maintenabilité & Architecture en couches (présentation, services, infrastructure). \\
 Coût & Aucun abonnement SaaS récurrent, frais de paiement transparents. \\
 \bottomrule
 \caption{Exigences non fonctionnelles}
@@ -164,7 +165,8 @@ Coût & Aucun abonnement SaaS récurrent, frais de paiement transparents. \\
 
 \noindent\textbf{Contraintes techniques :} MySQL exclusivement, backend FastAPI (Python) en
 couches, frontend Next.js (React/TypeScript) 100\,\% typé, métadonnées via OpenLibrary,
-conteneurisation Docker, tests automatisés avant déploiement.
+déploiement continu par pipeline GitHub Actions (SSH, service systemd, sans conteneurisation),
+tests automatisés avant déploiement.
 
 \noindent\textbf{Contraintes organisationnelles :} développement solo en alternance
 (environ 18h/sprint), projet de 3 mois en 6 sprints de 2 semaines, méthode Agile Scrum
@@ -198,10 +200,10 @@ projet, sur la base des critères d'acceptation de la section 4.
 SF-01 & Aucun accès non authentifié aux routes de gestion & Conforme \\
 SF-02 & Ajout d'un livre reconnu en moins de 2 minutes & Conforme \\
 SF-03 & Recherche multicritère fonctionnelle & Conforme \\
-SF-04 & Fiche détaillée complète et lisible & Conforme \\
+SF-04 & Fiche détaillée complète et lisible (favoris hors périmètre) & Conforme \\
 SF-05 & Libération automatique du stock réservé & Conforme \\
 SF-06 & Paiement CHF validé en environnement de test & Conforme avec réserve \\
-SF-07 & Livraison restreinte à la Suisse & Conforme \\
+SF-07 & Livraison restreinte à la Suisse (par choix du mode de livraison) & Conforme avec réserve \\
 SF-08 & Gestion autonome des annonces par un bénévole & Conforme \\
 SF-09 & Export / effacement des données personnelles & Conforme \\
 SF-10 & Parcours critiques utilisables au clavier & Conforme avec réserve \\

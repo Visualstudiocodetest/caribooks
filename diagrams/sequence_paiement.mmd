@@ -7,9 +7,10 @@ sequenceDiagram
     participant PF as PostFinance
     participant BD as BD MySQL
 
+    Ach->>Fro: choisit un mode de livraison<br/>(POST 9 CHF / CLICK_COLLECT 1 CHF)
     Ach->>Fro: valide le panier
     Fro->>API: POST /orders/commandes
-    API->>BD: INSERT commande (PENDING,<br/>cart_expires_at = +15 min)
+    API->>BD: INSERT commande (PENDING,<br/>cart_expires_at = +20 min)
     Fro->>API: POST /orders/paiements/postfinance
     API->>PF: crée la transaction
     PF-->>API: javascript_url + payment_methods
@@ -20,3 +21,11 @@ sequenceDiagram
     API->>BD: UPDATE statut (PAID) + finalise le stock
     API-->>Fro: confirmation
     Fro-->>Ach: page de confirmation
+
+    alt Session obsolète après redirection (webhook en retard)
+        Fro->>API: GET .../{id}/poll-postfinance
+        API->>PF: interroge le statut de la transaction
+        PF-->>API: statut courant
+        API-->>Fro: statut (PAID / PROCESSING / FAILED)
+        Fro-->>Ach: message distinct succès / échec / expiration
+    end

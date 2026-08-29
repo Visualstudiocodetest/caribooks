@@ -4,20 +4,20 @@ flowchart LR
     vend["Vendeur<br/>(bénévole Caritas)"]
     admin["Administrateur"]
     sys(["Plateforme<br/><b>CARIBOOKS</b>"])
-    ol["API OpenLibrary<br/>/ Google Books"]
+    ol["API OpenLibrary<br/>(métadonnées ISBN)"]
     pf["PostFinance<br/>(paiement CHF)"]
-    post["Poste Suisse<br/>(livraison)"]
+    goog["Google OAuth<br/>(connexion)"]
 
     ach   -->|recherche / achat| sys
     vend  -->|dépôt d'annonce| sys
     admin -->|modération| sys
     sys -.->|lookup ISBN| ol
     sys -.->|paiement CHF| pf
-    sys -.->|expédition| post
+    sys -.->|vérification jeton| goog
 
     classDef system fill:#cfe2ff,stroke:#0d3b66,stroke-width:2px,font-weight:bold;
     classDef actor fill:#e7f0ff,stroke:#333;
     classDef ext fill:#ececec,stroke:#555;
     class sys system;
     class ach,vend,admin actor;
-    class ol,pf,post ext;
+    class ol,pf,goog ext;

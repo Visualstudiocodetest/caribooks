@@ -9,7 +9,7 @@ flowchart TB
         pres --> svc --> infra
     end
     db["<b>Base de données MySQL</b>"]
-    ext["<b>Services externes</b><br/>OpenLibrary<br/>PostFinance<br/>Poste Suisse"]
+    ext["<b>Services externes</b><br/>OpenLibrary<br/>PostFinance<br/>Google OAuth"]
 
     front -. "HTTP / REST (JSON)" .-> API
     API -. "ORM SQLAlchemy" .-> db

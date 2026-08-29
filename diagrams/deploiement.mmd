@@ -6,20 +6,24 @@ flowchart LR
         fe["Frontend Next.js<br/>SSR / SSG"]
     end
 
-    subgraph oracle["«serveur — Oracle Cloud»"]
+    subgraph oracle["«Oracle Cloud» — CI/CD GitHub Actions (rolling deploy SSH)"]
         direction TB
-        api["API FastAPI (Uvicorn)<br/>conteneur Docker"]
-        db["Base MySQL<br/>Oracle Cloud"]
-        api -->|TCP 3306| db
+        vm1["VM1 (production)<br/>Nginx → Uvicorn/FastAPI<br/>service systemd"]
+        vm2["VM2 (secours à chaud)<br/>Nginx → Uvicorn/FastAPI<br/>service systemd"]
+        db["Base MySQL<br/>réseau privé (VCN)"]
+        vm1 -->|TCP 3306| db
+        vm2 -->|TCP 3306| db
     end
 
-    ext["«services externes»<br/>PostFinance<br/>OpenLibrary / Google Books<br/>Poste Suisse"]
+    ext["«services externes»<br/>PostFinance<br/>OpenLibrary<br/>Google OAuth"]
 
-    client -->|HTTPS| fe
-    client -->|HTTPS / REST| api
-    api -->|HTTPS| ext
+    client -->|HTTPS — DuckDNS| fe
+    client -->|"HTTPS / REST (VM1)"| vm1
+    vm1 -->|HTTPS| ext
 
     classDef device fill:#ececec,stroke:#555;
     classDef artifact fill:#cfe2ff,stroke:#0d3b66;
+    classDef standby fill:#f5f0d6,stroke:#8a7a0a;
     class client,ext device;
-    class fe,api,db artifact;
+    class fe,vm1,db artifact;
+    class vm2 standby;
