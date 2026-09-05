@@ -1,0 +1,29 @@
+%% Diagramme de séquence — Gestion admin du statut d'une commande
+sequenceDiagram
+    autonumber
+    actor Adm as Administrateur
+    participant Fro as Frontend<br/>Next.js (back-office)
+    participant API as API FastAPI<br/>(order_admin_router)
+    participant BD as BD MySQL
+
+    Adm->>Fro: ouvre la liste des commandes
+    Fro->>API: GET /orders/admin/commandes
+    API->>API: require_admin (403 si rôle ≠ admin)
+    API->>BD: SELECT commandes (toutes, tous utilisateurs)
+    BD-->>API: liste des commandes
+    API-->>Fro: commandes (avec shipping_method, statut)
+    Fro-->>Adm: tableau de bord commandes
+
+    Adm->>Fro: choisit une commande et une action
+    alt Surcharge manuelle du statut
+        Fro->>API: PUT /orders/admin/commandes/{id}/status {statut}
+    else Avancer / Annuler / Rembourser / Marquer envoyée / à réception
+        Fro->>API: POST /orders/admin/commandes/{id}/{action}
+    end
+    API->>API: require_admin
+    API->>BD: UPDATE commande.statut
+    BD-->>API: commande mise à jour
+    API-->>Fro: statut à jour
+    Fro-->>Adm: dropdown de statut synchronisé
+
+    note over API,BD: test d'isolation, un client ne peut ni lire ni modifier<br/>les commandes d'un autre client, un non-admin reçoit 403<br/>sur /orders/admin/*
