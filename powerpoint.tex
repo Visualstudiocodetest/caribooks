@@ -1061,30 +1061,31 @@ def _lock_stock_rows(db, ids_article):
 % ─────────────────────────────────────────
 %  SLIDE 18 — BLOCS CDA
 % ─────────────────────────────────────────
-\begin{frame}{Couverture des 3 blocs de compétences CDA}
-  \begin{block}{Bloc 1 --- Développer une application sécurisée}
-    \begin{itemize}\small
-      \item Auth \textbf{JWT HS256} + \textbf{bcrypt} + Google OAuth + rôles admin/user (dépendance FastAPI)
-      \item \textbf{SQLAlchemy ORM} : requêtes paramétrées, protection injections SQL
-      \item Validation \textbf{Pydantic}, rate limiting, protection SSRF, variables d'environnement
-    \end{itemize}
-  \end{block}
-  \vspace{3pt}
-  \begin{block}{Bloc 2 --- Concevoir et développer une application multicouche}
-    \begin{itemize}\small
-      \item Modélisation \textbf{MCD/MLD} MySQL (13 tables) + architecture en 3 couches
-      \item \textbf{REST API} FastAPI + frontend découplé \textbf{Next.js}/TypeScript
-      \item Intégration APIs tierces : \textbf{OpenLibrary} (ISBN), \textbf{PostFinance} (CHF), \textbf{Google OAuth}
-    \end{itemize}
-  \end{block}
-  \vspace{3pt}
-  \begin{block}{Bloc 3 --- Préparer le déploiement}
-    \begin{itemize}\small
-      \item \textit{Rolling deploy} SSH vers deux VMs (systemd, sans conteneurisation)
-      \item Pipeline \textbf{CI/CD GitHub Actions} : 99/99 tests $\rightarrow$ déploiement continu
-      \item Déploiement hybride \textbf{Vercel} + \textbf{Oracle Cloud}, Swagger/OpenAPI auto-généré
-    \end{itemize}
-  \end{block}
+\begin{frame}{Couverture des 3 blocs de compétences CDA --- traçabilité}
+  \begin{center}
+  \small
+  \renewcommand{\arraystretch}{1.5}
+  \begin{tabular}{@{}p{2.6cm}p{5.4cm}p{3.6cm}@{}}
+    \toprule
+    \textbf{Bloc} & \textbf{Compétences clés} & \textbf{Déjà montré à~:} \\
+    \midrule
+    \textbf{1} --- Sécuriser
+      & JWT + bcrypt + Google OAuth, ORM paramétré, Pydantic, RGPD/nLPD
+      & Authentification, Sécurité OWASP, RGPD \& accessibilité \\
+    \textbf{2} --- Concevoir \& développer
+      & MCD/MLD (13 tables), architecture en couches, API REST, intégrations tierces
+      & Modèle de données, Architecture, étapes Scan / Paiement \\
+    \textbf{3} --- Préparer le déploiement
+      & CI/CD GitHub Actions, rolling deploy, 99/99 tests
+      & Tests et couverture, Déploiement \\
+    \bottomrule
+  \end{tabular}
+  \end{center}
+  \vspace{6pt}
+  \begin{exampleblock}{\small Pas de redite}
+    \small Chaque ligne renvoie à ce que vous avez déjà vu en action --- le but ici
+    est juste de rendre explicite le lien avec le référentiel, pas de tout réexpliquer.
+  \end{exampleblock}
 \end{frame}
 
 % ══════════════════════════════════════════════════════════════════════
