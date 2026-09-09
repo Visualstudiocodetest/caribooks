@@ -176,6 +176,16 @@
 \newcommand{\badgegreen}[1]{\tikz[baseline=-1mm]{\node[taggreen]{#1};}}
 \newcommand{\badgeorange}[1]{\tikz[baseline=-1mm]{\node[tagorange]{#1};}}
 
+% Fil rouge : bandeau de progression "un livre, 5 étapes"
+\newcommand{\etapelivre}[2]{%
+  \vspace{-8pt}
+  \begin{flushright}
+  \textcolor{myaccent}{\scriptsize\textbf{FIL ROUGE --- notre livre} \quad
+  Étape #1/5 : \textit{#2}}
+  \end{flushright}
+  \vspace{-2pt}
+}
+
 % ─────────────────────────────────────────
 %  MÉTADONNÉES
 % ─────────────────────────────────────────
