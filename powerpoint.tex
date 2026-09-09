@@ -232,24 +232,7 @@ ESTIAM --- Promotion E3 DAD --- Encadrant : Mhand Boufala}
     \column{0.46\textwidth}
     \tableofcontents[hideallsubsections]
     \column{0.5\textwidth}
-    \begin{exampleblock}{Le principe de cette présentation}
-      \small Plutôt que de vous lister des fonctionnalités une par une, je vais suivre
-      \textbf{un seul livre}, de son dépôt chez Caritas jusqu'à sa livraison, et vous
-      montrer à chaque étape la brique technique qui le fait avancer.
-    \end{exampleblock}
     \vspace{6pt}
-    \begin{center}
-    \begin{tikzpicture}[every node/.style={font=\tiny}, node distance=6mm]
-      \node[tag] (a) {1. Scan};
-      \node[tag,right=of a] (b) {2. Catalogue};
-      \node[tag,right=of b] (c) {3. Achat};
-      \draw[flow] (a)--(b); \draw[flow] (b)--(c);
-      \node[tag,below=8mm of a,xshift=5mm] (d) {4. Livraison};
-      \node[tag,right=of d] (e) {5. Clôture};
-      \draw[flow] (c) -- ++(0,-0.3) -| (d);
-      \draw[flow] (d)--(e);
-    \end{tikzpicture}
-    \end{center}
   \end{columns}
 \end{frame}
 
@@ -407,8 +390,7 @@ ESTIAM --- Promotion E3 DAD --- Encadrant : Mhand Boufala}
       \begin{itemize}\small
         \item Aucune ne combine CHF + Scan ISBN + back-office simple
         \item Devise EUR imposée (Momox, Vinted)
-        \item Back-offices complexes (WooCommerce, Shopify)
-        \item Abonnements mensuels incompatibles avec une asso.
+        \item Back-offices complexes (Shopify, ...)
       \end{itemize}
     \end{alertblock}
     \column{0.48\textwidth}
