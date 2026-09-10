@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
 from sqlalchemy import text
+from sqlalchemy.orm import Session
 
 from infrastructure import models
 from infrastructure.crud_base import CrudBase
@@ -126,8 +126,8 @@ def delete_commande(id_commande: int, db: Session = Depends(get_db), current_use
         # Release any reserved stock before deleting — otherwise the cascade
         # delete of the lignes silently leaks the reservation forever.
         lignes = db.query(models.LigneCommande).filter(models.LigneCommande.id_commande == id_commande).all()
-        for l in lignes:
-            release_ligne_reservation(db, l)
+        for ligne in lignes:
+            release_ligne_reservation(db, ligne)
     db.delete(obj)
     db.commit()
     return None

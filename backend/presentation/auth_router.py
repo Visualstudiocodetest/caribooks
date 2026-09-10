@@ -1,10 +1,12 @@
+import os
+
+import httpx
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
-from presentation.auth_schemas import LoginRequest, UserCreate, UserRead, Token, GoogleAuthRequest
+
 from infrastructure import crud_user
-import os
-import httpx
-from presentation.deps import get_db, ENVIRONMENT, SECRET_KEY
+from presentation.auth_schemas import GoogleAuthRequest, LoginRequest, Token, UserCreate, UserRead
+from presentation.deps import ENVIRONMENT, SECRET_KEY, get_db
 from services.jwt_service import create_access_token
 from services.rate_limit import check_rate_limit, reset_rate_limit
 
@@ -84,8 +86,8 @@ def google_auth(payload: GoogleAuthRequest, request: Request, db: Session = Depe
         )
         r.raise_for_status()
         info = r.json()
-    except Exception:
-        raise HTTPException(status_code=400, detail="Token Google invalide")
+    except Exception as e:
+        raise HTTPException(status_code=400, detail="Token Google invalide") from e
 
     # Validate audience when GOOGLE_CLIENT_ID is configured
     if GOOGLE_CLIENT_ID and info.get("aud") != GOOGLE_CLIENT_ID:

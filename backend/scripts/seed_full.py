@@ -14,8 +14,8 @@ import sys
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
+from infrastructure import crud_user, models
 from infrastructure.db import SessionLocal
-from infrastructure import models, crud_user
 
 
 def upsert(db, model, lookup_field: str, lookup_value, **fields):

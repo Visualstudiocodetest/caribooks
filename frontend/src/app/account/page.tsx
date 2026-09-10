@@ -10,7 +10,7 @@ import type { UserRead, UserUpdate } from '@/types/api'
 export default function AccountPage() {
   const { isLoggedIn, setToken } = useAuth()
   const [loading, setLoading] = useState(true)
-  const [user, setUser] = useState<UserRead | null>(null)
+  const [, setUser] = useState<UserRead | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState<string | null>(null)

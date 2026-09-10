@@ -3,12 +3,10 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from infrastructure import models
+from infrastructure import crud_user, models
 from infrastructure.crud_base import CrudBase
-from infrastructure import crud_user
-from presentation.deps import get_db, require_admin, get_current_user
-from presentation.auth_schemas import UserUpdate, UserRead
-
+from presentation.auth_schemas import UserRead, UserUpdate
+from presentation.deps import get_current_user, get_db, require_admin
 
 router = APIRouter(prefix="/users", tags=["users"])
 

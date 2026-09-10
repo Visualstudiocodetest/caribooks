@@ -9,9 +9,12 @@ CRUD operations for Book/Livre and Article tables using SQLAlchemy.
 
 All functions expect a SQLAlchemy Session as first argument.
 """
-from sqlalchemy.orm import Session
-from infrastructure import models
 from typing import Any, List, Optional
+
+from sqlalchemy.orm import Session
+
+from infrastructure import models
+
 
 def _ensure_default_refs(db: Session, book: Any) -> tuple[int, int]:
     """

@@ -36,7 +36,6 @@ export default function AdminNewBookPage() {
     const cleaned = cleanIsbn(raw)
     setIsbn(cleaned)
     void autofill(cleaned)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
   const {
     start: startScanner,
@@ -106,7 +105,7 @@ export default function AdminNewBookPage() {
         }
       }
       setScanError('Aucun code détecté dans l\u2019image')
-    } catch (err) {
+    } catch {
       setScanError('Impossible de traiter l\u2019image')
     }
   }
@@ -140,7 +139,6 @@ export default function AdminNewBookPage() {
     setIsbn(raw)
     void autofill(raw)
     // run once on mount
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   async function onSubmit(e: React.FormEvent) {
@@ -228,7 +226,7 @@ export default function AdminNewBookPage() {
 
           <div className="two-up">
             <select className="input" value={idType} onChange={(e) => setIdType(e.target.value)} required>
-              <option value="">Type d'objet...</option>
+              <option value="">Type d&apos;objet...</option>
               {typeList.map((t) => (
                 <option key={t.id_type_objet} value={String(t.id_type_objet)}>
                   {t.libelle}

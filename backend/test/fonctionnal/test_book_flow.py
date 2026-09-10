@@ -1,15 +1,17 @@
-import pytest
-from  infrastructure.db import SessionLocal
-from  infrastructure import models
-
 """
 Functional test: Book CRUD flow via API
 """
-from fastapi.testclient import TestClient
-import sys
+
 import os
+import sys
+
+from fastapi.testclient import TestClient
+
+from infrastructure import models
+from infrastructure.db import SessionLocal
+
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../../..')))
-from  main import app
+from main import app
 
 client = TestClient(app)
 

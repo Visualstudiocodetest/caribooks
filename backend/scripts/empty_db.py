@@ -7,13 +7,15 @@ from __future__ import annotations
 
 import os
 import sys
+
 # Ensure the `backend/` package directory is on sys.path so imports like
 # `from infrastructure.db import SessionLocal` work when running this script
 # directly (regardless of current working directory).
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from infrastructure.db import SessionLocal
 from sqlalchemy import text
+
+from infrastructure.db import SessionLocal
 
 
 def empty_db():

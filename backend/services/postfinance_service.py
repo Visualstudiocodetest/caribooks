@@ -5,11 +5,11 @@ import os
 import time
 from typing import Any, Dict, List, Optional
 
-logger = logging.getLogger(__name__)
-
 from postfinancecheckout import Configuration, TransactionsService
 from postfinancecheckout.models import AddressCreate, LineItemCreate, TransactionCreate, TransactionPending
 from postfinancecheckout.service.webhook_encryption_keys_service import WebhookEncryptionKeysService
+
+logger = logging.getLogger(__name__)
 
 POSTFINANCE_USER_ID = os.getenv("POSTFINANCE_USER_ID")
 POSTFINANCE_AUTH_KEY = os.getenv("POSTFINANCE_AUTH_KEY")

@@ -1,6 +1,6 @@
+import hashlib
 import ipaddress
 import os
-import hashlib
 import socket
 from typing import Optional
 from urllib.parse import urlparse
@@ -36,8 +36,8 @@ def _assert_safe_url(url: str) -> None:
         raise ValueError("Invalid URL")
     try:
         infos = socket.getaddrinfo(hostname, None)
-    except socket.gaierror:
-        raise ValueError("Could not resolve host")
+    except socket.gaierror as e:
+        raise ValueError("Could not resolve host") from e
     if not infos or not all(_is_public_ip(info[4][0]) for info in infos):
         raise ValueError("URL host is not allowed")
 

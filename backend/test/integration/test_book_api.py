@@ -1,18 +1,18 @@
-import pytest
-from  infrastructure.db import SessionLocal
-from  infrastructure.models import Article
-from  infrastructure import models
-from sqlalchemy.sql import text
-
-
 """
 Integration tests for FastAPI book endpoints.
 """
-from fastapi.testclient import TestClient
-import sys
+
 import os
+import sys
+
+from fastapi.testclient import TestClient
+
+from infrastructure import models
+from infrastructure.db import SessionLocal
+
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../../..')))
-from  main import app
+from main import app
+
 client = TestClient(app)
 
 def test_create_and_get_book():
@@ -38,7 +38,7 @@ def test_create_and_get_book():
     token_resp = client.post("/auth/token", json={"username": user["email"], "password": user["mot_de_passe"]})
     if token_resp.status_code != 200:
         # try to reset stored hash to expected one (tests may run against existing DB)
-        from  infrastructure import crud_user
+        from infrastructure import crud_user
         db = SessionLocal()
         try:
             db_user = db.query(models.Utilisateur).filter(models.Utilisateur.email == user["email"]).first()

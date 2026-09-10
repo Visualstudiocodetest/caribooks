@@ -1,11 +1,13 @@
-from fastapi import APIRouter, HTTPException, status, Depends, Request
-from sqlalchemy.orm import Session
 from typing import Any, Dict, List, Optional
-from infrastructure import models
-from services.book_service import BookService
-from presentation.schemas import BookCreate, BookRead, BookUpdate
-from presentation.deps import get_db, require_admin
+
 import httpx
+from fastapi import APIRouter, Depends, HTTPException, Request, status
+from sqlalchemy.orm import Session
+
+from infrastructure import models
+from presentation.deps import get_db, require_admin
+from presentation.schemas import BookCreate, BookRead, BookUpdate
+from services.book_service import BookService
 
 router = APIRouter(prefix="/books", tags=["books"])
 

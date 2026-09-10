@@ -36,5 +36,5 @@ def test_download_image_rejects_ssrf_targets_without_making_a_request():
         "http://10.0.0.5/internal",
         "ftp://example.com/x",
     ):
-        with pytest.raises(Exception):
+        with pytest.raises(Exception):  # noqa: B017 — deliberately broad: covers both ValueError (SSRF) and unsupported-scheme errors
             download_image(url)

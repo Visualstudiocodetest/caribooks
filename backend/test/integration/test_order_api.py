@@ -259,7 +259,7 @@ def test_local_webhook_finalizes_and_is_idempotent(client: TestClient, register_
         json={"id_commande": cmd["id_commande"], "reference_externe": f"REF_WH_{uniq}"},
         headers=headers,
     )
-    pay = r.json()
+    assert r.status_code == 201, r.text
 
     stock_before = client.get("/stock/", headers=admin_headers).json()
     row_before = next(s for s in stock_before if s["id_article"] == article_id)
@@ -565,6 +565,7 @@ def test_paid_order_survives_expiry_cleanup(client: TestClient, register_and_log
     """Even if a paid order somehow still carries a past cart_expires_at, the
     cleanup must not cancel it (defense-in-depth: cleanup only touches OPEN orders)."""
     from sqlalchemy import text
+
     from infrastructure import models
     from infrastructure.db import SessionLocal
 
@@ -682,7 +683,7 @@ def test_orders_cross_user_isolation(client: TestClient, register_and_login, uni
     # ...nor list it indirectly...
     assert cmd["id_commande"] not in [c["id_commande"] for c in client.get("/orders/commandes", headers=other_headers).json()]
     assert ligne["id_ligne_commande"] not in [
-        l["id_ligne_commande"] for l in client.get("/orders/lignes", headers=other_headers).json()
+        row["id_ligne_commande"] for row in client.get("/orders/lignes", headers=other_headers).json()
     ]
     assert pay["id_paiement"] not in [p["id_paiement"] for p in client.get("/orders/paiements", headers=other_headers).json()]
 

@@ -7,8 +7,6 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
-logger = logging.getLogger("caribooks.orders")
-
 from infrastructure import models
 from infrastructure.crud_base import CrudBase
 from presentation.deps import get_current_user, get_db, require_admin
@@ -29,6 +27,8 @@ from services.postfinance_service import (
     parse_postfinance_webhook,
     verify_postfinance_webhook_signature,
 )
+
+logger = logging.getLogger("caribooks.orders")
 
 router = APIRouter(prefix="/orders", tags=["orders-payments"])
 

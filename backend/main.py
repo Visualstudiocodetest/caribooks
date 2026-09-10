@@ -1,21 +1,22 @@
 import os
 from pathlib import Path
 
+from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from presentation.book_router import router as book_router
-from presentation.auth_router import router as auth_router
-from presentation.catalog_router import router as catalog_router
+from fastapi.staticfiles import StaticFiles
+
 from presentation.article_router import router as article_router
-from presentation.stock_router import router as stock_router
+from presentation.auth_router import router as auth_router
+from presentation.book_router import router as book_router
+from presentation.catalog_router import router as catalog_router
+from presentation.images_router import router as images_router
+from presentation.order_admin_router import router as order_admin_router
 from presentation.order_router import router as order_router
 from presentation.payment_router import router as payment_router
-from presentation.order_admin_router import router as order_admin_router
 from presentation.scan_router import router as scan_router
+from presentation.stock_router import router as stock_router
 from presentation.user_router import router as user_router
-from presentation.images_router import router as images_router
-from fastapi.staticfiles import StaticFiles
-from dotenv import load_dotenv
 
 env_path = Path(__file__).resolve().parent.parent / ".env"
 load_dotenv(dotenv_path=env_path)

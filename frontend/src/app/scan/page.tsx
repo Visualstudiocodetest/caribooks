@@ -157,7 +157,6 @@ export default function ScanPage() {
   useEffect(() => {
     if (!isbn) return
     void lookup(isbn)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isbn])
 
   return (

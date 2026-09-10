@@ -18,4 +18,4 @@ def fetch_image(payload: ImageFetchIn, request: Request, _current_user=Depends(g
         base = str(request.base_url).rstrip('/')
         return {"image_link": f"{base}{rel}"}
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e

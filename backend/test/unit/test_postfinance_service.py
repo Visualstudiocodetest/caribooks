@@ -1,18 +1,19 @@
-import pytest
 from types import SimpleNamespace
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
+
+import pytest
 
 from services.postfinance_service import (
     build_postfinance_address,
     build_postfinance_line_items,
+    confirm_postfinance_transaction,
     create_postfinance_iframe_session,
     create_postfinance_transaction,
-    confirm_postfinance_transaction,
-    parse_postfinance_webhook,
     get_postfinance_checkout_status,
-    get_postfinance_payment_methods,
     get_postfinance_javascript_url,
+    get_postfinance_payment_methods,
     is_postfinance_success_status,
+    parse_postfinance_webhook,
 )
 
 LINE_ITEMS = [{

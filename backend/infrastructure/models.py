@@ -1,9 +1,8 @@
 from __future__ import annotations
-from sqlalchemy.orm import relationship
-from sqlalchemy.sql import func
 
-from infrastructure.db import Base
 from sqlalchemy import (
+    DECIMAL,
+    TIMESTAMP,
     BigInteger,
     Boolean,
     CheckConstraint,
@@ -14,12 +13,12 @@ from sqlalchemy import (
     String,
     Table,
     Text,
-    TIMESTAMP,
     UniqueConstraint,
-    DECIMAL,
 )
+from sqlalchemy.orm import relationship
+from sqlalchemy.sql import func
 
-
+from infrastructure.db import Base
 
 article_categorie = Table(
     "article_categorie",

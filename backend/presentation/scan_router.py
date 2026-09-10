@@ -3,10 +3,10 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from  infrastructure import models
-from  infrastructure.crud_base import CrudBase
-from  presentation.deps import get_current_user, get_db
-from  presentation.schemas import ScanISBNCreate, ScanISBNRead, ScanISBNUpdate
+from infrastructure import models
+from infrastructure.crud_base import CrudBase
+from presentation.deps import get_current_user, get_db
+from presentation.schemas import ScanISBNCreate, ScanISBNRead, ScanISBNUpdate
 
 router = APIRouter(prefix="/scans", tags=["scans"])
 

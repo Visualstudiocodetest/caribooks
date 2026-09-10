@@ -79,7 +79,15 @@ def test_stock_availability_batch(client: TestClient, register_and_login, uniq: 
     etat_id = r.json()["id_etat_usure"]
     r = client.post(
         "/articles/",
-        json={"id_type_objet": type_id, "id_etat_usure": etat_id, "sku": f"SKU_AV_{uniq}", "titre": "Av", "prix_chf": 10.0, "actif": True, "categorie_ids": []},
+        json={
+            "id_type_objet": type_id,
+            "id_etat_usure": etat_id,
+            "sku": f"SKU_AV_{uniq}",
+            "titre": "Av",
+            "prix_chf": 10.0,
+            "actif": True,
+            "categorie_ids": [],
+        },
         headers=headers,
     )
     article_id = r.json()["id_article"]

@@ -7,13 +7,13 @@ stock reservation, cart expiry, order totals, and finalization/refund/cancel.
 
 from __future__ import annotations
 
-from decimal import Decimal, ROUND_HALF_UP
+from decimal import ROUND_HALF_UP, Decimal
 from typing import Any
 
 from fastapi import HTTPException
+from sqlalchemy import text
 from sqlalchemy.orm import Session
 from sqlalchemy.sql import func
-from sqlalchemy import text
 
 from infrastructure import models
 
@@ -189,8 +189,8 @@ def release_ligne_reservation(db: Session, ligne: models.LigneCommande) -> None:
 def release_cart_reservation(db: Session, id_commande: int) -> None:
     """Reverse quantite_reservee increments made when lignes were added to a cart."""
     lignes = db.query(models.LigneCommande).filter(models.LigneCommande.id_commande == id_commande).all()
-    for l in lignes:
-        release_ligne_reservation(db, l)
+    for ligne in lignes:
+        release_ligne_reservation(db, ligne)
 
 
 def cleanup_expired_carts(db: Session) -> None:
@@ -276,12 +276,12 @@ def finalize_commande(db: Session, id_commande: int) -> None:
 
     # For each ligne in the commande, finalize reserved stock into sold stock
     lignes = db.query(models.LigneCommande).filter(models.LigneCommande.id_commande == id_commande).all()
-    for l in lignes:
-        stocks = _lock_stock_rows(db, int(l.id_article))  # type: ignore[arg-type]
+    for ligne in lignes:
+        stocks = _lock_stock_rows(db, int(ligne.id_article))  # type: ignore[arg-type]
         if not stocks:
             # nothing to do if no stock rows exist
             continue
-        remaining = l.quantite
+        remaining = ligne.quantite
         # first reduce reserved counts where possible
         for s in stocks:
             if remaining <= 0:  # type: ignore
@@ -302,7 +302,7 @@ def finalize_commande(db: Session, id_commande: int) -> None:
             s.quantite_disponible = avail - take  # type: ignore
             remaining -= take
     # mark articles inactive if no stock left (only those in this order)
-    art_ids = [l.id_article for l in lignes]
+    art_ids = [ligne.id_article for ligne in lignes]
     for aid in art_ids:
         total_left = (
             db.query(models.Stock)
@@ -324,18 +324,18 @@ def finalize_commande(db: Session, id_commande: int) -> None:
 def refund_commande(db: Session, id_commande: int) -> None:
     # When refunding, return sold quantities back to stock
     lignes = db.query(models.LigneCommande).filter(models.LigneCommande.id_commande == id_commande).all()
-    for l in lignes:
-        stocks = _lock_stock_rows(db, int(l.id_article))  # type: ignore[arg-type]
+    for ligne in lignes:
+        stocks = _lock_stock_rows(db, int(ligne.id_article))  # type: ignore[arg-type]
         if not stocks:  # type: ignore
             continue
-        remaining = l.quantite
+        remaining = ligne.quantite
         # add back to first stock rows
         for s in stocks:
             if remaining <= 0:  # type: ignore
                 break
             s.quantite_disponible = (s.quantite_disponible or 0) + remaining  # type: ignore
             remaining = 0
-    for aid in {l.id_article for l in lignes}:
+    for aid in {ligne.id_article for ligne in lignes}:
         _reactivate_article_if_available(db, int(aid))  # type: ignore[arg-type]
 
 

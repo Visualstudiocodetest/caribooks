@@ -1,0 +1,15 @@
+[tool.ruff]
+line-length = 140
+exclude = ["venv", ".venv", "migrations"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B"]
+ignore = [
+    "B008",  # function-call-in-default-argument: idiomatic FastAPI `Depends(...)` pattern
+]
+
+[tool.ruff.lint.per-file-ignores]
+# sys.path.insert(...) must run before the local "from main import app" — the
+# import can't move to the top of the file without breaking test discovery.
+"test/fonctionnal/test_book_flow.py" = ["E402"]
+"test/integration/test_book_api.py" = ["E402"]

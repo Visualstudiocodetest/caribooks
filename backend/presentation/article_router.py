@@ -3,10 +3,10 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from  infrastructure import models
-from  infrastructure.crud_base import CrudBase
-from  presentation.deps import get_db, require_admin
-from  presentation.schemas import ArticleCreate, ArticleRead, ArticleUpdate
+from infrastructure import models
+from infrastructure.crud_base import CrudBase
+from presentation.deps import get_db, require_admin
+from presentation.schemas import ArticleCreate, ArticleRead, ArticleUpdate
 
 router = APIRouter(prefix="/articles", tags=["articles"])
 

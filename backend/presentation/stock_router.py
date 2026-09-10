@@ -1,13 +1,13 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
 from sqlalchemy import func
+from sqlalchemy.orm import Session
 
-from  infrastructure import models
-from  infrastructure.crud_base import CrudBase
-from  presentation.deps import get_db, require_admin
-from  presentation.schemas import (
+from infrastructure import models
+from infrastructure.crud_base import CrudBase
+from presentation.deps import get_db, require_admin
+from presentation.schemas import (
     SourceStockCreate,
     SourceStockRead,
     SourceStockUpdate,
@@ -160,7 +160,12 @@ def _get_stock_for_update(db: Session, id_stock: int) -> models.Stock:
 
 
 @router.post("/{id_stock}/increment", response_model=StockRead)
-def increment_stock(id_stock: int, payload: StockQtyChange = StockQtyChange(), db: Session = Depends(get_db), _admin=Depends(require_admin)):
+def increment_stock(
+    id_stock: int,
+    payload: StockQtyChange = StockQtyChange(),
+    db: Session = Depends(get_db),
+    _admin=Depends(require_admin),
+):
     obj = _get_stock_for_update(db, id_stock)
     obj.quantite_disponible = (obj.quantite_disponible or 0) + payload.qty
     db.commit()
@@ -169,7 +174,12 @@ def increment_stock(id_stock: int, payload: StockQtyChange = StockQtyChange(), d
 
 
 @router.post("/{id_stock}/decrement", response_model=StockRead)
-def decrement_stock(id_stock: int, payload: StockQtyChange = StockQtyChange(), db: Session = Depends(get_db), _admin=Depends(require_admin)):
+def decrement_stock(
+    id_stock: int,
+    payload: StockQtyChange = StockQtyChange(),
+    db: Session = Depends(get_db),
+    _admin=Depends(require_admin),
+):
     obj = _get_stock_for_update(db, id_stock)
     if (obj.quantite_disponible or 0) < payload.qty:
         raise HTTPException(status_code=400, detail="Not enough stock to decrement")

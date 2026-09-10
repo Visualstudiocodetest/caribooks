@@ -86,7 +86,6 @@ export function useBarcodeScanner(
 
       let video = videoRef.current
       for (let i = 0; i < VIDEO_MOUNT_RETRIES && !video; i++) {
-        // eslint-disable-next-line no-await-in-loop
         await new Promise((r) => setTimeout(r, VIDEO_MOUNT_RETRY_DELAY_MS))
         video = videoRef.current
       }

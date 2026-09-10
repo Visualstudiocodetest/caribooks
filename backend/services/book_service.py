@@ -5,6 +5,7 @@ from fastapi import HTTPException
 from infrastructure import crud_book, models
 from services.image_service import download_image
 
+
 class BookService:
     def __init__(self, db_session):
         self.db_session = db_session

@@ -50,11 +50,11 @@ def admin_get_lignes(id_commande: int, db: Session = Depends(get_db), _admin=Dep
     lignes = db.query(models.LigneCommande).filter(models.LigneCommande.id_commande == id_commande).all()
     return [
         LigneCommandeAdminRead(
-            **LigneCommandeRead.model_validate(l).model_dump(),
-            titre_article=l.article.titre if l.article else None,
-            sku_article=l.article.sku if l.article else None,
+            **LigneCommandeRead.model_validate(ligne).model_dump(),
+            titre_article=ligne.article.titre if ligne.article else None,
+            sku_article=ligne.article.sku if ligne.article else None,
         )
-        for l in lignes
+        for ligne in lignes
     ]
 
 

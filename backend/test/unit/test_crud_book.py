@@ -1,12 +1,14 @@
 """
 Unit tests for infrastructure.crud_book
 """
+import os
+import sys
 import unittest
 from types import SimpleNamespace
 from unittest.mock import MagicMock
-from  infrastructure import crud_book
-import sys
-import os
+
+from infrastructure import crud_book
+
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../../backend')))
 
 class TestCrudBook(unittest.TestCase):
