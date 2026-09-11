@@ -78,8 +78,9 @@ Accessibilité de l'interface & Attributs \texttt{alt}, \texttt{aria-label} sur 
 \midrule
 \endhead
 Analyse et formalisation du besoin & Cahier des charges, échanges avec la Product Owner \\
+Maquettage UI et enchaînement des écrans & Première version des maquettes sous Figma Make (cf. mémoire), écrans finalisés directement en développement au fil des sprints \\
 Modélisation UML & Cas d'utilisation, séquence, classes, déploiement \\
-Modèle de données relationnel & Modélisation Merise (MCD/MLD), base MySQL \\
+Modèle de données relationnel & Modélisation Merise (MCD/MLD), base MySQL, scripts de migration versionnés (\texttt{backend/migrations/}) ; sauvegarde/restauration des données de production non automatisée (limite assumée, cf. mémoire) \\
 Architecture logicielle en couches & Présentation / Services / Infrastructure (\texttt{backend/presentation}, \texttt{services}, \texttt{infrastructure}) \\
 Accès aux données & Couche SQLAlchemy, CRUD générique réutilisable (\texttt{CrudBase}) \\
 API REST & Endpoints FastAPI documentés, validés par Pydantic \\
@@ -102,7 +103,8 @@ Intégration continue & Pipeline GitHub Actions, tests (pytest + Vitest) à chaq
 Déploiement continu & Backend redéployé automatiquement sur \texttt{VM1} (production) et \texttt{VM2} (secours à chaud) à chaque \textit{push} sur \texttt{main} ; frontend déployé sur Vercel \\
 Choix et configuration de l'hébergement & Frontend Vercel, backend/MySQL sur VMs Oracle Cloud, reverse proxy Nginx (TLS) \\
 Sécurisation de la production & HTTPS, variables d'environnement séparées du code, base MySQL isolée sur réseau privé (VCN) \\
-Plan et campagne de tests & 99 tests automatisés (68 backend + 31 frontend), couverture pytest par module \\
+Plan et campagne de tests & 99 tests automatisés (68 backend + 31 frontend), couverture pytest par module, jeu d'essai détaillé sur les deux parcours les plus représentatifs (commande/paiement, scan ISBN) \\
+Vérification de la qualité du code & Ruff (backend) et ESLint (frontend) exécutés en CI à chaque \textit{push}, dépôt intégralement conforme \\
 Documentation du déploiement & Procédure documentée et reproductible \\
 \bottomrule
 \caption{Compétences Bloc 3}

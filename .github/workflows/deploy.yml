@@ -1,0 +1,161 @@
+name: Deploy FastAPI (SSH rolling deploy)
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    strategy:
+      max-parallel: 1  # 0 means unlimited — use 1 for true sequential rolling deploy
+      matrix:
+        include:
+          - name: VM1
+            host_secret: VM1_PUBLIC_IP
+            key_secret: SSH_PRIVATE_KEY_VM1
+          - name: VM2
+            host_secret: VM2_PUBLIC_IP
+            key_secret: SSH_PRIVATE_KEY_VM2
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Deploy to ${{ matrix.name }}
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets[matrix.host_secret] }}
+          username: ubuntu
+          key: ${{ secrets[matrix.key_secret] }}
+          script: |
+            set -e
+
+            # ── Step 1: Install ALL system deps first, before anything else ──
+            echo "📦 Installing system dependencies..."
+            sudo apt-get update -qq
+            sudo apt-get install -y -q git curl python3 python3-venv python3-pip
+
+            # ── Step 2: Create /app directory if missing ──
+            if [ ! -d /app ]; then
+              echo "📁 Creating /app directory..."
+              sudo mkdir -p /app
+              sudo chown ubuntu:ubuntu /app
+            fi
+
+            # ── Step 3: Clone or update the repo ──
+            if [ ! -d /app/.git ]; then
+              echo "🔃 Cloning repository into /app..."
+              git clone https://github.com/${{ github.repository }}.git /app
+              sudo chown -R ubuntu:ubuntu /app
+            else
+              echo "🔃 Updating repository..."
+              cd /app
+              git fetch origin main
+              git reset --hard origin/main
+            fi
+
+            cd /app
+
+            # ── Step 4: Ensure /app/backend exists ──
+            if [ ! -d /app/backend ]; then
+              echo "❌ /app/backend directory not found after clone — check repo structure"
+              ls -la /app
+              exit 1
+            fi
+
+            # ── Step 5: Ensure requirements.txt exists ──
+            if [ ! -f /app/backend/requirements.txt ]; then
+              echo "❌ requirements.txt not found at /app/backend/requirements.txt"
+              ls -la /app/backend
+              exit 1
+            fi
+
+            # ── Step 6: Create or recreate venv if broken/missing ──
+            if [ ! -x /app/venv/bin/python ]; then
+              echo "🐍 Creating fresh virtualenv..."
+              rm -rf /app/venv
+              python3 -m venv /app/venv
+            fi
+
+            # ── Step 7: Install Python dependencies ──
+            echo "📦 Installing Python dependencies..."
+            /app/venv/bin/python -m pip install --upgrade pip --quiet
+            /app/venv/bin/pip install --no-cache-dir -r /app/backend/requirements.txt --quiet
+
+            # ── Step 8: Run database migrations ──
+            echo "🗄️ Running database migrations..."
+            if [ -f /app/backend/.env ]; then
+              set -a
+              source /app/backend/.env
+              set +a
+            fi
+            # Install mysql client if missing
+            if ! command -v mysql &>/dev/null; then
+              sudo apt-get install -y -q default-mysql-client
+            fi
+            # Create tracking table
+            mysql -u"${MYSQL_USER}" -p"${MYSQL_PASSWORD}" -h"${MYSQL_HOST}" "${MYSQL_DB}" -e "CREATE TABLE IF NOT EXISTS migration_log (name VARCHAR(255) NOT NULL PRIMARY KEY, applied_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP);"
+            # Apply any unapplied migration files
+            shopt -s nullglob
+            for f in /app/backend/migrations/*.sql; do
+              name=$(basename "$f")
+              count=$(mysql -u"${MYSQL_USER}" -p"${MYSQL_PASSWORD}" -h"${MYSQL_HOST}" "${MYSQL_DB}" -s -N -e "SELECT COUNT(*) FROM migration_log WHERE name='${name}'" 2>/dev/null || echo "0")
+              if [ "$count" = "0" ]; then
+                echo "  ▶ Applying ${name}..."
+                mysql -u"${MYSQL_USER}" -p"${MYSQL_PASSWORD}" -h"${MYSQL_HOST}" "${MYSQL_DB}" < "$f"
+                mysql -u"${MYSQL_USER}" -p"${MYSQL_PASSWORD}" -h"${MYSQL_HOST}" "${MYSQL_DB}" -e "INSERT IGNORE INTO migration_log (name) VALUES ('${name}')"
+                echo "  ✅ ${name} applied"
+              else
+                echo "  ⏭  ${name} already applied"
+              fi
+            done
+
+            # ── Step 9: Create systemd service if missing ──
+            if [ ! -f /etc/systemd/system/fastapi.service ]; then
+              echo "⚙️ Creating fastapi.service..."
+              sudo tee /etc/systemd/system/fastapi.service > /dev/null <<'EOF'
+            [Unit]
+            Description=FastAPI Application
+            After=network.target
+
+            [Service]
+            Type=simple
+            User=ubuntu
+            WorkingDirectory=/app/backend
+            ExecStart=/app/venv/bin/uvicorn main:app --host 0.0.0.0 --port 8000
+            Restart=always
+            RestartSec=5
+            StandardOutput=journal
+            StandardError=journal
+
+            [Install]
+            WantedBy=multi-user.target
+            EOF
+              sudo systemctl daemon-reload
+              sudo systemctl enable fastapi
+            fi
+
+            # ── Step 9: Restart service ──
+            echo "🚀 Restarting fastapi service..."
+            sudo systemctl restart fastapi
+
+            # ── Step 10: Healthcheck ──
+            echo "🏥 Waiting for healthcheck on ${{ matrix.name }}..."
+            for i in $(seq 1 10); do
+              if curl -fsS http://127.0.0.1:8000/health; then
+                echo "✅ ${{ matrix.name }} healthy"
+                exit 0
+              fi
+              echo "Attempt $i/10 failed, retrying in 3s..."
+              sleep 3
+            done
+
+            echo "❌ Healthcheck failed after 10 attempts"
+            sudo journalctl -u fastapi -n 200
+            exit 1
+
+      - name: Deployment finished
+        if: success()
+        run: echo "✅ Rolling deploy complete — both VMs healthy"

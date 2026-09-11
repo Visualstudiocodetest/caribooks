@@ -1,0 +1,41 @@
+import type { Metadata } from 'next'
+import './globals.css'
+import { Header } from '@/components/layout/Header'
+import { Footer } from '@/components/layout/Footer'
+import { CookieBanner } from '@/components/ui/CookieBanner'
+import { Providers } from './providers'
+import type { ReactNode } from 'react'
+import { SpeedInsights } from '@vercel/speed-insights/next'
+import { Analytics } from '@vercel/analytics/next'
+
+export const metadata: Metadata = {
+  title: 'Caribooks',
+  description: 'Livres de seconde main — Caritas',
+}
+
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: ReactNode
+}>) {
+  return (
+    <html lang="fr">
+      <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+      </head>
+      <body>
+        <Providers>
+          <Header />
+          <main className="page-main">
+            <div className="container">{children}</div>
+          </main>
+          <Footer />
+          <CookieBanner />
+        </Providers>
+        <SpeedInsights />
+        <Analytics />
+      </body>
+    </html>
+  )
+}
+

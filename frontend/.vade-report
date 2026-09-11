@@ -1,0 +1,63 @@
+# Vercel Web Analytics Implementation
+
+## Summary
+Successfully installed and configured Vercel Web Analytics for the Caribooks Next.js project.
+
+## Changes Made
+
+### 1. Package Installation
+- Installed `@vercel/analytics` package (v2.0.1) using npm with `--legacy-peer-deps` flag
+- Updated `package.json` to include the new dependency
+- Updated `package-lock.json` with the new package and its dependencies
+
+### 2. Analytics Integration
+**Modified:** `frontend/src/app/layout.tsx`
+- Added import statement: `import { Analytics } from '@vercel/analytics/next'`
+- Added `<Analytics />` component in the root layout's body section, right after `<SpeedInsights />`
+
+## Implementation Details
+
+### Framework
+This is a **Next.js 15** project using the **App Router** architecture, so I followed the official Vercel documentation's instructions for Next.js App Router.
+
+### Analytics Component Placement
+The Analytics component was added to the root layout file (`src/app/layout.tsx`) which ensures analytics tracking is active across all pages of the application. It's positioned at the end of the body section, consistent with the existing SpeedInsights component.
+
+### Code Changes
+```typescript
+// Added import
+import { Analytics } from '@vercel/analytics/next'
+
+// Added component in body
+<SpeedInsights />
+<Analytics />
+```
+
+## Verification
+
+### ✅ Type Checking
+Ran `npm run typecheck` - No TypeScript errors
+
+### ✅ Build
+Ran `npm run build` - Build completed successfully
+- All 21 routes compiled and generated correctly
+- No errors or warnings related to Analytics
+
+### ✅ Tests
+Ran `npm run test` - All tests passed
+- 2 test files, 16 tests passed
+- No breaking changes introduced
+
+## Next Steps (Deployment)
+
+To enable analytics in production:
+1. Deploy to Vercel using `vercel deploy`
+2. Navigate to the Analytics section in your Vercel dashboard
+3. Click "Enable" to activate analytics for the project
+4. Verify analytics are working by checking the browser Network tab for requests to the analytics endpoint
+
+## Notes
+- The Analytics component is placed alongside the existing SpeedInsights component for consistency
+- Used `--legacy-peer-deps` flag during installation to resolve peer dependency conflicts with existing Vite/Vitest setup
+- The implementation follows the official Vercel documentation retrieved from https://vercel.com/docs/analytics/quickstart
+- Analytics will automatically track page views and Web Vitals metrics once enabled in the Vercel dashboard

@@ -232,7 +232,26 @@ ESTIAM --- Promotion E3 DAD --- Encadrant : Mhand Boufala}
     \column{0.46\textwidth}
     \tableofcontents[hideallsubsections]
     \column{0.5\textwidth}
+    \begin{exampleblock}{Le principe de cette présentation}
+      \begin{itemize}\small
+        \item Pas une liste de fonctionnalités
+        \item \textbf{Un seul livre suivi}, du dépôt chez Caritas à la livraison
+        \item À chaque étape : la brique technique qui le fait avancer
+      \end{itemize}
+    \end{exampleblock}
     \vspace{6pt}
+    \begin{center}
+    \begin{tikzpicture}[every node/.style={font=\tiny}, node distance=6mm]
+      \node[tag] (a) {1. Scan};
+      \node[tag,right=of a] (b) {2. Catalogue};
+      \node[tag,right=of b] (c) {3. Achat};
+      \draw[flow] (a)--(b); \draw[flow] (b)--(c);
+      \node[tag,below=8mm of a,xshift=5mm] (d) {4. Livraison};
+      \node[tag,right=of d] (e) {5. Clôture};
+      \draw[flow] (c) -- ++(0,-0.3) -| (d);
+      \draw[flow] (d)--(e);
+    \end{tikzpicture}
+    \end{center}
   \end{columns}
 \end{frame}
 
@@ -244,13 +263,16 @@ ESTIAM --- Promotion E3 DAD --- Encadrant : Mhand Boufala}
     \column{0.52\textwidth}
     \begin{block}{Étudiant alternant --- ESTIAM E3 DAD}
       \begin{itemize}\small
-        \item \textbf{Mission 1 (5 mois) --- CERN}, la plus grande expérience
-          scientifique d'Europe : développement low-code sur \textbf{Oracle APEX}
-          (applications sur base Oracle on-premise), déploiement d'une application
-          ETL open source nommée \textbf{Prefect}, orchestrée sur \textbf{Kubernetes}
-        \item \textbf{Mission 2 (actuelle, 6\textsuperscript{e} mois) --- Qiminfo},
-          ESN suisse : \textbf{Power Apps}, \textbf{Power Automate}, \textbf{SharePoint}
-          --- et une transition en cours vers le développement \textbf{C\#/.NET (Razor)}
+        \item \textbf{Mission 1 (5 mois) --- CERN}
+        \begin{itemize}\scriptsize
+          \item Low-code sur \textbf{Oracle APEX} (Oracle on-premise)
+          \item ETL \textbf{Prefect}, orchestré sur \textbf{Kubernetes}
+        \end{itemize}
+        \item \textbf{Mission 2 (actuelle, 6\textsuperscript{e} mois) --- Qiminfo}
+        \begin{itemize}\scriptsize
+          \item \textbf{Power Apps}, \textbf{Power Automate}, \textbf{SharePoint}
+          \item Transition en cours vers \textbf{C\#/.NET (Razor)}
+        \end{itemize}
       \end{itemize}
     \end{block}
     \vspace{6pt}
@@ -265,10 +287,11 @@ ESTIAM --- Promotion E3 DAD --- Encadrant : Mhand Boufala}
     \end{center}
     \column{0.44\textwidth}
     \begin{exampleblock}{Le lien avec Caribooks}
-      \small D'un environnement low-code (Oracle APEX, Power Platform) à un projet
-      \textbf{full-code} de bout en bout --- FastAPI, Next.js, MySQL --- Caribooks est
-      l'endroit où j'ai pu pousser le développement \og pur code \fg{} le plus loin,
-      juste avant de plonger dans le C\#/.NET.
+      \begin{itemize}\small
+        \item Missions : low-code (Oracle APEX, Power Platform)
+        \item Caribooks : \textbf{full-code} de bout en bout --- FastAPI, Next.js, MySQL
+        \item Le projet où je pousse le \og pur code \fg{} le plus loin
+      \end{itemize}
     \end{exampleblock}
   \end{columns}
 \end{frame}
@@ -291,15 +314,19 @@ ESTIAM --- Promotion E3 DAD --- Encadrant : Mhand Boufala}
   \end{block}
   \vspace{6pt}
   \begin{alertblock}{Problématique centrale}
-    Comment mettre en vente des livres d'occasion \textbf{exclusivement en CHF},
-    livraison \textbf{Suisse uniquement}, via une interface
-    \textbf{accessible aux bénévoles non technophiles} ?
+    \begin{itemize}\small
+      \item Vente \textbf{exclusivement en CHF}
+      \item Livraison \textbf{Suisse uniquement}
+      \item Interface \textbf{accessible aux bénévoles non technophiles}
+    \end{itemize}
   \end{alertblock}
   \vspace{6pt}
   \begin{exampleblock}{\small Pourquoi j'ai choisi ce projet}
-    \small Une association qui aide concrètement à la réinsertion, un besoin réel et
-    mesurable (des cartons de livres qui dorment en réserve), et un périmètre complet
-    à porter seul, du schéma de base de données jusqu'au serveur de production.
+    \begin{itemize}\small
+      \item Une mission concrète de réinsertion
+      \item Un besoin réel et mesurable (livres qui dorment en réserve)
+      \item Un périmètre complet porté seul : de la base de données au serveur de production
+    \end{itemize}
   \end{exampleblock}
 \end{frame}
 
@@ -390,7 +417,8 @@ ESTIAM --- Promotion E3 DAD --- Encadrant : Mhand Boufala}
       \begin{itemize}\small
         \item Aucune ne combine CHF + Scan ISBN + back-office simple
         \item Devise EUR imposée (Momox, Vinted)
-        \item Back-offices complexes (Shopify, ...)
+        \item Back-offices complexes (WooCommerce, Shopify)
+        \item Abonnements mensuels incompatibles avec une association
       \end{itemize}
     \end{alertblock}
     \column{0.48\textwidth}
@@ -399,7 +427,7 @@ ESTIAM --- Promotion E3 DAD --- Encadrant : Mhand Boufala}
         \item Contrôle total sur le tunnel CHF
         \item Scan ISBN intégré nativement
         \item UI épurée taillée pour les bénévoles
-        \item \textbf{PostFinance} : TWINT, sandbox sans CB réelle
+        \item Coût de possession minimal --- pas de SaaS récurrent
       \end{itemize}
     \end{exampleblock}
   \end{columns}
@@ -411,17 +439,21 @@ ESTIAM --- Promotion E3 DAD --- Encadrant : Mhand Boufala}
 \begin{frame}{Stack technique --- Les choix, et pourquoi je les ai faits}
   \begin{block}{Justifications des choix}
     \begin{itemize}\small
-      \item \tech{FastAPI} : performances ASGI, Pydantic auto, Swagger natif \quad\badgeorange{Migration depuis Express.js}
+      \item \tech{FastAPI} : performances ASGI, Pydantic auto, Swagger natif
       \item \tech{Next.js} : SSR pour le SEO vitrine, SPA pour le back-office
-      \item \tech{MySQL} + \tech{SQLAlchemy} : relationnel éprouvé, transactions ACID, requêtes \textbf{paramétrées} $\Rightarrow$ anti-injections SQL
-      \item \tech{SQL vs NoSQL} : besoin fondamentalement relationnel (FK, intégrité stock/commande) $\Rightarrow$ pas de NoSQL au MVP ; \textbf{Redis} identifié comme piste si la charge le justifie
-      \item \tech{PostFinance} : TWINT natif, sandbox accessible, 100\% suisse \quad\badgeorange{Migration depuis Payrexx}
-      \item \tech{GitHub Actions} + \tech{Vercel} : tests $\rightarrow$ déploiement continu, CDN frontend gratuit
+      \item \tech{MySQL} + \tech{SQLAlchemy} : relationnel éprouvé, transactions ACID, requêtes \textbf{paramétrées}
+      \item \tech{SQL vs NoSQL} : besoin fondamentalement relationnel (FK, intégrité stock/commande)
+      \item \tech{PostFinance} : paiement suisse en CHF --- détails à l'étape paiement
+      \item \tech{GitHub Actions} + \tech{Vercel} : tests $\rightarrow$ déploiement continu
     \end{itemize}
   \end{block}
   \vspace{4pt}
-  \begin{exampleblock}{\small Architecture en couches, dans le détail}
-    \small Chaque router s'appuie sur un \texttt{CrudBase<T>} générique (\texttt{list/get/create/update/delete}) et sur l'injection de dépendances FastAPI (\texttt{Depends()}) --- diagramme à la slide suivante. \textit{J'y reviens en détail dans les difficultés rencontrées.}
+  \begin{exampleblock}{\small Architecture en couches --- vue d'ensemble}
+    \begin{itemize}\small
+      \item \texttt{CrudBase<T>} générique par router
+      \item Injection de dépendances FastAPI (\texttt{Depends()})
+      \item Diagramme détaillé à la slide suivante
+    \end{itemize}
   \end{exampleblock}
 \end{frame}
 
@@ -479,11 +511,14 @@ ESTIAM --- Promotion E3 DAD --- Encadrant : Mhand Boufala}
     \end{block}
     \vspace{5pt}
     \begin{exampleblock}{\small Adapté au projet}
-      \small Configuré dès le sprint 1 pour tester et intégrer en continu : \texttt{startapp.sh} lance backend + frontend en une commande.
+      \begin{itemize}\small
+        \item Configuré dès le sprint 1
+        \item \texttt{startapp.sh} : backend + frontend en une commande
+      \end{itemize}
     \end{exampleblock}
     \vspace{5pt}
     \begin{center}
-    \badgegreen{99/99 tests passants}\quad\badgegreen{79\% couverture backend}\quad\badge{Déployé en ligne}
+    \badgegreen{6/6 sprints livrés}\quad\badge{Déployé en ligne}
     \end{center}
   \end{columns}
 \end{frame}
@@ -520,8 +555,10 @@ ESTIAM --- Promotion E3 DAD --- Encadrant : Mhand Boufala}
     \end{block}
     \column{0.48\textwidth}
     \begin{block}{Pattern Table Per Class}
-      La table \texttt{livre} étend \texttt{article} par clé primaire partagée.
-      Permet d'ajouter d'autres types \textbf{sans restructurer} le schéma.
+      \begin{itemize}\small
+        \item \texttt{livre} étend \texttt{article} par clé primaire partagée
+        \item Ajout d'autres types \textbf{sans restructurer} le schéma
+      \end{itemize}
     \end{block}
     \vspace{4pt}
     \begin{exampleblock}{Index de performance}
@@ -549,9 +586,11 @@ ESTIAM --- Promotion E3 DAD --- Encadrant : Mhand Boufala}
   \begin{columns}[T]
     \column{0.5\textwidth}
     \begin{exampleblock}{Le livre que nous allons suivre}
-      \small \textit{L'Étranger}, Albert Camus (Folio) --- ISBN \texttt{978-2-07-036002-4}.
-      Déposé en rayon par un donateur, il traîne depuis des semaines chez Caritas.
-      Nous allons le suivre jusqu'à sa vente.
+      \begin{itemize}\small
+        \item \textit{Divergente --- tome 2 : L'Insurrection}, Veronica Roth
+        \item ISBN \texttt{978-2-266-27451-7}
+        \item Déposé en rayon par un donateur, invendu depuis des semaines
+      \end{itemize}
     \end{exampleblock}
     \vspace{6pt}
     \begin{block}{Ce que ça va couvrir}
@@ -595,21 +634,25 @@ ESTIAM --- Promotion E3 DAD --- Encadrant : Mhand Boufala}
     \end{block}
     \vspace{4pt}
     \begin{alertblock}{\small Sécurité de démarrage}
-      \small L'API \textbf{refuse de démarrer} si \texttt{SECRET\_KEY} vaut une valeur
-      faible/placeholder connue ; si absente, une clé aléatoire est générée par processus.
+      \begin{itemize}\small
+        \item Refuse de démarrer si \texttt{SECRET\_KEY} est faible/placeholder
+        \item Si absente : clé aléatoire générée par processus
+      \end{itemize}
     \end{alertblock}
     \column{0.46\textwidth}
     \begin{block}{Connexion via Google --- second flux}
       \begin{itemize}\small
-        \item \texttt{POST /auth/google} : le jeton est revérifié \textbf{côté serveur} auprès de Google, jamais de confiance aveugle envers le frontend
+        \item \texttt{POST /auth/google} : jeton revérifié \textbf{côté serveur}
+        \item Jamais de confiance aveugle envers le frontend
         \item Compte retrouvé/lié par \texttt{google\_id}, sinon créé
       \end{itemize}
     \end{block}
     \vspace{4pt}
     \begin{alertblock}{\small Contrôle critique}
-      \small Si \texttt{email\_verified} = \textit{false} côté Google, connexion
-      \textbf{refusée (400)} --- sinon un compte à email non vérifié permettrait une
-      prise de contrôle de compte.
+      \begin{itemize}\small
+        \item \texttt{email\_verified = false} $\Rightarrow$ connexion refusée (400)
+        \item Sinon : prise de contrôle de compte possible
+      \end{itemize}
     \end{alertblock}
   \end{columns}
 \end{frame}
@@ -641,7 +684,7 @@ def get_isbn_metadata(isbn: str):
     if r.status_code == 200:
         book = r.json().get(f"ISBN:{clean}")
         if book and book.get("title"):
-            return book  # "L'Etranger", Camus...
+            return book  # "Divergente - tome 2", Roth...
 
     raise HTTPException(404, "ISBN introuvable")
 \end{lstlisting}
@@ -657,7 +700,7 @@ def get_isbn_metadata(isbn: str):
 \begin{frame}{Étape 1 --- Maquette Scan ISBN (mobile)}
   \etapelivre{1}{scan et préremplissage automatique}
   \begin{center}
-  \resizebox{!}{0.66\textheight}{%
+  \resizebox{!}{0.56\textheight}{%
   \begin{tikzpicture}
     % Téléphone
     \fill[gray!30] (0.8,0) rectangle (4.4,7.5);
@@ -677,19 +720,24 @@ def get_isbn_metadata(isbn: str):
     \node[font=\tiny,text=white] at (2.6,6.4) {Scan ISBN};
     % Formulaire en dessous
     \fill[mybluepale] (1.1,4.6) rectangle (4.1,5.1);
-    \node[font=\tiny] at (2.6,4.85) {Titre : \textit{L'Étranger (prérempli)}};
+    \node[font=\tiny] at (2.6,4.85) {Titre : \textit{Divergente T.2 (prérempli)}};
     \fill[mybluepale] (1.1,4.0) rectangle (4.1,4.5);
-    \node[font=\tiny] at (2.6,4.25) {Auteur : \textit{Albert Camus (prérempli)}};
+    \node[font=\tiny] at (2.6,4.25) {Auteur : \textit{Veronica Roth (prérempli)}};
     \fill[gray!15] (1.1,3.4) rectangle (4.1,3.9);
-    \node[font=\tiny] at (2.6,3.65) {État : Bon état \quad Prix : 12.50 CHF};
+    \node[font=\tiny] at (2.6,3.65) {État : Bon état \quad Prix : 9.50 CHF};
     % Bouton publier
     \fill[mysuccess] (1.3,2.7) rectangle (3.9,3.2);
     \node[font=\tiny\bfseries,text=white] at (2.6,2.95) {Publier l'annonce};
     % Home bar
     \fill[gray!50,rounded corners=2pt] (2.1,0.2) rectangle (3.1,0.35);
-  \end{tikzpicture}}\\[4pt]
-  \scriptsize\textcolor{mygray}{RGAA : libellés explicites (pas de placeholder seul), bouton $\geq$ 44px, alternative de saisie manuelle}
+  \end{tikzpicture}}
   \end{center}
+  \textcolor{mygray}{\scriptsize\textbf{RGAA}}
+  \begin{itemize}\scriptsize
+    \item \textcolor{mygray}{Libellés explicites}
+    \item \textcolor{mygray}{Bouton $\geq$ 44px}
+    \item \textcolor{mygray}{Alternative de saisie manuelle}
+  \end{itemize}
 \end{frame}
 
 % ─────────────────────────────────────────
@@ -698,7 +746,7 @@ def get_isbn_metadata(isbn: str):
 \begin{frame}{Étape 2 --- Notre livre apparaît au catalogue}
   \etapelivre{2}{visible et trouvable}
   \begin{center}
-  \resizebox{!}{0.64\textheight}{%
+  \resizebox{!}{0.56\textheight}{%
   \begin{tikzpicture}
     % Fenêtre navigateur
     \fill[gray!20] (0,5.4) rectangle (6,6.0);
@@ -723,7 +771,7 @@ def get_isbn_metadata(isbn: str):
     \node[font=\tiny] at (2.35,4.225) {État};
     \node[font=\tiny] at (3.75,4.225) {Prix CHF};
     % Livres
-    \foreach \x/\ti/\p in {0.3/Camus/12.50, 2.3/Orwell/15.00, 4.3/St-Exupery/8.50} {
+    \foreach \x/\ti/\p in {0.3/Roth/9.50, 2.3/Orwell/15.00, 4.3/St-Exupery/8.50} {
       \fill[gray!10] (\x,2.4) rectangle ({\x+1.7},{3.9});
       \fill[mybluepale!80] (\x,2.4) rectangle ({\x+1.7},{3.3});
       \node[font=\tiny\bfseries,align=center,text width=14mm] at ({\x+0.85},2.85) {\ti};
@@ -733,12 +781,17 @@ def get_isbn_metadata(isbn: str):
     % Footer
     \fill[myblue!80] (0,0) rectangle (6,0.5);
     \node[font=\tiny,text=white] at (3,0.25) {Livraison Suisse uniquement \textbullet{} Paiement CHF};
-    % Annotation flèche sur Camus
+    % Annotation flèche sur notre livre
     \draw[myaccent,thick,-{Stealth[length=2mm]}] (1.15,1.7) -- (1.15,2.05);
     \node[font=\tiny\bfseries,text=myaccent] at (1.15,1.5) {notre livre};
-  \end{tikzpicture}}\\[4pt]
-  \scriptsize\textcolor{mygray}{RGAA : contraste $\geq$ 4.5:1 sur les prix, zones cliquables $\geq$ 44px, focus clavier cohérent}
+  \end{tikzpicture}}
   \end{center}
+  \textcolor{mygray}{\scriptsize\textbf{RGAA}}
+  \begin{itemize}\scriptsize
+    \item \textcolor{mygray}{Contraste $\geq$ 4.5:1 sur les prix}
+    \item \textcolor{mygray}{Zones cliquables $\geq$ 44px}
+    \item \textcolor{mygray}{Focus clavier cohérent}
+  \end{itemize}
 \end{frame}
 
 % ─────────────────────────────────────────
@@ -781,24 +834,26 @@ def get_isbn_metadata(isbn: str):
 % ─────────────────────────────────────────
 \begin{frame}{Démonstration en direct --- l'achat de notre livre}
   \begin{alertblock}{\small Passage à l'application réelle}
-    \small Je bascule maintenant sur \texttt{caribooks.vercel.app} pour acheter
-    \textit{L'Étranger} en sandbox PostFinance, en direct.
+    \begin{itemize}\small
+      \item Bascule sur \texttt{caribooks.vercel.app}, sur mon téléphone
+      \item Achat de \textit{Divergente T.2} en sandbox PostFinance, en direct
+    \end{itemize}
   \end{alertblock}
   \vspace{6pt}
   \begin{columns}[T]
     \column{0.38\textwidth}
     \centering
-    \includegraphics[width=\linewidth]{vue_telephone.png}\\
-    \scriptsize\textit{Vitrine mobile --- caribooks.vercel.app}
+    \includegraphics[height=0.52\textheight,keepaspectratio]{vue_telephone.png}\\
+    \scriptsize\textit{Vitrine mobile}
     \column{0.60\textwidth}
     \centering
-    \includegraphics[width=\linewidth]{SWAGGER_LOGIN_DETAIL.png}\\
-    \scriptsize\textit{Documentation Swagger générée automatiquement --- POST /auth/token}
+    \includegraphics[height=0.42\textheight,keepaspectratio]{SWAGGER_LOGIN_DETAIL.png}\\
+    \scriptsize\textit{Swagger --- POST /auth/token}
   \end{columns}
   \vspace{4pt}
-  \begin{center}
-  \scriptsize\textcolor{mygray}{Plan B --- ces captures d'écran servent de secours si la démo en direct n'est pas possible}
-  \end{center}
+  \begin{itemize}\scriptsize
+    \item[] \textcolor{mygray}{\textbf{Plan B} : captures d'écran de secours}
+  \end{itemize}
 \end{frame}
 
 % ─────────────────────────────────────────
@@ -823,9 +878,10 @@ def get_isbn_metadata(isbn: str):
     \end{block}
     \vspace{5pt}
     \begin{exampleblock}{\small Ce qui m'a fait le plus peur}
-      \small Deux clients qui achètent le \textbf{dernier} exemplaire de notre livre
-      au même instant. Sans verrou, les deux transactions liraient \og en stock \fg{}
-      et vendraient le même livre deux fois.
+      \begin{itemize}\small
+        \item Deux clients, \textbf{dernier} exemplaire, même instant
+        \item Sans verrou : double lecture \og en stock \fg{}, double vente
+      \end{itemize}
     \end{exampleblock}
     \column{0.50\textwidth}
 \begin{lstlisting}[style=pysmall,caption={}]
@@ -841,8 +897,10 @@ def _lock_stock_rows(db, ids_article):
     ).with_for_update().all()
 \end{lstlisting}
     \begin{exampleblock}{\small Pourquoi \texttt{FOR UPDATE} ?}
-      \small La seconde transaction attend la première puis relit un
-      stock à 0 --- MySQL/InnoDB garantit l'atomicité, pas le code applicatif.
+      \begin{itemize}\small
+        \item 2\textsuperscript{e} transaction attend, relit un stock à 0
+        \item Atomicité garantie par MySQL/InnoDB, pas par le code applicatif
+      \end{itemize}
     \end{exampleblock}
   \end{columns}
 \end{frame}
@@ -864,9 +922,11 @@ def _lock_stock_rows(db, ids_article):
     \end{block}
     \vspace{4pt}
     \begin{exampleblock}{\small Test d'isolation dédié}
-      \small \texttt{test\_orders\_cross\_user\_isolation} : un client ne peut ni lire
-      ni modifier les commandes d'un autre (\textbf{404}) ; un non-admin reçoit
-      \textbf{403} sur \texttt{/orders/admin/*}.
+      \begin{itemize}\small
+        \item \texttt{test\_orders\_cross\_user\_isolation}
+        \item Client $\rightarrow$ commande d'un autre : \textbf{404}
+        \item Non-admin $\rightarrow$ \texttt{/orders/admin/*} : \textbf{403}
+      \end{itemize}
     \end{exampleblock}
     \column{0.54\textwidth}
     \begin{center}
@@ -880,25 +940,23 @@ def _lock_stock_rows(db, ids_article):
 % ─────────────────────────────────────────
 \begin{frame}{Difficultés rencontrées --- ce que j'ai appris en le faisant seul}
   \begin{itemize}\small
-    \item \textbf{Changement de technologie backend} : première version en Express.js,
-      abandonnée pour FastAPI face aux exigences de robustesse et de validation
-      automatique --- coûteux en temps, mais gain net en productivité.
-    \item \textbf{Performance du scan de code-barres} : latence et taux de reconnaissance
-      insuffisants en première implémentation ; j'ai dû revoir l'algorithme de détection.
-    \item \textbf{Changement de prestataire de paiement} : Payrexx envisagé puis remplacé
-      par PostFinance, dont la sandbox ne nécessite pas de carte bancaire réelle.
-    \item \textbf{Gestion du périmètre} : la Product Owner informelle voulait régulièrement
-      ajouter des fonctionnalités (favoris, chat) ; j'ai dû tenir le MVP et reporter au backlog.
-    \item \textbf{Concilier formation et projet personnel} : développement uniquement en
-      soirée, 3 jours/semaine, en parallèle de l'alternance.
+    \item \textbf{Backend Express.js $\rightarrow$ FastAPI} --- robustesse et validation automatique
+    \item \textbf{Scan code-barres} --- latence et reconnaissance insuffisantes, algorithme revu
+    \item \textbf{Paiement Payrexx $\rightarrow$ PostFinance} --- sandbox sans CB réelle
+    \item \textbf{Gestion du périmètre} --- demandes récurrentes (favoris, chat) reportées au backlog
+    \item \textbf{Formation + projet perso} --- développement en soirée, 3 j/semaine
   \end{itemize}
   \vspace{6pt}
   \begin{alertblock}{Une question pour vous}
-    \small Face à une commanditaire qui redemande sans cesse de nouvelles fonctionnalités,
-    qu'auriez-vous fait à ma place ?
-    \pause \\[3pt]
-    \textit{Voici comment j'ai tranché : chaque demande passait par le backlog, jamais
-    par un ajout direct au sprint en cours --- le MVP restait la seule priorité contractuelle.}
+    \begin{itemize}\small
+      \item Commanditaire qui redemande sans cesse de nouvelles fonctionnalités
+      \item Qu'auriez-vous fait à ma place ?
+    \end{itemize}
+    \pause
+    \begin{itemize}\small
+      \item Ma réponse : chaque demande $\rightarrow$ backlog, jamais le sprint en cours
+      \item Le MVP restait la seule priorité contractuelle
+    \end{itemize}
   \end{alertblock}
 \end{frame}
 
@@ -960,11 +1018,10 @@ def _lock_stock_rows(db, ids_article):
     \column{0.5\textwidth}
     \begin{block}{Protection des données — RGPD / nLPD}
       \begin{itemize}\small
-        \item \textbf{Politique de confidentialité} + CGU + bannière \textbf{consentement cookies}
-        \item Bases légales, durées de conservation, sous-traitants (PostFinance CH, Google/Vercel US + CCT)
+        \item Politique de confidentialité + CGU + bannière cookies
+        \item Bases légales, durées de conservation, sous-traitants documentés
         \item \textbf{Portabilité} : \texttt{GET /users/me/export} (JSON)
-        \item \textbf{Effacement} : \texttt{DELETE /users/me} — anonymisation, commandes conservées (obligation légale)
-        \item Minimisation OAuth, HTTPS/TLS, bcrypt, JWT \texttt{exp}
+        \item \textbf{Effacement} : \texttt{DELETE /users/me} --- anonymisation, commandes conservées
       \end{itemize}
     \end{block}
     \column{0.5\textwidth}
@@ -972,9 +1029,8 @@ def _lock_stock_rows(db, ids_article):
       \begin{itemize}\small
         \item HTML sémantique (\texttt{header}/\texttt{nav}/\texttt{main}/\texttt{footer})
         \item \texttt{alt} sur les couvertures, \texttt{aria-label}/\texttt{aria-expanded}
-        \item \texttt{label} associés (\texttt{htmlFor}) + \texttt{aria-describedby} sur erreurs
-        \item Focus clavier visible, \texttt{prefers-reduced-motion}
-        \item Contrastes \textbf{WCAG AA}
+        \item \texttt{label} associés + \texttt{aria-describedby} sur erreurs
+        \item \texttt{prefers-reduced-motion}
       \end{itemize}
     \end{block}
     \vspace{4pt}
@@ -1005,7 +1061,11 @@ def _lock_stock_rows(db, ids_article):
     \badgegreen{99 / 99 tests passants (68 pytest + 31 Vitest)}
     \vspace{5pt}
     \begin{alertblock}{\small Axes de renforcement (Phase 2)}
-      \texttt{image\_service} (36\,\%), \texttt{order\_admin\_router} (40\,\%) et \texttt{user\_router} (51\,\%) identifiés comme prioritaires.
+      \begin{itemize}\small
+        \item \texttt{image\_service} (36\,\%)
+        \item \texttt{order\_admin\_router} (40\,\%)
+        \item \texttt{user\_router} (51\,\%)
+      \end{itemize}
     \end{alertblock}
     \column{0.50\textwidth}
     \begin{center}
@@ -1045,6 +1105,7 @@ def _lock_stock_rows(db, ids_article):
     \begin{block}{Pipeline CI/CD --- GitHub Actions}
       \begin{enumerate}\small
         \item Push sur branche \texttt{main}
+        \item Lint \textbf{Ruff + ESLint} (0 erreur requis)
         \item Exécution \textbf{pytest + Vitest} (99/99 requis)
         \item \textit{Rolling deploy} SSH séquentiel vers \textbf{VM1} puis \textbf{VM2}
         \item Migrations SQL appliquées automatiquement
@@ -1083,27 +1144,23 @@ def _lock_stock_rows(db, ids_article):
 \begin{frame}{Couverture des 3 blocs de compétences CDA --- traçabilité}
   \begin{center}
   \small
-  \renewcommand{\arraystretch}{1.5}
-  \begin{tabular}{@{}p{2.6cm}p{5.4cm}p{3.6cm}@{}}
+  \renewcommand{\arraystretch}{1.6}
+  \begin{tabular}{@{}p{4cm}p{6cm}@{}}
     \toprule
-    \textbf{Bloc} & \textbf{Compétences clés} & \textbf{Déjà montré à~:} \\
+    \textbf{Bloc} & \textbf{Déjà montré à~:} \\
     \midrule
-    \textbf{1} --- Sécuriser
-      & JWT + bcrypt + Google OAuth, ORM paramétré, Pydantic, RGPD/nLPD
-      & Authentification, Sécurité OWASP, RGPD \& accessibilité \\
-    \textbf{2} --- Concevoir \& développer
-      & MCD/MLD (13 tables), architecture en couches, API REST, intégrations tierces
-      & Modèle de données, Architecture, étapes Scan / Paiement \\
-    \textbf{3} --- Préparer le déploiement
-      & CI/CD GitHub Actions, rolling deploy, 99/99 tests
-      & Tests et couverture, Déploiement \\
+    \textbf{1} --- Sécuriser & Authentification, Sécurité OWASP, RGPD \& accessibilité \\
+    \textbf{2} --- Concevoir \& développer & Modèle de données, Architecture, étapes Scan / Paiement \\
+    \textbf{3} --- Préparer le déploiement & Tests et couverture, Déploiement \\
     \bottomrule
   \end{tabular}
   \end{center}
-  \vspace{6pt}
+  \vspace{8pt}
   \begin{exampleblock}{\small Pas de redite}
-    \small Chaque ligne renvoie à ce que vous avez déjà vu en action --- le but ici
-    est juste de rendre explicite le lien avec le référentiel, pas de tout réexpliquer.
+    \begin{itemize}\small
+      \item Chaque ligne renvoie à ce qui a déjà été montré en action
+      \item Objectif : expliciter le lien avec le référentiel
+    \end{itemize}
   \end{exampleblock}
 \end{frame}
 
@@ -1120,10 +1177,10 @@ def _lock_stock_rows(db, ids_article):
     \begin{exampleblock}{Objectifs MVP atteints}
       \begin{itemize}\small
         \item Ajout livre par scan ISBN en \textbf{$<$ 2 min}
-        \item Paiement \textbf{CHF} via PostFinance (TWINT + carte)
-        \item Livraison restreinte à la \textbf{Suisse} (envoi postal ou Click \& Collect)
-        \item Back-office bénévole opérationnel, incl. gestion admin des statuts de commande
-        \item \textbf{99/99 tests}, 79\,\% couverture backend
+        \item Paiement \textbf{CHF} via PostFinance
+        \item Livraison restreinte à la \textbf{Suisse}
+        \item Back-office bénévole opérationnel
+        \item Suite de tests exhaustive --- \textit{cf. partie Tests}
         \item Déployé sur \texttt{caribooks.vercel.app}
       \end{itemize}
     \end{exampleblock}
@@ -1144,9 +1201,10 @@ def _lock_stock_rows(db, ids_article):
     \end{block}
     \vspace{4pt}
     \begin{exampleblock}{\small Et notre livre, dans tout ça ?}
-      \small \textit{L'Étranger} a fait le tour complet du système --- scanné, catalogué,
-      acheté, payé, livré --- exactement le parcours que suivra chacun des livres réels
-      déposés chez Caritas.
+      \begin{itemize}\small
+        \item \textit{Divergente T.2} : scanné, catalogué, acheté, payé, livré
+        \item Le même parcours pour chaque livre réel déposé chez Caritas
+      \end{itemize}
     \end{exampleblock}
   \end{columns}
 \end{frame}

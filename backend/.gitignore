@@ -1,0 +1,6 @@
+./venv
+test/fonctionnal/__pycache__/
+test/integration/__pycache__/
+test/unit/__pycache__/
+.pytest_cache/
+static/images/books/

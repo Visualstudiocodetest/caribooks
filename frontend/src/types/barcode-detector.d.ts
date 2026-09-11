@@ -1,0 +1,40 @@
+// Minimal typings for the Barcode Detection API.
+
+
+declare global {
+  type BarcodeFormat =
+    | 'aztec'
+    | 'code_128'
+    | 'code_39'
+    | 'code_93'
+    | 'codabar'
+    | 'data_matrix'
+    | 'ean_13'
+    | 'ean_8'
+    | 'itf'
+    | 'pdf417'
+    | 'qr_code'
+    | 'upc_a'
+    | 'upc_e'
+
+  interface DetectedBarcode {
+    rawValue: string
+    format?: BarcodeFormat
+  }
+
+  interface BarcodeDetectorOptions {
+    formats?: BarcodeFormat[]
+  }
+
+  class BarcodeDetector {
+    constructor(options?: BarcodeDetectorOptions)
+    static getSupportedFormats?(): Promise<BarcodeFormat[]>
+    detect(image: ImageBitmapSource): Promise<DetectedBarcode[]>
+  }
+
+  interface Window {
+    BarcodeDetector?: typeof BarcodeDetector
+  }
+}
+
+export {}

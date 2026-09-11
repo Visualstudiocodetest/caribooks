@@ -763,6 +763,14 @@ Le backend (API FastAPI) et la base de données sont hébergés sur l'offre \tex
 
 \subsection{Conception UI/UX}
 
+Une première version des maquettes d'écran a été réalisée avec \textbf{Figma Make}
+(\url{https://www.figma.com/make/zxJBQpMufiATw69c9aVSTk/E-commerce-website-for-books}), afin de
+fixer l'enchaînement des écrans principaux (catalogue, fiche livre, panier, paiement) avant le
+développement. Cette première version a ensuite évolué directement dans le code au fil des
+sprints, au plus près des retours de démonstration de la commanditaire ; la maquette Figma reste
+la référence de la structure initiale de navigation, illustrée ci-dessous par la vue mobile de
+l'écran de scan ISBN telle qu'implémentée.
+
 \includegraphics[width=\textwidth]{vue_telephone.png}
 
 % --- CHAPITRE 3 ---
@@ -928,6 +936,67 @@ Paiement & Webhook échec & Callback PostFinance fail & Statut commande = ÉCHEC
 \label{tab:tests}
 \end{longtable}
 
+\section{Jeu d'essai — parcours représentatifs}
+
+Cette section détaille, pour les deux fonctionnalités les plus représentatives du projet, un jeu
+d'essai complet (données en entrée, résultat attendu, résultat obtenu) rejoué via le client de
+test FastAPI (\texttt{TestClient}) contre une base MySQL locale, et l'analyse des écarts
+éventuels entre l'attendu et l'obtenu.
+
+\subsection{Parcours \og commande et paiement \fg{} (F02, F07, F08, SF-05, SF-06)}
+
+\noindent\textbf{Contexte :} un article \og Madame Bovary \fg{} à 12,50 CHF, 3 exemplaires en
+stock, livraison postale (frais fixe 9 CHF).
+
+\begin{longtable}{@{}p{3.4cm}p{5.5cm}p{2.7cm}p{2.9cm}@{}}
+\toprule
+\textbf{Étape} & \textbf{Donnée en entrée} & \textbf{Attendu} & \textbf{Obtenu} \\
+\midrule
+\endhead
+1. Création commande & \texttt{POST /orders/commandes} & Commande \texttt{CREATED}, frais de port 9 CHF & Conforme : \texttt{statut=CREATED}, \texttt{frais\_port\_chf=9.0} \\
+2. Ajout au panier & \texttt{POST /orders/lignes} (article, quantité 1) & Stock réservé (+1) & Conforme : \texttt{quantite\_reservee} passe de 0 à 1 (disponible inchangé à 3) \\
+3. Initiation paiement & \texttt{POST /orders/paiements} (référence externe) & Paiement \texttt{PENDING}, montant = prix + port & Conforme : \texttt{statut=PENDING}, \texttt{montant\_chf=21.5} (12.5 + 9.0) \\
+4. Callback paiement réussi & \texttt{POST /orders/paiements/webhook/local} (\texttt{status=AUTHORIZED}) & Webhook accepté, commande finalisée & Conforme : \texttt{\{"ok": true\}} \\
+5. Statut final & \texttt{GET /orders/commandes/\{id\}} & Commande \texttt{PAID}, montant total = 21,50 CHF & Conforme : \texttt{statut=PAID}, \texttt{montant\_total\_chf=21.5} \\
+6. Stock final & \texttt{GET /stock/} & Réservation levée sans double décompte & Conforme : \texttt{quantite\_disponible=3}, \texttt{quantite\_reservee=0} \\
+\bottomrule
+\caption{Jeu d'essai — parcours commande et paiement}
+\end{longtable}
+
+\noindent\textbf{Analyse des écarts :} aucun écart entre l'attendu et l'obtenu sur ce parcours. Le
+montant du paiement additionne correctement le prix de l'article et les frais de port, et la
+réservation de stock est convertie en vente sans décrémenter deux fois la quantité disponible —
+comportement rejoué deux fois (webhook répété) lors de la campagne de tests automatisés pour
+vérifier l'idempotence (\texttt{test\_local\_webhook\_finalizes\_and\_is\_idempotent}). Ce jeu
+d'essai utilise le webhook local de développement plutôt qu'un callback PostFinance réel : la
+logique de finalisation appelée (\texttt{\_finalize\_commande}) est strictement la même que celle
+déclenchée par le webhook PostFinance de production, seule la vérification de signature
+PostFinance est court-circuitée hors production.
+
+\subsection{Parcours \og scan ISBN \fg{} (F02, SF-02)}
+
+\begin{longtable}{@{}p{3.4cm}p{4.2cm}p{3.6cm}p{3.3cm}@{}}
+\toprule
+\textbf{Étape} & \textbf{Donnée en entrée} & \textbf{Attendu} & \textbf{Obtenu} \\
+\midrule
+\endhead
+1. ISBN reconnu & \texttt{GET /books/isbn-metadata/9782070413119} & 200, métadonnées OpenLibrary préremplies & Conforme : 200, titre \og Madame Bovary \fg{}, auteur, éditeur et couverture retournés \\
+2. ISBN inconnu & \texttt{GET /books/isbn-metadata/9780000000001} & 404, bascule en saisie manuelle & Conforme : 404 \texttt{\{"detail": "ISBN introuvable"\}} \\
+\bottomrule
+\caption{Jeu d'essai — parcours scan ISBN}
+\end{longtable}
+
+\noindent\textbf{Analyse des écarts :} les deux cas testés sont conformes à l'attendu. La
+préparation de ce jeu d'essai a toutefois révélé une limite de la source externe unique
+(OpenLibrary) plutôt que du code de CARIBOOKS : certains ISBN habituellement utilisés comme
+\og factices \fg{} dans les jeux de test (par exemple une suite de zéros ou de neuf) correspondent
+en réalité à des ouvrages déjà catalogués dans OpenLibrary (des éditeurs les utilisent comme ISBN
+de substitution), qui renvoient alors un livre existant mais hors sujet au lieu d'un 404. Un
+utilisateur scannant un ouvrage portant ce type d'ISBN verrait donc des métadonnées erronées
+proposées au préremplissage plutôt que la bascule en saisie manuelle attendue par la SF-02 — un
+axe de vigilance identifié pour une itération ultérieure (par exemple une validation du format
+ISBN ou un contrôle de cohérence titre/couverture avant préremplissage).
+
 \section{Résultats obtenus}
 
 La suite de tests automatisés a été exécutée avec \textbf{pytest} et l'extension \texttt{pytest-cov} côté backend, et avec \textbf{Vitest} côté frontend. L'intégralité des tests passe : \textbf{68 tests backend sur 68} (unitaires, d'intégration via \texttt{TestClient}, et un test fonctionnel de bout en bout) et \textbf{31 tests frontend sur 31}, soit \textbf{99 tests au total, 100\,\% de réussite}.
@@ -987,6 +1056,7 @@ Aucune campagne formelle de tests de performance ou de charge (\textit{benchmark
     \item \textbf{Interface mobile :} certains écrans de l'interface mobile restent à affiner pour une expérience pleinement responsive.
     \item \textbf{Suivi des commandes côté administrateur :} la fonctionnalité de base (avancement, annulation, remboursement, surcharge de statut) est désormais implémentée et testée ; il reste à enrichir l'ergonomie (filtres avancés, export) et le traitement d'erreurs plus fin (\texttt{order\_admin\_router} à 40\,\% de couverture).
     \item \textbf{Couverture de tests :} le service de traitement d'images (36\,\%) et le routeur utilisateur (51\,\%) restent les modules à renforcer en priorité.
+    \item \textbf{Sauvegarde et restauration de la base de données :} seule la \textbf{structure} du schéma est reproductible de façon fiable, via les scripts SQL versionnés du dossier \texttt{backend/migrations/} appliqués automatiquement au déploiement (annexe~\ref{lst:ddl}). Il n'existe en revanche aucune procédure de sauvegarde/restauration automatisée des \textbf{données} de production (ex. \texttt{mysqldump} planifié) : c'est une limite assumée de ce MVP, identifiée comme axe prioritaire avant une montée en charge réelle du service.
 \end{itemize}
 
 % ==========================================
@@ -1033,6 +1103,34 @@ L'accès aux ressources protégées de l'API CARIBOOKS repose exclusivement sur 
 \section{Gestion des droits et des accès}
 
 Chaque endpoint FastAPI déclare explicitement ses dépendances d'authentification et d'autorisation. Les routes de lecture publique (catalogue, fiche livre) sont accessibles sans token. Les routes d'écriture (création d'annonce, passage de commande) requièrent un token valide. Les routes d'administration requièrent un rôle \texttt{admin} vérifié dans le payload JWT.
+
+\section{Vérification de la qualité du code}
+
+En complément des tests automatisés, deux outils d'analyse statique ont été intégrés au dépôt et
+à la CI (\texttt{.github/workflows/test.yml}) afin de vérifier la qualité du code à chaque
+\textit{push} et \textit{pull request} :
+
+\begin{itemize}
+    \item \textbf{Ruff} (backend Python) : configuré dans \texttt{backend/pyproject.toml}
+    (règles \texttt{E}/\texttt{F}/\texttt{I}/\texttt{B} — erreurs de style, imports inutilisés,
+    tri des imports, bonnes pratiques \textit{bugbear}), avec une exception documentée pour
+    \texttt{B008} (le motif idiomatique \texttt{Depends(...)} de FastAPI). L'exécution initiale a
+    relevé 85 signalements ; après correction (imports mal placés, gestion des exceptions sans
+    \texttt{raise ... from}, variable ambiguë \texttt{l} renommée, ligne longue reformatée), le
+    dépôt est désormais \textbf{intégralement conforme} (\texttt{ruff check .} : \og All checks
+    passed \fg{}).
+    \item \textbf{ESLint} (frontend Next.js) : configuré dans \texttt{frontend/eslint.config.mjs}
+    avec le \textit{preset} \texttt{next/core-web-vitals} et \texttt{next/typescript}.
+    L'exécution initiale a relevé 3 erreurs et 9 avertissements sur le code applicatif (hors
+    build \texttt{.next/} exclu de l'analyse) ; après correction (entités HTML non échappées,
+    variables et imports inutilisés, directives \texttt{eslint-disable} obsolètes), il ne reste
+    qu'un avertissement volontairement non corrigé (dépendance manquante d'un \texttt{useEffect}
+    dont l'ajout automatique risquerait de modifier le comportement du formulaire concerné).
+\end{itemize}
+
+\noindent Les deux outils sont exécutés en CI (\texttt{ruff check .} et \texttt{npm run lint}) en
+plus des suites de tests, avant même le déploiement continu, ce qui empêche la régression de ces
+règles de qualité sur les futures contributions.
 
 \section{Veille technologique et sécurité}
 
@@ -1190,6 +1288,12 @@ Le code source complet du projet est disponible sur GitHub :
 \noindent L'application est déployée et accessible en ligne à l'adresse suivante :
 \begin{center}
     \url{https://caribooks.vercel.app}
+\end{center}
+
+\noindent La première version des maquettes d'écran (Figma Make) est consultable à l'adresse
+suivante :
+\begin{center}
+    \url{https://www.figma.com/make/zxJBQpMufiATw69c9aVSTk/E-commerce-website-for-books}
 \end{center}
 
 \noindent L'hébergement repose sur une architecture hybride : le \textbf{frontend Next.js} est déployé sur \textbf{Vercel}, tandis que le \textbf{backend FastAPI} et la \textbf{base de données MySQL} sont hébergés sur \textbf{Oracle Cloud} (machine virtuelle et instance MySQL).
