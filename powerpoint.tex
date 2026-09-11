@@ -17,9 +17,6 @@
 \usepackage{colortbl}
 \usepackage{hyperref}
 
-% ─────────────────────────────────────────
-%  COULEURS
-% ─────────────────────────────────────────
 \definecolor{myblue}{RGB}{27,63,139}
 \definecolor{mybluelight}{RGB}{74,134,200}
 \definecolor{mybluepale}{RGB}{232,240,251}
@@ -28,9 +25,6 @@
 \definecolor{codebg}{RGB}{245,247,250}
 \definecolor{mygray}{RGB}{100,100,100}
 
-% ─────────────────────────────────────────
-%  THÈME BEAMER
-% ─────────────────────────────────────────
 \usetheme{Boadilla}
 \usecolortheme[named=myblue]{structure}
 
@@ -61,7 +55,6 @@
 \setbeamerfont{block title}{series=\bfseries,size=\small}
 \setbeamerfont{block body}{size=\small}
 
-% Section intermédiaire (cadre bleu)
 \AtBeginSection[]{
   \begin{frame}[plain]
     \begin{tikzpicture}[remember picture,overlay]
@@ -78,9 +71,6 @@
   \end{frame}
 }
 
-% ─────────────────────────────────────────
-%  LISTINGS
-% ─────────────────────────────────────────
 \lstdefinestyle{pysmall}{
     language=Python,
     basicstyle=\ttfamily\tiny,
@@ -114,9 +104,6 @@
     xleftmargin=6pt,
 }
 
-% ─────────────────────────────────────────
-%  TIKZ STYLES RÉUTILISABLES
-% ─────────────────────────────────────────
 \tikzset{
   syst/.style={rectangle,draw=myblue,thick,rounded corners=4pt,fill=mybluepale,
     align=center,minimum height=10mm,minimum width=28mm,font=\bfseries\scriptsize},
@@ -156,7 +143,6 @@
   seqret/.style={-{Stealth[length=1.6mm]},dashed,font=\tiny,color=mygray},
 }
 
-% Acteur UML
 \newcommand{\umlactor}[3]{
   \begin{scope}[shift={(#1,#2)}]
     \draw[thick,myblue] (0,0.55) circle (0.14);
@@ -168,7 +154,6 @@
   \end{scope}
 }
 
-% Commandes utilitaires
 \newcommand{\tech}[1]{\textcolor{myblue}{\textbf{#1}}}
 \newcommand{\yes}{\textcolor{mysuccess}{\textbf{\checkmark}}}
 \newcommand{\nomark}{\textcolor{red}{\textbf{$\times$}}}
@@ -176,7 +161,6 @@
 \newcommand{\badgegreen}[1]{\tikz[baseline=-1mm]{\node[taggreen]{#1};}}
 \newcommand{\badgeorange}[1]{\tikz[baseline=-1mm]{\node[tagorange]{#1};}}
 
-% Fil rouge : bandeau de progression "un livre, 5 étapes"
 \newcommand{\etapelivre}[2]{%
   \vspace{-8pt}
   \begin{flushright}
@@ -186,9 +170,6 @@
   \vspace{-2pt}
 }
 
-% ─────────────────────────────────────────
-%  MÉTADONNÉES
-% ─────────────────────────────────────────
 \title[CARIBOOKS]{\textbf{CARIBOOKS}}
 \subtitle{Plateforme e-commerce solidaire de livres d'occasion}
 \author[Alexandre REY]{Alexandre REY}
@@ -196,13 +177,8 @@
 ESTIAM --- Promotion E3 DAD --- Encadrant : Mhand Boufala}
 \date{Juin 2026}
 
-% ══════════════════════════════════════════════════════════════════════
 \begin{document}
-% ══════════════════════════════════════════════════════════════════════
 
-% ─────────────────────────────────────────
-%  SLIDE 1 — TITRE
-% ─────────────────────────────────────────
 \begin{frame}[plain]
   \begin{tikzpicture}[remember picture,overlay]
     \fill[myblue] (current page.north west) rectangle (current page.south east);
@@ -224,9 +200,6 @@ ESTIAM --- Promotion E3 DAD --- Encadrant : Mhand Boufala}
   \end{center}
 \end{frame}
 
-% ─────────────────────────────────────────
-%  SLIDE 2 — PLAN + FIL ROUGE
-% ─────────────────────────────────────────
 \begin{frame}{Plan de la présentation}
   \begin{columns}[T]
     \column{0.46\textwidth}
@@ -236,9 +209,6 @@ ESTIAM --- Promotion E3 DAD --- Encadrant : Mhand Boufala}
   \end{columns}
 \end{frame}
 
-% ─────────────────────────────────────────
-%  SLIDE 2b — MON PARCOURS
-% ─────────────────────────────────────────
 \begin{frame}{Mon parcours --- avant et pendant ce projet}
   \begin{columns}[T]
     \column{0.52\textwidth}
@@ -277,13 +247,8 @@ ESTIAM --- Promotion E3 DAD --- Encadrant : Mhand Boufala}
   \end{columns}
 \end{frame}
 
-% ══════════════════════════════════════════════════════════════════════
 \section{Contexte et problématique}
-% ══════════════════════════════════════════════════════════════════════
 
-% ─────────────────────────────────────────
-%  SLIDE 3 — CONTEXTE
-% ─────────────────────────────────────────
 \begin{frame}{Contexte du projet — Association Caritas}
   \begin{block}{L'association Caritas}
     \begin{itemize}
@@ -336,13 +301,8 @@ ESTIAM --- Promotion E3 DAD --- Encadrant : Mhand Boufala}
   \end{columns}
 \end{frame}
 
-% ══════════════════════════════════════════════════════════════════════
 \section{État de l\textquotesingle{}art et choix technique}
-% ══════════════════════════════════════════════════════════════════════
 
-% ─────────────────────────────────────────
-%  SLIDE 5 — COMPARATIF
-% ─────────────────────────────────────────
 \begin{frame}{Solutions existantes -- Pourquoi développer sur mesure ?}
   \begin{center}
   \small
@@ -386,9 +346,6 @@ ESTIAM --- Promotion E3 DAD --- Encadrant : Mhand Boufala}
   \end{columns}
 \end{frame}
 
-% ─────────────────────────────────────────
-%  SLIDE 6 — STACK TECHNIQUE + ARCHITECTURE
-% ─────────────────────────────────────────
 \begin{frame}{Stack technique --- Les choix, et pourquoi je les ai faits}
   \begin{block}{Justifications des choix}
     \begin{itemize}\small
@@ -410,13 +367,8 @@ ESTIAM --- Promotion E3 DAD --- Encadrant : Mhand Boufala}
   \end{center}
 \end{frame}
 
-% ══════════════════════════════════════════════════════════════════════
 \section{Gestion de projet}
-% ══════════════════════════════════════════════════════════════════════
 
-% ─────────────────────────────────────────
-%  SLIDE 7 — SCRUM + ENVIRONNEMENT
-% ─────────────────────────────────────────
 \begin{frame}{Gestion de projet --- Scrum simplifié \& environnement}
   \begin{columns}[T]
     \column{0.42\textwidth}
@@ -469,22 +421,14 @@ ESTIAM --- Promotion E3 DAD --- Encadrant : Mhand Boufala}
   \end{columns}
 \end{frame}
 
-% ══════════════════════════════════════════════════════════════════════
 \section{Analyse et conception}
-% ══════════════════════════════════════════════════════════════════════
 
-% ─────────────────────────────────────────
-%  SLIDE 8 — CAS D'UTILISATION
-% ─────────────────────────────────────────
 \begin{frame}{Diagramme de cas d'utilisation --- Vue globale}
   \begin{center}
   \includegraphics[width=\linewidth,height=0.82\textheight,keepaspectratio]{diagrams/use_case_global.pdf}
   \end{center}
 \end{frame}
 
-% ─────────────────────────────────────────
-%  SLIDE 9 — MODÈLE DE DONNÉES
-% ─────────────────────────────────────────
 \begin{frame}{Modèle de données --- Architecture en héritage de table}
   \begin{columns}[T]
     \column{0.48\textwidth}
@@ -521,13 +465,8 @@ ESTIAM --- Promotion E3 DAD --- Encadrant : Mhand Boufala}
   \end{center}
 \end{frame}
 
-% ══════════════════════════════════════════════════════════════════════
 \section{Le parcours d'un livre}
-% ══════════════════════════════════════════════════════════════════════
 
-% ─────────────────────────────────────────
-%  SLIDE 10 — PIVOT : LE LIVRE TÉMOIN
-% ─────────────────────────────────────────
 \begin{frame}{Notre fil rouge --- un exemplaire, une trajectoire complète}
   \begin{columns}[T]
     \column{0.5\textwidth}
@@ -564,9 +503,6 @@ ESTIAM --- Promotion E3 DAD --- Encadrant : Mhand Boufala}
   \end{columns}
 \end{frame}
 
-% ─────────────────────────────────────────
-%  SLIDE 11 — AUTHENTIFICATION (PRÉREQUIS)
-% ─────────────────────────────────────────
 \begin{frame}{Avant toute chose --- le bénévole doit se connecter}
   \begin{columns}[T]
     \column{0.5\textwidth}
@@ -613,11 +549,9 @@ ESTIAM --- Promotion E3 DAD --- Encadrant : Mhand Boufala}
   \begin{center}
   \resizebox{!}{0.56\textheight}{%
   \begin{tikzpicture}
-    % Téléphone
     \fill[gray!30] (0.8,0) rectangle (4.4,7.5);
     \fill[gray!30,rounded corners=6pt] (0.8,0) rectangle (4.4,7.5);
     \fill[white] (1.0,0.5) rectangle (4.2,7.0);
-    % Camera area / scanner
     \fill[black!85] (1.0,5.2) rectangle (4.2,7.0);
     \draw[myaccent,line width=1.2pt]
       (1.4,5.5) -- (1.4,5.2) -- (1.7,5.2);
@@ -629,17 +563,14 @@ ESTIAM --- Promotion E3 DAD --- Encadrant : Mhand Boufala}
       (3.8,6.7) -- (3.8,7.0) -- (3.5,7.0);
     \draw[myaccent!80,line width=0.8pt] (1.1,6.1) -- (4.1,6.1);
     \node[font=\tiny,text=white] at (2.6,6.4) {Scan ISBN};
-    % Formulaire en dessous
     \fill[mybluepale] (1.1,4.6) rectangle (4.1,5.1);
     \node[font=\tiny] at (2.6,4.85) {Titre : \textit{Divergente T.2 (prérempli)}};
     \fill[mybluepale] (1.1,4.0) rectangle (4.1,4.5);
     \node[font=\tiny] at (2.6,4.25) {Auteur : \textit{Veronica Roth (prérempli)}};
     \fill[gray!15] (1.1,3.4) rectangle (4.1,3.9);
     \node[font=\tiny] at (2.6,3.65) {État : Bon état \quad Prix : 9.50 CHF};
-    % Bouton publier
     \fill[mysuccess] (1.3,2.7) rectangle (3.9,3.2);
     \node[font=\tiny\bfseries,text=white] at (2.6,2.95) {Publier l'annonce};
-    % Home bar
     \fill[gray!50,rounded corners=2pt] (2.1,0.2) rectangle (3.1,0.35);
   \end{tikzpicture}}
   \end{center}
@@ -682,15 +613,11 @@ def get_isbn_metadata(isbn: str):
   \end{center}
 \end{frame}
 
-% ─────────────────────────────────────────
-%  SLIDE 13 — ÉTAPE 2 : CATALOGUE
-% ─────────────────────────────────────────
 \begin{frame}{Étape 2 --- Notre livre apparaît au catalogue}
   \etapelivre{2}{visible et trouvable}
   \begin{center}
   \resizebox{!}{0.56\textheight}{%
   \begin{tikzpicture}
-    % Fenêtre navigateur
     \fill[gray!20] (0,5.4) rectangle (6,6.0);
     \fill[white!90!gray] (0.1,5.45) circle (0.08);
     \fill[white!90!gray] (0.3,5.45) circle (0.08);
@@ -698,21 +625,17 @@ def get_isbn_metadata(isbn: str):
     \fill[white] (0.8,5.35) rectangle (5.2,5.6);
     \node[font=\tiny,text=mygray] at (3,5.475) {caribooks.vercel.app/catalog};
     \draw[myblue,thick] (0,0) rectangle (6,5.4);
-    % Header
     \fill[myblue] (0,4.9) rectangle (6,5.4);
     \node[font=\tiny\bfseries,text=white] at (1,5.15) {CARIBOOKS};
     \node[font=\tiny,text=white] at (3,5.15) {Catalogue \quad Connexion};
-    % Search bar
     \fill[gray!15] (0.3,4.5) rectangle (5.7,4.8);
     \node[font=\tiny,text=mygray] at (3,4.65) {Rechercher un livre...};
-    % Filtres
     \fill[mybluepale] (0.3,4.1) rectangle (1.6,4.35);
     \fill[mybluepale] (1.7,4.1) rectangle (3.0,4.35);
     \fill[mybluepale] (3.1,4.1) rectangle (4.4,4.35);
     \node[font=\tiny] at (0.95,4.225) {Catégorie};
     \node[font=\tiny] at (2.35,4.225) {État};
     \node[font=\tiny] at (3.75,4.225) {Prix CHF};
-    % Livres
     \foreach \x/\ti/\p in {0.3/Roth/9.50, 2.3/Orwell/15.00, 4.3/St-Exupery/8.50} {
       \fill[gray!10] (\x,2.4) rectangle ({\x+1.7},{3.9});
       \fill[mybluepale!80] (\x,2.4) rectangle ({\x+1.7},{3.3});
@@ -720,10 +643,8 @@ def get_isbn_metadata(isbn: str):
       \fill[mysuccess] (\x,2.1) rectangle ({\x+1.7},{2.4});
       \node[font=\tiny,text=white] at ({\x+0.85},2.25) {\p\,CHF};
     }
-    % Footer
     \fill[myblue!80] (0,0) rectangle (6,0.5);
     \node[font=\tiny,text=white] at (3,0.25) {Livraison Suisse uniquement \textbullet{} Paiement CHF};
-    % Annotation flèche sur notre livre
     \draw[myaccent,thick,-{Stealth[length=2mm]}] (1.15,1.7) -- (1.15,2.05);
     \node[font=\tiny\bfseries,text=myaccent] at (1.15,1.5) {notre livre};
   \end{tikzpicture}}
@@ -736,9 +657,6 @@ def get_isbn_metadata(isbn: str):
   \end{itemize}
 \end{frame}
 
-% ─────────────────────────────────────────
-%  SLIDE 14 — ÉTAPE 3 : PAIEMENT (TEXTE)
-% ─────────────────────────────────────────
 \begin{frame}{Étape 3 --- Un client l'achète : le tunnel CHF PostFinance}
   \etapelivre{3}{achat et paiement en CHF}
   \begin{columns}[T]
@@ -771,9 +689,6 @@ def get_isbn_metadata(isbn: str):
   \end{center}
 \end{frame}
 
-% ─────────────────────────────────────────
-%  SLIDE 15 — DÉMONSTRATION EN DIRECT
-% ─────────────────────────────────────────
 \begin{frame}{Démonstration en direct --- l'achat de notre livre}
   
   \vspace{6pt}
@@ -790,9 +705,6 @@ def get_isbn_metadata(isbn: str):
   \vspace{4pt}
 \end{frame}
 
-% ─────────────────────────────────────────
-%  SLIDE 16 — ÉTAPE 4 : LIVRAISON ET STOCK
-% ─────────────────────────────────────────
 \begin{frame}[fragile]{Étape 4 --- Réserver le stock et choisir la livraison}
   \etapelivre{4}{stock et livraison}
   \begin{columns}[T]
@@ -839,9 +751,6 @@ def _lock_stock_rows(db, ids_article):
   \end{columns}
 \end{frame}
 
-% ─────────────────────────────────────────
-%  SLIDE 17 — ÉTAPE 5 : BACK-OFFICE ADMIN
-% ─────────────────────────────────────────
 \begin{frame}{Étape 5 --- L'association clôture la commande}
   \etapelivre{5}{suivi et clôture par l'admin}
   \begin{columns}[T]
@@ -869,9 +778,6 @@ def _lock_stock_rows(db, ids_article):
   \end{columns}
 \end{frame}
 
-% ─────────────────────────────────────────
-%  SLIDE 18 — DIFFICULTÉS RENCONTRÉES
-% ─────────────────────────────────────────
 \begin{frame}{Difficultés rencontrées --- ce que j'ai appris en le faisant seul}
   \begin{itemize}\small
     \item \textbf{Backend Express.js $\rightarrow$ FastAPI} --- robustesse et validation automatique
@@ -891,13 +797,8 @@ def _lock_stock_rows(db, ids_article):
   \end{alertblock}
 \end{frame}
 
-% ══════════════════════════════════════════════════════════════════════
 \section{Cybersécurité et qualité}
-% ══════════════════════════════════════════════════════════════════════
 
-% ─────────────────────────────────────────
-%  SLIDE 15 — SÉCURITÉ
-% ─────────────────────────────────────────
 \begin{frame}{Cybersécurité --- Mesures implémentées (OWASP Top 10)}
   \begin{center}
   \small
@@ -944,9 +845,6 @@ def _lock_stock_rows(db, ids_article):
   \end{columns}
 \end{frame}
 
-% ─────────────────────────────────────────
-%  SLIDE 15b — RGPD / nLPD & ACCESSIBILITÉ
-% ─────────────────────────────────────────
 \begin{frame}{Données personnelles (RGPD / nLPD) \& Accessibilité}
   \begin{columns}[T]
     \column{0.5\textwidth}
@@ -972,13 +870,8 @@ def _lock_stock_rows(db, ids_article):
   \end{columns}
 \end{frame}
 
-% ══════════════════════════════════════════════════════════════════════
 \section{Tests et déploiement}
-% ══════════════════════════════════════════════════════════════════════
 
-% ─────────────────────────────────────────
-%  SLIDE 16 — TESTS
-% ─────────────────────────────────────────
 \begin{frame}{Tests et couverture --- 99/99, 79\,\%}
   \begin{columns}[T]
     \column{0.48\textwidth}
@@ -1030,9 +923,6 @@ def _lock_stock_rows(db, ids_article):
   \end{columns}
 \end{frame}
 
-% ─────────────────────────────────────────
-%  SLIDE 17 — DÉPLOIEMENT
-% ─────────────────────────────────────────
 \begin{frame}{Déploiement --- Infrastructure cloud hybride + CI/CD}
   \begin{columns}[T]
     \column{0.48\textwidth}
@@ -1070,9 +960,6 @@ def _lock_stock_rows(db, ids_article):
 
 \section{Conclusion \& perspectives}
 
-% ─────────────────────────────────────────
-%  SLIDE 19 — CONCLUSION
-% ─────────────────────────────────────────
 \begin{frame}{Conclusion --- Bilan et perspectives}
   \begin{columns}[T]
     \column{0.48\textwidth}
@@ -1111,9 +998,6 @@ def _lock_stock_rows(db, ids_article):
   \end{columns}
 \end{frame}
 
-% ─────────────────────────────────────────
-%  SLIDE 20 — QUESTIONS
-% ─────────────────────────────────────────
 \begin{frame}[plain]
   \begin{tikzpicture}[remember picture,overlay]
     \fill[myblue] (current page.north west) rectangle (current page.south east);
