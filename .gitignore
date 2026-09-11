@@ -16,3 +16,5 @@ frontend/.next/
 frontend/.pytest_cache/
 
 docs/
+
+questions_jury.md
