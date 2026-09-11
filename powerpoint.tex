@@ -310,55 +310,29 @@ ESTIAM --- Promotion E3 DAD --- Encadrant : Mhand Boufala}
   \end{exampleblock}
 \end{frame}
 
-\begin{frame}{Contexte du projet — Diagramme de contexte}
-  \begin{center}
-  \vspace{-6pt}
-  \includegraphics[width=\linewidth,height=0.82\textheight,keepaspectratio]{diagrams/contexte.pdf}
-  \end{center}
-\end{frame}
-
-% ─────────────────────────────────────────
-%  SLIDE 4 — BESOINS
-% ─────────────────────────────────────────
-\begin{frame}{Analyse des besoins}
+\begin{frame}{Contexte du projet --- Diagramme et besoins}
   \begin{columns}[T]
-    \column{0.48\textwidth}
+    \column{0.42\textwidth}
+    \begin{center}
+    \includegraphics[width=\linewidth,keepaspectratio]{diagrams/contexte.pdf}
+    \end{center}
+    \column{0.54\textwidth}
     \begin{block}{Trois profils utilisateurs}
-      \begin{itemize}
-        \item \textbf{Bénévoles Caritas} — ajout rapide de stock
-        \item \textbf{Acheteurs} — trouver un livre pas cher en CHF
-        \item \textbf{Administrateur} — modération et suivi
+      \begin{itemize}\small
+        \item \textbf{Bénévoles Caritas} --- ajout rapide de stock
+        \item \textbf{Acheteurs} --- trouver un livre pas cher en CHF
+        \item \textbf{Administrateur} --- modération et suivi
       \end{itemize}
     \end{block}
-    \vspace{5pt}
+    \vspace{6pt}
     \begin{block}{Critères de succès du MVP}
-      \begin{itemize}
+      \begin{itemize}\small
         \item Mettre un livre en vente en \textbf{$<$ 2 minutes}
         \item Paiement \textbf{CHF natif} (TWINT, Visa/MC)
         \item \textbf{Livraison restreinte à la Suisse}
         \item Interface \textbf{épurée} pour bénévoles
       \end{itemize}
     \end{block}
-    \column{0.48\textwidth}
-    \begin{block}{Contraintes techniques et organisationnelles}
-      \begin{itemize}
-        \item Développement \textbf{solo}, le soir (17h--20h)
-        \item \textbf{3 mois} / 6 sprints de 2 semaines
-        \item Coût de maintenance \textbf{minimal} (association)
-        \item Fallback ISBN manuel si API indisponible
-      \end{itemize}
-    \end{block}
-    \vspace{6pt}
-    \begin{center}
-    \begin{tikzpicture}
-      \node[tag] at (0,0)     {Scan ISBN};
-      \node[tag] at (1.7,0)   {CHF uniquement};
-      \node[tag] at (3.8,0)   {JWT Auth};
-      \node[tag] at (0,-0.52)  {PostFinance};
-      \node[tag] at (1.9,-0.52){Google OAuth};
-      \node[tag] at (3.6,-0.52){CI/CD};
-    \end{tikzpicture}
-    \end{center}
   \end{columns}
 \end{frame}
 
