@@ -1,19 +1,25 @@
 import Link from 'next/link'
 import { listBooks } from '@/services/books'
 import { getAvailabilityMap } from '@/services/stocks'
-import { BookGrid } from '@/components/books/BookGrid'
+import { listCatalog } from '@/services/catalog'
+import { CatalogClient, type EtatItem, type CategorieItem } from '@/components/catalog/CatalogClient'
 
 export const dynamic = 'force-dynamic'
 
 export default async function HomePage() {
   const books = await listBooks().catch(() => [])
-  const recent = books.slice(0, 8)
-
-  // Server-side stock lookup so BookCard can cap "Ajouter au panier" at the
-  // real remaining quantity instead of allowing unlimited clicks on a book
-  // that's out of stock (the home page, unlike /catalog, doesn't filter
-  // unavailable books out of the list at all).
+  // One batched availability request instead of fetching the whole /stock/ list
+  // and reducing it here (the map is now computed server-side in a single query).
   const availability = await getAvailabilityMap().catch(() => ({}) as Record<number, number>)
+  // Reference lists fetched server-side alongside books/availability, instead of
+  // a client-side waterfall after CatalogClient mounts.
+  const etatList = await listCatalog<EtatItem>('etat-usures').catch(() => [])
+  const categorieList = await listCatalog<CategorieItem>('categories').catch(() => [])
+
+  // Show only books with remaining stock. availability keys are numbers server-side
+  // but arrive as string keys once JSON-serialized — index defensively.
+  const availAt = (id: number) => availability[id] ?? (availability as Record<string, number>)[String(id)] ?? 0
+  const available = books.filter((b) => availAt(b.id_article) > 0)
 
   return (
     <div style={{ display: 'grid', gap: 32 }}>
@@ -38,13 +44,6 @@ export default async function HomePage() {
           livraison uniquement en Suisse.
         </p>
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-          <Link
-            className="btn btnPrimary"
-            href="/catalog"
-            style={{ background: '#065f46', border: 'none' }}
-          >
-            Voir le catalogue →
-          </Link>
           <Link
             className="btn"
             href="/register"
@@ -82,32 +81,13 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* Recent books */}
-      {recent.length > 0 ? (
-        <section style={{ display: 'grid', gap: 14 }}>
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'baseline',
-              justifyContent: 'space-between',
-              gap: 12,
-            }}
-          >
-            <h2 style={{ margin: 0 }}>Dernières arrivées</h2>
-            <Link className="muted" href="/catalog" style={{ fontSize: 14 }}>
-              Tout voir →
-            </Link>
-          </div>
-          <BookGrid books={recent} availability={availability} />
-        </section>
-      ) : (
-        <section className="card cardPadding" style={{ textAlign: 'center' }}>
-          <div className="muted">Le catalogue est en cours de remplissage.</div>
-          <Link className="btn btnPrimary" href="/catalog" style={{ marginTop: 10 }}>
-            Voir le catalogue
-          </Link>
-        </section>
-      )}
+      {/* Full catalog: search, filters, sort */}
+      <CatalogClient
+        books={available}
+        availability={availability}
+        etatList={etatList}
+        categorieList={categorieList}
+      />
     </div>
   )
 }

@@ -175,7 +175,7 @@ export function CatalogClient({
 
       {/* Results header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h1 style={{ margin: 0, fontSize: '1.4rem' }}>Catalogue</h1>
+        <h2 style={{ margin: 0, fontSize: '1.4rem' }}>Catalogue</h2>
         <span className="muted" style={{ fontSize: 14 }}>
           {filtered.length} livre{filtered.length !== 1 ? 's' : ''}
         </span>
