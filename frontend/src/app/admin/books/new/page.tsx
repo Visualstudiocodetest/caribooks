@@ -125,7 +125,7 @@ export default function AdminNewBookPage() {
   }
 
   async function onAutofill() {
-    await autofill(isbn)
+    await handleIsbn(cleanIsbn(isbn))
   }
 
   async function onFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
@@ -142,9 +142,7 @@ export default function AdminNewBookPage() {
         if (results && results.length) {
           const code = results[0].rawValue
           if (code) {
-            const cleaned = cleanIsbn(code)
-            setIsbn(cleaned)
-            await autofill(cleaned)
+            await handleIsbn(cleanIsbn(code))
             return
           }
         }
