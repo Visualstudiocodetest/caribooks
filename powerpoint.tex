@@ -444,12 +444,12 @@ ESTIAM --- Promotion E3 DAD --- Encadrant : Mhand Boufala}
       \end{itemize}
     \end{block}
     \column{0.48\textwidth}
-    \begin{block}{Pattern Table Per Class}
+    \begin{alertblock}{\small Pourquoi une table \texttt{type\_objet} plutôt qu'un simple champ \og livre/DVD \fg{} ?}
       \begin{itemize}\small
-        \item \texttt{livre} étend \texttt{article} par clé primaire partagée
-        \item Ajout d'autres types \textbf{sans restructurer} le schéma
+        \item \texttt{livre} étend \texttt{article} par clé primaire partagée (\textit{Table Per Class})
+        \item Un admin ajoute un nouveau type (DVD, jeu\ldots) via l'API, \textbf{sans redéploiement}
       \end{itemize}
-    \end{block}
+    \end{alertblock}
     \vspace{4pt}
     \begin{exampleblock}{Index de performance}
       \scriptsize
