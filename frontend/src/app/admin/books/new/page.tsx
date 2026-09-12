@@ -2,8 +2,10 @@
 
 import { useEffect, useState, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { ApiError } from '@/services/api'
-import { createBook } from '@/services/books'
+import { createBook, getBookByIsbn } from '@/services/books'
+import { createScan } from '@/services/scans'
 import { listCatalog } from '@/services/catalog'
 import Image from 'next/image'
 import { lookupIsbn } from '@/services/openlibrary'
@@ -11,6 +13,7 @@ import { fetchRemoteImage } from '@/services/images'
 import { cleanIsbn } from '@/lib/isbn'
 import { isExternalImage } from '@/lib/images'
 import { useBarcodeScanner } from '@/hooks/useBarcodeScanner'
+import type { BookRead } from '@/types/api'
 
 type EtatItem = { id_etat_usure: number; libelle: string }
 type TypeObjetItem = { id_type_objet: number; libelle: string; code?: string }
@@ -30,13 +33,55 @@ export default function AdminNewBookPage() {
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [autofillLoading, setAutofillLoading] = useState(false)
+  // Set when the scanned/typed ISBN already matches a book in the Caribooks
+  // catalog: creating it again would just fail on the unique ISBN constraint,
+  // so instead we show the existing book and offer to log a traceability scan
+  // (scan_isbn) against it, exactly like the old standalone /scan page did.
+  const [existingBook, setExistingBook] = useState<BookRead | null>(null)
+  const [scanSaving, setScanSaving] = useState(false)
+  const [scanSaved, setScanSaved] = useState<string | null>(null)
   const videoRef = useRef<HTMLVideoElement | null>(null)
 
-  const onDetect = useCallback((raw: string) => {
-    const cleaned = cleanIsbn(raw)
+  async function handleIsbn(cleaned: string) {
     setIsbn(cleaned)
+    setScanSaved(null)
+    if (!cleaned) {
+      setExistingBook(null)
+      return
+    }
+    const found = await getBookByIsbn(cleaned).catch(() => null)
+    if (found) {
+      setExistingBook(found)
+      return
+    }
+    setExistingBook(null)
     void autofill(cleaned)
+  }
+
+  const onDetect = useCallback((raw: string) => {
+    void handleIsbn(cleanIsbn(raw))
   }, [])
+
+  async function onSaveScan() {
+    if (!existingBook) return
+    const clean = cleanIsbn(isbn)
+    if (!clean) return
+    setScanSaving(true)
+    setError(null)
+    try {
+      const created = await createScan({
+        id_article_livre: existingBook.id_article,
+        isbn_lu: clean,
+        valide: false,
+      })
+      setScanSaved(`Scan enregistré (#${created.id_scan_isbn}).`)
+    } catch (e) {
+      const err = e as unknown
+      setError(err instanceof ApiError ? err.message : 'Enregistrement du scan impossible')
+    } finally {
+      setScanSaving(false)
+    }
+  }
   const {
     start: startScanner,
     stop: stopScanner,
@@ -80,7 +125,7 @@ export default function AdminNewBookPage() {
   }
 
   async function onAutofill() {
-    await autofill(isbn)
+    await handleIsbn(cleanIsbn(isbn))
   }
 
   async function onFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
@@ -97,9 +142,7 @@ export default function AdminNewBookPage() {
         if (results && results.length) {
           const code = results[0].rawValue
           if (code) {
-            const cleaned = cleanIsbn(code)
-            setIsbn(cleaned)
-            await autofill(cleaned)
+            await handleIsbn(cleanIsbn(code))
             return
           }
         }
@@ -136,8 +179,7 @@ export default function AdminNewBookPage() {
     const raw = (param || '').trim()
     if (!raw) return
 
-    setIsbn(raw)
-    void autofill(raw)
+    void handleIsbn(cleanIsbn(raw))
     // run once on mount
   }, [])
 
@@ -193,13 +235,58 @@ export default function AdminNewBookPage() {
   return (
     <div className="container page-main">
       <div className="content-center">
-        <h1 style={{ margin: 0 }}>Nouveau livre</h1>
+        <h1 style={{ margin: 0 }}>Ajouter un livre</h1>
 
+        {existingBook ? (
+          <div className="card cardPadding" style={{ display: 'grid', gap: 12 }}>
+            <div className="muted">Ce livre est déjà au catalogue — inutile de le recréer.</div>
+            <div style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
+              {existingBook.image_link ? (
+                <Image
+                  src={existingBook.image_link}
+                  alt={existingBook.titre}
+                  width={64}
+                  height={88}
+                  style={{ objectFit: 'cover', borderRadius: 10, border: '1px solid var(--color-border)' }}
+                  unoptimized={isExternalImage(existingBook.image_link)}
+                />
+              ) : (
+                <div className="card" style={{ width: 64, height: 88 }} />
+              )}
+              <div style={{ flex: 1 }}>
+                <div style={{ fontWeight: 900 }}>{existingBook.titre}</div>
+                <div className="muted">ISBN: {existingBook.isbn}</div>
+                <div className="muted">Prix: CHF {existingBook.prix_chf.toFixed(2)}</div>
+              </div>
+              <Link className="btn" href={`/admin/books/${existingBook.id_article}`}>
+                Détails
+              </Link>
+            </div>
+            <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+              <button className="btn btnPrimary" type="button" onClick={onSaveScan} disabled={scanSaving}>
+                {scanSaving ? 'Enregistrement…' : 'Enregistrer le scan'}
+              </button>
+              <button
+                className="btn"
+                type="button"
+                onClick={() => {
+                  setExistingBook(null)
+                  setIsbn('')
+                  setScanSaved(null)
+                }}
+              >
+                Ajouter un autre livre
+              </button>
+            </div>
+            {scanSaved ? <div className="banner-success">{scanSaved}</div> : null}
+            {error ? <div className="banner-error">{error}</div> : null}
+          </div>
+        ) : (
         <form className="card cardPadding" onSubmit={onSubmit}>
           <div className="form-row">
             <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
               <button className="btn" type="button" onClick={() => void startScanner()}>
-                Quick scanner
+                Scanner un code-barres
               </button>
               <label className="btn" style={{ cursor: 'pointer' }}>
                 Upload image
@@ -299,6 +386,7 @@ export default function AdminNewBookPage() {
             {loading ? 'Création…' : 'Créer'}
           </button>
         </form>
+        )}
 
         {scanning ? (
           <div className="modal">

@@ -56,7 +56,7 @@ export default function AccountOrdersPage() {
           {commandes.length === 0 ? (
             <div className="card cardPadding" style={{ textAlign: 'center' }}>
               <div className="muted">Vous n&apos;avez pas encore de commande.</div>
-              <Link className="btn btnPrimary" href="/catalog" style={{ marginTop: 10 }}>
+              <Link className="btn btnPrimary" href="/" style={{ marginTop: 10 }}>
                 Voir le catalogue
               </Link>
             </div>

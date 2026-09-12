@@ -35,7 +35,7 @@ export default function CartPage() {
           <div className="card cardPadding">
             <div className="muted">Votre panier est vide.</div>
             <div style={{ marginTop: 12 }}>
-              <Link className="btn btnPrimary" href="/catalog">
+              <Link className="btn btnPrimary" href="/">
                 Parcourir le catalogue
               </Link>
             </div>

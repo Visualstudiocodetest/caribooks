@@ -22,7 +22,7 @@ export default async function BookDetailPage({ params }: { params: Promise<{ id:
   return (
     <div className="content-center">
       <div style={{ marginBottom: 4 }}>
-        <Link className="btn btnGhost" href="/catalog" style={{ fontSize: 13, padding: '4px 10px' }}>
+        <Link className="btn btnGhost" href="/" style={{ fontSize: 13, padding: '4px 10px' }}>
           ← Retour au catalogue
         </Link>
       </div>

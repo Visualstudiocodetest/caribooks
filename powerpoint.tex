@@ -17,9 +17,6 @@
 \usepackage{colortbl}
 \usepackage{hyperref}
 
-% ─────────────────────────────────────────
-%  COULEURS
-% ─────────────────────────────────────────
 \definecolor{myblue}{RGB}{27,63,139}
 \definecolor{mybluelight}{RGB}{74,134,200}
 \definecolor{mybluepale}{RGB}{232,240,251}
@@ -28,9 +25,6 @@
 \definecolor{codebg}{RGB}{245,247,250}
 \definecolor{mygray}{RGB}{100,100,100}
 
-% ─────────────────────────────────────────
-%  THÈME BEAMER
-% ─────────────────────────────────────────
 \usetheme{Boadilla}
 \usecolortheme[named=myblue]{structure}
 
@@ -61,7 +55,6 @@
 \setbeamerfont{block title}{series=\bfseries,size=\small}
 \setbeamerfont{block body}{size=\small}
 
-% Section intermédiaire (cadre bleu)
 \AtBeginSection[]{
   \begin{frame}[plain]
     \begin{tikzpicture}[remember picture,overlay]
@@ -78,9 +71,6 @@
   \end{frame}
 }
 
-% ─────────────────────────────────────────
-%  LISTINGS
-% ─────────────────────────────────────────
 \lstdefinestyle{pysmall}{
     language=Python,
     basicstyle=\ttfamily\tiny,
@@ -114,9 +104,6 @@
     xleftmargin=6pt,
 }
 
-% ─────────────────────────────────────────
-%  TIKZ STYLES RÉUTILISABLES
-% ─────────────────────────────────────────
 \tikzset{
   syst/.style={rectangle,draw=myblue,thick,rounded corners=4pt,fill=mybluepale,
     align=center,minimum height=10mm,minimum width=28mm,font=\bfseries\scriptsize},
@@ -156,7 +143,6 @@
   seqret/.style={-{Stealth[length=1.6mm]},dashed,font=\tiny,color=mygray},
 }
 
-% Acteur UML
 \newcommand{\umlactor}[3]{
   \begin{scope}[shift={(#1,#2)}]
     \draw[thick,myblue] (0,0.55) circle (0.14);
@@ -168,7 +154,6 @@
   \end{scope}
 }
 
-% Commandes utilitaires
 \newcommand{\tech}[1]{\textcolor{myblue}{\textbf{#1}}}
 \newcommand{\yes}{\textcolor{mysuccess}{\textbf{\checkmark}}}
 \newcommand{\nomark}{\textcolor{red}{\textbf{$\times$}}}
@@ -176,7 +161,6 @@
 \newcommand{\badgegreen}[1]{\tikz[baseline=-1mm]{\node[taggreen]{#1};}}
 \newcommand{\badgeorange}[1]{\tikz[baseline=-1mm]{\node[tagorange]{#1};}}
 
-% Fil rouge : bandeau de progression "un livre, 5 étapes"
 \newcommand{\etapelivre}[2]{%
   \vspace{-8pt}
   \begin{flushright}
@@ -186,9 +170,6 @@
   \vspace{-2pt}
 }
 
-% ─────────────────────────────────────────
-%  MÉTADONNÉES
-% ─────────────────────────────────────────
 \title[CARIBOOKS]{\textbf{CARIBOOKS}}
 \subtitle{Plateforme e-commerce solidaire de livres d'occasion}
 \author[Alexandre REY]{Alexandre REY}
@@ -196,13 +177,8 @@
 ESTIAM --- Promotion E3 DAD --- Encadrant : Mhand Boufala}
 \date{Juin 2026}
 
-% ══════════════════════════════════════════════════════════════════════
 \begin{document}
-% ══════════════════════════════════════════════════════════════════════
 
-% ─────────────────────────────────────────
-%  SLIDE 1 — TITRE
-% ─────────────────────────────────────────
 \begin{frame}[plain]
   \begin{tikzpicture}[remember picture,overlay]
     \fill[myblue] (current page.north west) rectangle (current page.south east);
@@ -224,9 +200,6 @@ ESTIAM --- Promotion E3 DAD --- Encadrant : Mhand Boufala}
   \end{center}
 \end{frame}
 
-% ─────────────────────────────────────────
-%  SLIDE 2 — PLAN + FIL ROUGE
-% ─────────────────────────────────────────
 \begin{frame}{Plan de la présentation}
   \begin{columns}[T]
     \column{0.46\textwidth}
@@ -236,9 +209,6 @@ ESTIAM --- Promotion E3 DAD --- Encadrant : Mhand Boufala}
   \end{columns}
 \end{frame}
 
-% ─────────────────────────────────────────
-%  SLIDE 2b — MON PARCOURS
-% ─────────────────────────────────────────
 \begin{frame}{Mon parcours --- avant et pendant ce projet}
   \begin{columns}[T]
     \column{0.52\textwidth}
@@ -277,13 +247,8 @@ ESTIAM --- Promotion E3 DAD --- Encadrant : Mhand Boufala}
   \end{columns}
 \end{frame}
 
-% ══════════════════════════════════════════════════════════════════════
 \section{Contexte et problématique}
-% ══════════════════════════════════════════════════════════════════════
 
-% ─────────────────────────────────────────
-%  SLIDE 3 — CONTEXTE
-% ─────────────────────────────────────────
 \begin{frame}{Contexte du projet — Association Caritas}
   \begin{block}{L'association Caritas}
     \begin{itemize}
@@ -310,65 +275,34 @@ ESTIAM --- Promotion E3 DAD --- Encadrant : Mhand Boufala}
   \end{exampleblock}
 \end{frame}
 
-\begin{frame}{Contexte du projet — Diagramme de contexte}
-  \begin{center}
-  \vspace{-6pt}
-  \includegraphics[width=\linewidth,height=0.82\textheight,keepaspectratio]{diagrams/contexte.pdf}
-  \end{center}
-\end{frame}
-
-% ─────────────────────────────────────────
-%  SLIDE 4 — BESOINS
-% ─────────────────────────────────────────
-\begin{frame}{Analyse des besoins}
+\begin{frame}{Contexte du projet --- Diagramme et besoins}
   \begin{columns}[T]
-    \column{0.48\textwidth}
+    \column{0.42\textwidth}
+    \begin{center}
+    \includegraphics[width=\linewidth,keepaspectratio]{diagrams/contexte.pdf}
+    \end{center}
+    \column{0.54\textwidth}
     \begin{block}{Trois profils utilisateurs}
-      \begin{itemize}
-        \item \textbf{Bénévoles Caritas} — ajout rapide de stock
-        \item \textbf{Acheteurs} — trouver un livre pas cher en CHF
-        \item \textbf{Administrateur} — modération et suivi
+      \begin{itemize}\small
+        \item \textbf{Bénévoles Caritas} --- ajout rapide de stock
+        \item \textbf{Acheteurs} --- trouver un livre pas cher en CHF
+        \item \textbf{Administrateur} --- modération et suivi
       \end{itemize}
     \end{block}
-    \vspace{5pt}
+    \vspace{6pt}
     \begin{block}{Critères de succès du MVP}
-      \begin{itemize}
+      \begin{itemize}\small
         \item Mettre un livre en vente en \textbf{$<$ 2 minutes}
         \item Paiement \textbf{CHF natif} (TWINT, Visa/MC)
         \item \textbf{Livraison restreinte à la Suisse}
         \item Interface \textbf{épurée} pour bénévoles
       \end{itemize}
     \end{block}
-    \column{0.48\textwidth}
-    \begin{block}{Contraintes techniques et organisationnelles}
-      \begin{itemize}
-        \item Développement \textbf{solo}, le soir (17h--20h)
-        \item \textbf{3 mois} / 6 sprints de 2 semaines
-        \item Coût de maintenance \textbf{minimal} (association)
-        \item Fallback ISBN manuel si API indisponible
-      \end{itemize}
-    \end{block}
-    \vspace{6pt}
-    \begin{center}
-    \begin{tikzpicture}
-      \node[tag] at (0,0)     {Scan ISBN};
-      \node[tag] at (1.7,0)   {CHF uniquement};
-      \node[tag] at (3.8,0)   {JWT Auth};
-      \node[tag] at (0,-0.52)  {PostFinance};
-      \node[tag] at (1.9,-0.52){Google OAuth};
-      \node[tag] at (3.6,-0.52){CI/CD};
-    \end{tikzpicture}
-    \end{center}
   \end{columns}
 \end{frame}
 
-% ══════════════════════════════════════════════════════════════════════
 \section{État de l\textquotesingle{}art et choix technique}
-% ══════════════════════════════════════════════════════════════════════
 
-% ─────────────────────────────────────────
-%  SLIDE 5 — COMPARATIF
-% ─────────────────────────────────────────
 \begin{frame}{Solutions existantes -- Pourquoi développer sur mesure ?}
   \begin{center}
   \small
@@ -412,9 +346,6 @@ ESTIAM --- Promotion E3 DAD --- Encadrant : Mhand Boufala}
   \end{columns}
 \end{frame}
 
-% ─────────────────────────────────────────
-%  SLIDE 6 — STACK TECHNIQUE + ARCHITECTURE
-% ─────────────────────────────────────────
 \begin{frame}{Stack technique --- Les choix, et pourquoi je les ai faits}
   \begin{block}{Justifications des choix}
     \begin{itemize}\small
@@ -427,12 +358,6 @@ ESTIAM --- Promotion E3 DAD --- Encadrant : Mhand Boufala}
     \end{itemize}
   \end{block}
   \vspace{4pt}
-  \begin{exampleblock}{\small Architecture en couches --- vue d'ensemble}
-    \begin{itemize}\small
-      \item \texttt{CrudBase<T>} générique par router
-      \item Injection de dépendances FastAPI (\texttt{Depends()})
-    \end{itemize}
-  \end{exampleblock}
 \end{frame}
 
 \begin{frame}{Architecture en couches --- Diagramme}
@@ -442,13 +367,8 @@ ESTIAM --- Promotion E3 DAD --- Encadrant : Mhand Boufala}
   \end{center}
 \end{frame}
 
-% ══════════════════════════════════════════════════════════════════════
 \section{Gestion de projet}
-% ══════════════════════════════════════════════════════════════════════
 
-% ─────────────────────────────────────────
-%  SLIDE 7 — SCRUM + ENVIRONNEMENT
-% ─────────────────────────────────────────
 \begin{frame}{Gestion de projet --- Scrum simplifié \& environnement}
   \begin{columns}[T]
     \column{0.42\textwidth}
@@ -501,22 +421,14 @@ ESTIAM --- Promotion E3 DAD --- Encadrant : Mhand Boufala}
   \end{columns}
 \end{frame}
 
-% ══════════════════════════════════════════════════════════════════════
 \section{Analyse et conception}
-% ══════════════════════════════════════════════════════════════════════
 
-% ─────────────────────────────────────────
-%  SLIDE 8 — CAS D'UTILISATION
-% ─────────────────────────────────────────
 \begin{frame}{Diagramme de cas d'utilisation --- Vue globale}
   \begin{center}
   \includegraphics[width=\linewidth,height=0.82\textheight,keepaspectratio]{diagrams/use_case_global.pdf}
   \end{center}
 \end{frame}
 
-% ─────────────────────────────────────────
-%  SLIDE 9 — MODÈLE DE DONNÉES
-% ─────────────────────────────────────────
 \begin{frame}{Modèle de données --- Architecture en héritage de table}
   \begin{columns}[T]
     \column{0.48\textwidth}
@@ -532,12 +444,12 @@ ESTIAM --- Promotion E3 DAD --- Encadrant : Mhand Boufala}
       \end{itemize}
     \end{block}
     \column{0.48\textwidth}
-    \begin{block}{Pattern Table Per Class}
+    \begin{alertblock}{\small Pourquoi une table \texttt{type\_objet} plutôt qu'un simple champ \og livre/DVD \fg{} ?}
       \begin{itemize}\small
-        \item \texttt{livre} étend \texttt{article} par clé primaire partagée
-        \item Ajout d'autres types \textbf{sans restructurer} le schéma
+        \item \texttt{livre} étend \texttt{article} par clé primaire partagée (\textit{Table Per Class})
+        \item Un admin ajoute un nouveau type (DVD, jeu\ldots) via l'API, \textbf{sans redéploiement}
       \end{itemize}
-    \end{block}
+    \end{alertblock}
     \vspace{4pt}
     \begin{exampleblock}{Index de performance}
       \scriptsize
@@ -553,13 +465,8 @@ ESTIAM --- Promotion E3 DAD --- Encadrant : Mhand Boufala}
   \end{center}
 \end{frame}
 
-% ══════════════════════════════════════════════════════════════════════
 \section{Le parcours d'un livre}
-% ══════════════════════════════════════════════════════════════════════
 
-% ─────────────────────────────────────────
-%  SLIDE 10 — PIVOT : LE LIVRE TÉMOIN
-% ─────────────────────────────────────────
 \begin{frame}{Notre fil rouge --- un exemplaire, une trajectoire complète}
   \begin{columns}[T]
     \column{0.5\textwidth}
@@ -593,13 +500,9 @@ ESTIAM --- Promotion E3 DAD --- Encadrant : Mhand Boufala}
     \end{tikzpicture}
     \end{center}
     \vspace{4pt}
-    \badgeorange{Démo live possible à partir d'ici}
   \end{columns}
 \end{frame}
 
-% ─────────────────────────────────────────
-%  SLIDE 11 — AUTHENTIFICATION (PRÉREQUIS)
-% ─────────────────────────────────────────
 \begin{frame}{Avant toute chose --- le bénévole doit se connecter}
   \begin{columns}[T]
     \column{0.5\textwidth}
@@ -611,10 +514,10 @@ ESTIAM --- Promotion E3 DAD --- Encadrant : Mhand Boufala}
       \end{itemize}
     \end{block}
     \vspace{4pt}
-    \begin{alertblock}{\small Sécurité de démarrage}
+    \begin{alertblock}{\small Que se passe-t-il si \texttt{SECRET\_KEY} n'est pas définie ?}
       \begin{itemize}\small
-        \item Refuse de démarrer si \texttt{SECRET\_KEY} est faible/placeholder
-        \item Si absente : clé aléatoire générée par processus
+        \item Valeur \og placeholder \fg{} connue $\Rightarrow$ l'application \textbf{refuse de démarrer}
+        \item Absente $\Rightarrow$ clé aléatoire générée pour le processus (jamais de secret devinable)
       \end{itemize}
     \end{alertblock}
     \column{0.46\textwidth}
@@ -626,9 +529,9 @@ ESTIAM --- Promotion E3 DAD --- Encadrant : Mhand Boufala}
       \end{itemize}
     \end{block}
     \vspace{4pt}
-    \begin{alertblock}{\small Contrôle critique}
+    \begin{alertblock}{\small Pourquoi vérifier \texttt{email\_verified} ?}
       \begin{itemize}\small
-        \item \texttt{email\_verified = false} $\Rightarrow$ connexion refusée (400)
+        \item Faux $\Rightarrow$ connexion refusée (400)
         \item Sinon : prise de contrôle de compte possible
       \end{itemize}
     \end{alertblock}
@@ -641,10 +544,45 @@ ESTIAM --- Promotion E3 DAD --- Encadrant : Mhand Boufala}
   \end{center}
 \end{frame}
 
-% ─────────────────────────────────────────
-%  SLIDE 12 — ÉTAPE 1 : SCAN ISBN (CODE)
-% ─────────────────────────────────────────
-\begin{frame}[fragile]{Étape 1 --- Le bénévole scanne notre \textit{Étranger}}
+\begin{frame}{Étape 1 --- Maquette \og Ajouter un livre \fg{} (mobile)}
+  \etapelivre{1}{scan et préremplissage automatique}
+  \begin{center}
+  \resizebox{!}{0.56\textheight}{%
+  \begin{tikzpicture}
+    \fill[gray!30] (0.8,0) rectangle (4.4,7.5);
+    \fill[gray!30,rounded corners=6pt] (0.8,0) rectangle (4.4,7.5);
+    \fill[white] (1.0,0.5) rectangle (4.2,7.0);
+    \fill[black!85] (1.0,5.2) rectangle (4.2,7.0);
+    \draw[myaccent,line width=1.2pt]
+      (1.4,5.5) -- (1.4,5.2) -- (1.7,5.2);
+    \draw[myaccent,line width=1.2pt]
+      (3.8,5.5) -- (3.8,5.2) -- (3.5,5.2);
+    \draw[myaccent,line width=1.2pt]
+      (1.4,6.7) -- (1.4,7.0) -- (1.7,7.0);
+    \draw[myaccent,line width=1.2pt]
+      (3.8,6.7) -- (3.8,7.0) -- (3.5,7.0);
+    \draw[myaccent!80,line width=0.8pt] (1.1,6.1) -- (4.1,6.1);
+    \node[font=\tiny,text=white] at (2.6,6.4) {Ajouter un livre};
+    \fill[mybluepale] (1.1,4.6) rectangle (4.1,5.1);
+    \node[font=\tiny] at (2.6,4.85) {Titre : \textit{Divergente T.2 (prérempli)}};
+    \fill[mybluepale] (1.1,4.0) rectangle (4.1,4.5);
+    \node[font=\tiny] at (2.6,4.25) {Auteur : \textit{Veronica Roth (prérempli)}};
+    \fill[gray!15] (1.1,3.4) rectangle (4.1,3.9);
+    \node[font=\tiny] at (2.6,3.65) {État : Bon état \quad Prix : 9.50 CHF};
+    \fill[mysuccess] (1.3,2.7) rectangle (3.9,3.2);
+    \node[font=\tiny\bfseries,text=white] at (2.6,2.95) {Publier l'annonce};
+    \fill[gray!50,rounded corners=2pt] (2.1,0.2) rectangle (3.1,0.35);
+  \end{tikzpicture}}
+  \end{center}
+  \textcolor{mygray}{\scriptsize\textbf{RGAA}}
+  \begin{itemize}\scriptsize
+    \item \textcolor{mygray}{Libellés explicites}
+    \item \textcolor{mygray}{Bouton $\geq$ 44px}
+    \item \textcolor{mygray}{Alternative de saisie manuelle}
+  \end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{Étape 1 --- Le bénévole scanne notre \textit{Divergente}}
   \etapelivre{1}{scan et préremplissage automatique}
 \begin{lstlisting}[style=pysmall,caption={}]
 # presentation/book_router.py
@@ -675,80 +613,29 @@ def get_isbn_metadata(isbn: str):
   \end{center}
 \end{frame}
 
-\begin{frame}{Étape 1 --- Maquette Scan ISBN (mobile)}
-  \etapelivre{1}{scan et préremplissage automatique}
-  \begin{center}
-  \resizebox{!}{0.56\textheight}{%
-  \begin{tikzpicture}
-    % Téléphone
-    \fill[gray!30] (0.8,0) rectangle (4.4,7.5);
-    \fill[gray!30,rounded corners=6pt] (0.8,0) rectangle (4.4,7.5);
-    \fill[white] (1.0,0.5) rectangle (4.2,7.0);
-    % Camera area / scanner
-    \fill[black!85] (1.0,5.2) rectangle (4.2,7.0);
-    \draw[myaccent,line width=1.2pt]
-      (1.4,5.5) -- (1.4,5.2) -- (1.7,5.2);
-    \draw[myaccent,line width=1.2pt]
-      (3.8,5.5) -- (3.8,5.2) -- (3.5,5.2);
-    \draw[myaccent,line width=1.2pt]
-      (1.4,6.7) -- (1.4,7.0) -- (1.7,7.0);
-    \draw[myaccent,line width=1.2pt]
-      (3.8,6.7) -- (3.8,7.0) -- (3.5,7.0);
-    \draw[myaccent!80,line width=0.8pt] (1.1,6.1) -- (4.1,6.1);
-    \node[font=\tiny,text=white] at (2.6,6.4) {Scan ISBN};
-    % Formulaire en dessous
-    \fill[mybluepale] (1.1,4.6) rectangle (4.1,5.1);
-    \node[font=\tiny] at (2.6,4.85) {Titre : \textit{Divergente T.2 (prérempli)}};
-    \fill[mybluepale] (1.1,4.0) rectangle (4.1,4.5);
-    \node[font=\tiny] at (2.6,4.25) {Auteur : \textit{Veronica Roth (prérempli)}};
-    \fill[gray!15] (1.1,3.4) rectangle (4.1,3.9);
-    \node[font=\tiny] at (2.6,3.65) {État : Bon état \quad Prix : 9.50 CHF};
-    % Bouton publier
-    \fill[mysuccess] (1.3,2.7) rectangle (3.9,3.2);
-    \node[font=\tiny\bfseries,text=white] at (2.6,2.95) {Publier l'annonce};
-    % Home bar
-    \fill[gray!50,rounded corners=2pt] (2.1,0.2) rectangle (3.1,0.35);
-  \end{tikzpicture}}
-  \end{center}
-  \textcolor{mygray}{\scriptsize\textbf{RGAA}}
-  \begin{itemize}\scriptsize
-    \item \textcolor{mygray}{Libellés explicites}
-    \item \textcolor{mygray}{Bouton $\geq$ 44px}
-    \item \textcolor{mygray}{Alternative de saisie manuelle}
-  \end{itemize}
-\end{frame}
-
-% ─────────────────────────────────────────
-%  SLIDE 13 — ÉTAPE 2 : CATALOGUE
-% ─────────────────────────────────────────
 \begin{frame}{Étape 2 --- Notre livre apparaît au catalogue}
   \etapelivre{2}{visible et trouvable}
   \begin{center}
   \resizebox{!}{0.56\textheight}{%
   \begin{tikzpicture}
-    % Fenêtre navigateur
     \fill[gray!20] (0,5.4) rectangle (6,6.0);
     \fill[white!90!gray] (0.1,5.45) circle (0.08);
     \fill[white!90!gray] (0.3,5.45) circle (0.08);
     \fill[white!90!gray] (0.5,5.45) circle (0.08);
     \fill[white] (0.8,5.35) rectangle (5.2,5.6);
-    \node[font=\tiny,text=mygray] at (3,5.475) {caribooks.vercel.app/catalog};
+    \node[font=\tiny,text=mygray] at (3,5.475) {caribooks.vercel.app};
     \draw[myblue,thick] (0,0) rectangle (6,5.4);
-    % Header
     \fill[myblue] (0,4.9) rectangle (6,5.4);
     \node[font=\tiny\bfseries,text=white] at (1,5.15) {CARIBOOKS};
     \node[font=\tiny,text=white] at (3,5.15) {Catalogue \quad Connexion};
-    % Search bar
     \fill[gray!15] (0.3,4.5) rectangle (5.7,4.8);
     \node[font=\tiny,text=mygray] at (3,4.65) {Rechercher un livre...};
-    % Filtres
     \fill[mybluepale] (0.3,4.1) rectangle (1.6,4.35);
     \fill[mybluepale] (1.7,4.1) rectangle (3.0,4.35);
     \fill[mybluepale] (3.1,4.1) rectangle (4.4,4.35);
     \node[font=\tiny] at (0.95,4.225) {Catégorie};
     \node[font=\tiny] at (2.35,4.225) {État};
     \node[font=\tiny] at (3.75,4.225) {Prix CHF};
-    % Livres
     \foreach \x/\ti/\p in {0.3/Roth/9.50, 2.3/Orwell/15.00, 4.3/St-Exupery/8.50} {
       \fill[gray!10] (\x,2.4) rectangle ({\x+1.7},{3.9});
       \fill[mybluepale!80] (\x,2.4) rectangle ({\x+1.7},{3.3});
@@ -756,10 +643,8 @@ def get_isbn_metadata(isbn: str):
       \fill[mysuccess] (\x,2.1) rectangle ({\x+1.7},{2.4});
       \node[font=\tiny,text=white] at ({\x+0.85},2.25) {\p\,CHF};
     }
-    % Footer
     \fill[myblue!80] (0,0) rectangle (6,0.5);
     \node[font=\tiny,text=white] at (3,0.25) {Livraison Suisse uniquement \textbullet{} Paiement CHF};
-    % Annotation flèche sur notre livre
     \draw[myaccent,thick,-{Stealth[length=2mm]}] (1.15,1.7) -- (1.15,2.05);
     \node[font=\tiny\bfseries,text=myaccent] at (1.15,1.5) {notre livre};
   \end{tikzpicture}}
@@ -772,9 +657,6 @@ def get_isbn_metadata(isbn: str):
   \end{itemize}
 \end{frame}
 
-% ─────────────────────────────────────────
-%  SLIDE 14 — ÉTAPE 3 : PAIEMENT (TEXTE)
-% ─────────────────────────────────────────
 \begin{frame}{Étape 3 --- Un client l'achète : le tunnel CHF PostFinance}
   \etapelivre{3}{achat et paiement en CHF}
   \begin{columns}[T]
@@ -790,7 +672,7 @@ def get_isbn_metadata(isbn: str):
     \column{0.48\textwidth}
     \begin{block}{Sécurisation webhook}
       \begin{itemize}\small
-        \item Signature \textbf{ECDSA} vérifiée avant mise à jour
+        \item Signature \textbf{ECDSA} (\textit{Elliptic Curve Digital Signature Algorithm}) vérifiée avant mise à jour
         \item \texttt{with\_for\_update()} : verrou SQL --- accès concurrents
         \item Finalisation atomique de la commande
       \end{itemize}
@@ -807,16 +689,8 @@ def get_isbn_metadata(isbn: str):
   \end{center}
 \end{frame}
 
-% ─────────────────────────────────────────
-%  SLIDE 15 — DÉMONSTRATION EN DIRECT
-% ─────────────────────────────────────────
 \begin{frame}{Démonstration en direct --- l'achat de notre livre}
-  \begin{alertblock}{\small Passage à l'application réelle}
-    \begin{itemize}\small
-      \item Bascule sur \texttt{caribooks.vercel.app}, sur mon téléphone
-      \item Achat de \textit{Divergente T.2} en sandbox PostFinance, en direct
-    \end{itemize}
-  \end{alertblock}
+  
   \vspace{6pt}
   \begin{columns}[T]
     \column{0.38\textwidth}
@@ -829,14 +703,8 @@ def get_isbn_metadata(isbn: str):
     \scriptsize\textit{Swagger --- POST /auth/token}
   \end{columns}
   \vspace{4pt}
-  \begin{itemize}\scriptsize
-    \item[] \textcolor{mygray}{\textbf{Plan B} : captures d'écran de secours}
-  \end{itemize}
 \end{frame}
 
-% ─────────────────────────────────────────
-%  SLIDE 16 — ÉTAPE 4 : LIVRAISON ET STOCK
-% ─────────────────────────────────────────
 \begin{frame}[fragile]{Étape 4 --- Réserver le stock et choisir la livraison}
   \etapelivre{4}{stock et livraison}
   \begin{columns}[T]
@@ -855,12 +723,12 @@ def get_isbn_metadata(isbn: str):
       \end{itemize}
     \end{block}
     \vspace{5pt}
-    \begin{exampleblock}{\small Ce qui m'a fait le plus peur}
+    \begin{alertblock}{\small Que se passe-t-il si deux clients achètent le \textbf{dernier} exemplaire au même instant ?}
       \begin{itemize}\small
-        \item Deux clients, \textbf{dernier} exemplaire, même instant
-        \item Sans verrou : double lecture \og en stock \fg{}, double vente
+        \item Sans verrou : les deux lisent \og en stock \fg{} en même temps
+        \item Conséquence : double vente du même exemplaire
       \end{itemize}
-    \end{exampleblock}
+    \end{alertblock}
     \column{0.50\textwidth}
 \begin{lstlisting}[style=pysmall,caption={}]
 # services/order_service.py
@@ -883,9 +751,6 @@ def _lock_stock_rows(db, ids_article):
   \end{columns}
 \end{frame}
 
-% ─────────────────────────────────────────
-%  SLIDE 17 — ÉTAPE 5 : BACK-OFFICE ADMIN
-% ─────────────────────────────────────────
 \begin{frame}{Étape 5 --- L'association clôture la commande}
   \etapelivre{5}{suivi et clôture par l'admin}
   \begin{columns}[T]
@@ -896,16 +761,17 @@ def _lock_stock_rows(db, ids_article):
         \item Marquer \og envoyée \fg{} / \og à réception \fg{}
         \item Surcharge manuelle du statut (cas exceptionnels)
         \item Toutes les routes protégées par \texttt{require\_admin}
+        \item Front \texttt{/admin} : non connecté $\Rightarrow$ redirection \texttt{/login} avec message
       \end{itemize}
     \end{block}
     \vspace{4pt}
-    \begin{exampleblock}{\small Test d'isolation dédié}
+    \begin{alertblock}{\small Qu'arrive-t-il si un client consulte la commande d'un autre ?}
       \begin{itemize}\small
-        \item \texttt{test\_orders\_cross\_user\_isolation}
-        \item Client $\rightarrow$ commande d'un autre : \textbf{404}
+        \item Réponse : \textbf{404}, comme si elle n'existait pas
         \item Non-admin $\rightarrow$ \texttt{/orders/admin/*} : \textbf{403}
+        \item Vérifié par un test dédié, \texttt{test\_orders\_cross\_user\_isolation}
       \end{itemize}
-    \end{exampleblock}
+    \end{alertblock}
     \column{0.54\textwidth}
     \begin{center}
     \includegraphics[width=\linewidth,height=0.62\textheight,keepaspectratio]{diagrams/sequence_admin_commande.pdf}
@@ -913,9 +779,6 @@ def _lock_stock_rows(db, ids_article):
   \end{columns}
 \end{frame}
 
-% ─────────────────────────────────────────
-%  SLIDE 18 — DIFFICULTÉS RENCONTRÉES
-% ─────────────────────────────────────────
 \begin{frame}{Difficultés rencontrées --- ce que j'ai appris en le faisant seul}
   \begin{itemize}\small
     \item \textbf{Backend Express.js $\rightarrow$ FastAPI} --- robustesse et validation automatique
@@ -925,26 +788,17 @@ def _lock_stock_rows(db, ids_article):
     \item \textbf{Formation + projet perso} --- développement en soirée, 3 j/semaine
   \end{itemize}
   \vspace{6pt}
-  \begin{alertblock}{Une question pour vous}
+  \begin{exampleblock}{\small Gestion du commanditaire}
     \begin{itemize}\small
       \item Commanditaire qui redemande sans cesse de nouvelles fonctionnalités
-      \item Qu'auriez-vous fait à ma place ?
-    \end{itemize}
-    \pause
-    \begin{itemize}\small
-      \item Ma réponse : chaque demande $\rightarrow$ backlog, jamais le sprint en cours
+      \item Chaque demande $\rightarrow$ backlog, jamais le sprint en cours
       \item Le MVP restait la seule priorité contractuelle
     \end{itemize}
-  \end{alertblock}
+  \end{exampleblock}
 \end{frame}
 
-% ══════════════════════════════════════════════════════════════════════
 \section{Cybersécurité et qualité}
-% ══════════════════════════════════════════════════════════════════════
 
-% ─────────────────────────────────────────
-%  SLIDE 15 — SÉCURITÉ
-% ─────────────────────────────────────────
 \begin{frame}{Cybersécurité --- Mesures implémentées (OWASP Top 10)}
   \begin{center}
   \small
@@ -965,9 +819,11 @@ def _lock_stock_rows(db, ids_article):
     \bottomrule
   \end{tabular}
   \end{center}
-  \vspace{4pt}
+\end{frame}
+
+\begin{frame}{Cybersécurité --- Veille et mesures complémentaires}
   \begin{columns}[T]
-    \column{0.48\textwidth}
+    \column{0.47\textwidth}
     \begin{block}{Veille sécurité menée}
       \begin{itemize}\small
         \item \textbf{OWASP Top 10} : référentiel principal
@@ -976,7 +832,8 @@ def _lock_stock_rows(db, ids_article):
         \item \textbf{Daily.dev} / bytes : newsletter tech hebdo
       \end{itemize}
     \end{block}
-    \column{0.48\textwidth}
+    \hspace{0.06\textwidth}
+    \column{0.47\textwidth}
     \begin{block}{Mesures complémentaires}
       \begin{itemize}\small
         \item CORS : origines autorisées (Vercel + localhost)
@@ -988,9 +845,6 @@ def _lock_stock_rows(db, ids_article):
   \end{columns}
 \end{frame}
 
-% ─────────────────────────────────────────
-%  SLIDE 15b — RGPD / nLPD & ACCESSIBILITÉ
-% ─────────────────────────────────────────
 \begin{frame}{Données personnelles (RGPD / nLPD) \& Accessibilité}
   \begin{columns}[T]
     \column{0.5\textwidth}
@@ -1016,13 +870,8 @@ def _lock_stock_rows(db, ids_article):
   \end{columns}
 \end{frame}
 
-% ══════════════════════════════════════════════════════════════════════
 \section{Tests et déploiement}
-% ══════════════════════════════════════════════════════════════════════
 
-% ─────────────────────────────────────────
-%  SLIDE 16 — TESTS
-% ─────────────────────────────────────────
 \begin{frame}{Tests et couverture --- 99/99, 79\,\%}
   \begin{columns}[T]
     \column{0.48\textwidth}
@@ -1074,9 +923,6 @@ def _lock_stock_rows(db, ids_article):
   \end{columns}
 \end{frame}
 
-% ─────────────────────────────────────────
-%  SLIDE 17 — DÉPLOIEMENT
-% ─────────────────────────────────────────
 \begin{frame}{Déploiement --- Infrastructure cloud hybride + CI/CD}
   \begin{columns}[T]
     \column{0.48\textwidth}
@@ -1112,43 +958,8 @@ def _lock_stock_rows(db, ids_article):
   \end{center}
 \end{frame}
 
-% ══════════════════════════════════════════════════════════════════════
-\section{Compétences CDA}
-% ══════════════════════════════════════════════════════════════════════
-
-% ─────────────────────────────────────────
-%  SLIDE 18 — BLOCS CDA
-% ─────────────────────────────────────────
-\begin{frame}{Couverture des 3 blocs de compétences CDA --- traçabilité}
-  \begin{center}
-  \small
-  \renewcommand{\arraystretch}{1.6}
-  \begin{tabular}{@{}p{4cm}p{6cm}@{}}
-    \toprule
-    \textbf{Bloc} & \textbf{Déjà montré à~:} \\
-    \midrule
-    \textbf{1} --- Sécuriser & Authentification, Sécurité OWASP, RGPD \& accessibilité \\
-    \textbf{2} --- Concevoir \& développer & Modèle de données, Architecture, étapes Scan / Paiement \\
-    \textbf{3} --- Préparer le déploiement & Tests et couverture, Déploiement \\
-    \bottomrule
-  \end{tabular}
-  \end{center}
-  \vspace{8pt}
-  \begin{exampleblock}{\small Pas de redite}
-    \begin{itemize}\small
-      \item Chaque ligne renvoie à ce qui a déjà été montré en action
-      \item Objectif : expliciter le lien avec le référentiel
-    \end{itemize}
-  \end{exampleblock}
-\end{frame}
-
-% ══════════════════════════════════════════════════════════════════════
 \section{Conclusion \& perspectives}
-% ══════════════════════════════════════════════════════════════════════
 
-% ─────────────────────────────────────────
-%  SLIDE 19 — CONCLUSION
-% ─────────────────────────────────────────
 \begin{frame}{Conclusion --- Bilan et perspectives}
   \begin{columns}[T]
     \column{0.48\textwidth}
@@ -1187,9 +998,6 @@ def _lock_stock_rows(db, ids_article):
   \end{columns}
 \end{frame}
 
-% ─────────────────────────────────────────
-%  SLIDE 20 — QUESTIONS
-% ─────────────────────────────────────────
 \begin{frame}[plain]
   \begin{tikzpicture}[remember picture,overlay]
     \fill[myblue] (current page.north west) rectangle (current page.south east);

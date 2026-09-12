@@ -14,6 +14,7 @@ function LoginForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const returnTo = safeReturnTo(searchParams.get('returnTo'))
+  const reason = searchParams.get('reason')
   const { isLoggedIn, setToken } = useAuth()
 
   useEffect(() => {
@@ -49,6 +50,11 @@ function LoginForm() {
   return (
     <div className="content-center" style={{ maxWidth: 440 }}>
       <h1 style={{ margin: 0 }}>Connexion</h1>
+      {reason === 'admin_required' ? (
+        <div className="banner-error" role="alert">
+          Vous devez être connecté avec un compte administrateur pour accéder à cette page.
+        </div>
+      ) : null}
       <form className="card cardPadding" onSubmit={onSubmit}>
         <label className="sr-only" htmlFor="login-email">Email</label>
         <input
