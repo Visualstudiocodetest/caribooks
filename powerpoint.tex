@@ -514,10 +514,10 @@ ESTIAM --- Promotion E3 DAD --- Encadrant : Mhand Boufala}
       \end{itemize}
     \end{block}
     \vspace{4pt}
-    \begin{alertblock}{\small Sécurité de démarrage}
+    \begin{alertblock}{\small Que se passe-t-il si \texttt{SECRET\_KEY} n'est pas définie ?}
       \begin{itemize}\small
-        \item Refuse de démarrer si \texttt{SECRET\_KEY} est faible/placeholder
-        \item Si absente : clé aléatoire générée par processus
+        \item Valeur \og placeholder \fg{} connue $\Rightarrow$ l'application \textbf{refuse de démarrer}
+        \item Absente $\Rightarrow$ clé aléatoire générée pour le processus (jamais de secret devinable)
       \end{itemize}
     \end{alertblock}
     \column{0.46\textwidth}
@@ -529,9 +529,9 @@ ESTIAM --- Promotion E3 DAD --- Encadrant : Mhand Boufala}
       \end{itemize}
     \end{block}
     \vspace{4pt}
-    \begin{alertblock}{\small Contrôle critique}
+    \begin{alertblock}{\small Pourquoi vérifier \texttt{email\_verified} ?}
       \begin{itemize}\small
-        \item \texttt{email\_verified = false} $\Rightarrow$ connexion refusée (400)
+        \item Faux $\Rightarrow$ connexion refusée (400)
         \item Sinon : prise de contrôle de compte possible
       \end{itemize}
     \end{alertblock}
