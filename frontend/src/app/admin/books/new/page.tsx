@@ -2,8 +2,10 @@
 
 import { useEffect, useState, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { ApiError } from '@/services/api'
-import { createBook } from '@/services/books'
+import { createBook, getBookByIsbn } from '@/services/books'
+import { createScan } from '@/services/scans'
 import { listCatalog } from '@/services/catalog'
 import Image from 'next/image'
 import { lookupIsbn } from '@/services/openlibrary'
@@ -11,6 +13,7 @@ import { fetchRemoteImage } from '@/services/images'
 import { cleanIsbn } from '@/lib/isbn'
 import { isExternalImage } from '@/lib/images'
 import { useBarcodeScanner } from '@/hooks/useBarcodeScanner'
+import type { BookRead } from '@/types/api'
 
 type EtatItem = { id_etat_usure: number; libelle: string }
 type TypeObjetItem = { id_type_objet: number; libelle: string; code?: string }
@@ -30,13 +33,55 @@ export default function AdminNewBookPage() {
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [autofillLoading, setAutofillLoading] = useState(false)
+  // Set when the scanned/typed ISBN already matches a book in the Caribooks
+  // catalog: creating it again would just fail on the unique ISBN constraint,
+  // so instead we show the existing book and offer to log a traceability scan
+  // (scan_isbn) against it, exactly like the old standalone /scan page did.
+  const [existingBook, setExistingBook] = useState<BookRead | null>(null)
+  const [scanSaving, setScanSaving] = useState(false)
+  const [scanSaved, setScanSaved] = useState<string | null>(null)
   const videoRef = useRef<HTMLVideoElement | null>(null)
 
-  const onDetect = useCallback((raw: string) => {
-    const cleaned = cleanIsbn(raw)
+  async function handleIsbn(cleaned: string) {
     setIsbn(cleaned)
+    setScanSaved(null)
+    if (!cleaned) {
+      setExistingBook(null)
+      return
+    }
+    const found = await getBookByIsbn(cleaned).catch(() => null)
+    if (found) {
+      setExistingBook(found)
+      return
+    }
+    setExistingBook(null)
     void autofill(cleaned)
+  }
+
+  const onDetect = useCallback((raw: string) => {
+    void handleIsbn(cleanIsbn(raw))
   }, [])
+
+  async function onSaveScan() {
+    if (!existingBook) return
+    const clean = cleanIsbn(isbn)
+    if (!clean) return
+    setScanSaving(true)
+    setError(null)
+    try {
+      const created = await createScan({
+        id_article_livre: existingBook.id_article,
+        isbn_lu: clean,
+        valide: false,
+      })
+      setScanSaved(`Scan enregistré (#${created.id_scan_isbn}).`)
+    } catch (e) {
+      const err = e as unknown
+      setError(err instanceof ApiError ? err.message : 'Enregistrement du scan impossible')
+    } finally {
+      setScanSaving(false)
+    }
+  }
   const {
     start: startScanner,
     stop: stopScanner,
