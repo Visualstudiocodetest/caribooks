@@ -119,7 +119,7 @@ function PaymentSuccessScreen({ commande }: { commande: CommandeRead | null }) {
         </div>
         <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap' }}>
           <Link className="btn btnPrimary" href="/account/orders">Voir mes commandes</Link>
-          <Link className="btn" href="/catalog">Continuer mes achats</Link>
+          <Link className="btn" href="/">Continuer mes achats</Link>
         </div>
       </div>
     </div>
@@ -665,7 +665,7 @@ export function PaymentClient() {
         await cancelCommande(commandeId)
         if (clearCart) clear()
         refreshAvailability()
-        router.push('/catalog')
+        router.push('/')
       } catch (e: unknown) {
         setCancelling(false)
         setError(e instanceof ApiError ? e.message : 'Erreur lors de l’annulation.')

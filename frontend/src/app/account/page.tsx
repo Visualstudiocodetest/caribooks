@@ -201,7 +201,7 @@ export default function AccountPage() {
           <button className="btn btnPrimary" type="submit" disabled={saving}>
             {saving ? 'Enregistrement…' : 'Enregistrer'}
           </button>
-          <Link className="btn" href="/catalog">
+          <Link className="btn" href="/">
             Retour au catalogue
           </Link>
         </div>

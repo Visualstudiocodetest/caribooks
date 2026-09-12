@@ -26,10 +26,10 @@ export function Header() {
             <span>Caribooks</span>
           </Link>
           <nav className="main-nav">
-            <Link className="muted" href="/catalog">Catalogue</Link>
+            <Link className="muted" href="/">Catalogue</Link>
             {isAdmin ? (
               <>
-                <Link className="muted" href="/scan">Scanner</Link>
+                <Link className="muted" href="/admin/books/new">Ajouter un livre</Link>
                 <Link className="muted" href="/admin/books">Admin</Link>
                 <Link className="muted" href="/admin/orders">Commandes</Link>
               </>
@@ -95,7 +95,7 @@ export function Header() {
 
       <div className={`mobile-nav ${open ? 'open' : ''}`}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          <Link href="/catalog" onClick={closeMenu}>Catalogue</Link>
+          <Link href="/" onClick={closeMenu}>Catalogue</Link>
           {isAdmin ? <Link href="/scan" onClick={closeMenu}>Scanner un ISBN</Link> : null}
           {isAdmin ? <Link href="/admin/books" onClick={closeMenu}>Interface admin</Link> : null}
           {isAdmin ? <Link href="/admin/orders" onClick={closeMenu}>Commandes (admin)</Link> : null}
