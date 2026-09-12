@@ -179,8 +179,7 @@ export default function AdminNewBookPage() {
     const raw = (param || '').trim()
     if (!raw) return
 
-    setIsbn(raw)
-    void autofill(raw)
+    void handleIsbn(cleanIsbn(raw))
     // run once on mount
   }, [])
 
@@ -236,13 +235,58 @@ export default function AdminNewBookPage() {
   return (
     <div className="container page-main">
       <div className="content-center">
-        <h1 style={{ margin: 0 }}>Nouveau livre</h1>
+        <h1 style={{ margin: 0 }}>Ajouter un livre</h1>
 
+        {existingBook ? (
+          <div className="card cardPadding" style={{ display: 'grid', gap: 12 }}>
+            <div className="muted">Ce livre est déjà au catalogue — inutile de le recréer.</div>
+            <div style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
+              {existingBook.image_link ? (
+                <Image
+                  src={existingBook.image_link}
+                  alt={existingBook.titre}
+                  width={64}
+                  height={88}
+                  style={{ objectFit: 'cover', borderRadius: 10, border: '1px solid var(--color-border)' }}
+                  unoptimized={isExternalImage(existingBook.image_link)}
+                />
+              ) : (
+                <div className="card" style={{ width: 64, height: 88 }} />
+              )}
+              <div style={{ flex: 1 }}>
+                <div style={{ fontWeight: 900 }}>{existingBook.titre}</div>
+                <div className="muted">ISBN: {existingBook.isbn}</div>
+                <div className="muted">Prix: CHF {existingBook.prix_chf.toFixed(2)}</div>
+              </div>
+              <Link className="btn" href={`/admin/books/${existingBook.id_article}`}>
+                Détails
+              </Link>
+            </div>
+            <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+              <button className="btn btnPrimary" type="button" onClick={onSaveScan} disabled={scanSaving}>
+                {scanSaving ? 'Enregistrement…' : 'Enregistrer le scan'}
+              </button>
+              <button
+                className="btn"
+                type="button"
+                onClick={() => {
+                  setExistingBook(null)
+                  setIsbn('')
+                  setScanSaved(null)
+                }}
+              >
+                Ajouter un autre livre
+              </button>
+            </div>
+            {scanSaved ? <div className="banner-success">{scanSaved}</div> : null}
+            {error ? <div className="banner-error">{error}</div> : null}
+          </div>
+        ) : (
         <form className="card cardPadding" onSubmit={onSubmit}>
           <div className="form-row">
             <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
               <button className="btn" type="button" onClick={() => void startScanner()}>
-                Quick scanner
+                Scanner un code-barres
               </button>
               <label className="btn" style={{ cursor: 'pointer' }}>
                 Upload image
