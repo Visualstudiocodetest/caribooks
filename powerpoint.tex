@@ -672,7 +672,7 @@ def get_isbn_metadata(isbn: str):
     \column{0.48\textwidth}
     \begin{block}{Sécurisation webhook}
       \begin{itemize}\small
-        \item Signature \textbf{ECDSA} vérifiée avant mise à jour
+        \item Signature \textbf{ECDSA} (\textit{Elliptic Curve Digital Signature Algorithm}) vérifiée avant mise à jour
         \item \texttt{with\_for\_update()} : verrou SQL --- accès concurrents
         \item Finalisation atomique de la commande
       \end{itemize}
