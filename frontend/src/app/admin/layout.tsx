@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
+import { usePathname, useRouter } from 'next/navigation'
 import { useAuth } from '@/components/auth/AuthProvider'
 import { getCurrentUser } from '@/services/auth'
 
@@ -9,6 +10,8 @@ type Check = 'checking' | 'admin' | 'not-admin' | 'anon'
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const { isLoggedIn } = useAuth()
+  const router = useRouter()
+  const pathname = usePathname()
   // The role is NOT trusted from the client-side (unsigned) JWT decode. We verify
   // it against the backend, which validates the token signature and returns the
   // real role — so a tampered localStorage token can never render the back-office.
@@ -29,19 +32,18 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     }
   }, [isLoggedIn])
 
-  if (check === 'anon') {
-    return (
-      <div className="card" style={{ padding: 16, display: 'grid', gap: 10 }}>
-        <div style={{ fontWeight: 900 }}>Connexion requise</div>
-        <div className="muted">Connectez-vous avec un compte admin pour accéder au back-office.</div>
-        <Link className="btn btnPrimary" href="/login?returnTo=/admin">
-          Se connecter
-        </Link>
-      </div>
-    )
-  }
+  useEffect(() => {
+    // Not connected at all: send straight to the login page with a message,
+    // instead of rendering an inline "please log in" card in place of the
+    // back-office. An authenticated-but-non-admin user is left on the
+    // "Accès refusé" card below — sending them back to /login would just
+    // show them the same account logged in again.
+    if (check === 'anon') {
+      router.replace(`/login?returnTo=${encodeURIComponent(pathname)}&reason=admin_required`)
+    }
+  }, [check, router, pathname])
 
-  if (check === 'checking') {
+  if (check === 'anon' || check === 'checking') {
     return (
       <div className="card" style={{ padding: 16 }}>
         <div className="muted">Vérification des droits…</div>
