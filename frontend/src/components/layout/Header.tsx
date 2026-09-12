@@ -96,7 +96,7 @@ export function Header() {
       <div className={`mobile-nav ${open ? 'open' : ''}`}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           <Link href="/" onClick={closeMenu}>Catalogue</Link>
-          {isAdmin ? <Link href="/scan" onClick={closeMenu}>Scanner un ISBN</Link> : null}
+          {isAdmin ? <Link href="/admin/books/new" onClick={closeMenu}>Ajouter un livre</Link> : null}
           {isAdmin ? <Link href="/admin/books" onClick={closeMenu}>Interface admin</Link> : null}
           {isAdmin ? <Link href="/admin/orders" onClick={closeMenu}>Commandes (admin)</Link> : null}
           {isLoggedIn ? <Link href="/account" onClick={closeMenu}>Mon compte</Link> : null}
