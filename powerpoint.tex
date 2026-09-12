@@ -723,12 +723,12 @@ def get_isbn_metadata(isbn: str):
       \end{itemize}
     \end{block}
     \vspace{5pt}
-    \begin{exampleblock}{\small Ce qui m'a fait le plus peur}
+    \begin{alertblock}{\small Que se passe-t-il si deux clients achètent le \textbf{dernier} exemplaire au même instant ?}
       \begin{itemize}\small
-        \item Deux clients, \textbf{dernier} exemplaire, même instant
-        \item Sans verrou : double lecture \og en stock \fg{}, double vente
+        \item Sans verrou : les deux lisent \og en stock \fg{} en même temps
+        \item Conséquence : double vente du même exemplaire
       \end{itemize}
-    \end{exampleblock}
+    \end{alertblock}
     \column{0.50\textwidth}
 \begin{lstlisting}[style=pysmall,caption={}]
 # services/order_service.py
@@ -765,13 +765,13 @@ def _lock_stock_rows(db, ids_article):
       \end{itemize}
     \end{block}
     \vspace{4pt}
-    \begin{exampleblock}{\small Test d'isolation dédié}
+    \begin{alertblock}{\small Qu'arrive-t-il si un client consulte la commande d'un autre ?}
       \begin{itemize}\small
-        \item \texttt{test\_orders\_cross\_user\_isolation}
-        \item Client $\rightarrow$ commande d'un autre : \textbf{404}
+        \item Réponse : \textbf{404}, comme si elle n'existait pas
         \item Non-admin $\rightarrow$ \texttt{/orders/admin/*} : \textbf{403}
+        \item Vérifié par un test dédié, \texttt{test\_orders\_cross\_user\_isolation}
       \end{itemize}
-    \end{exampleblock}
+    \end{alertblock}
     \column{0.54\textwidth}
     \begin{center}
     \includegraphics[width=\linewidth,height=0.62\textheight,keepaspectratio]{diagrams/sequence_admin_commande.pdf}
