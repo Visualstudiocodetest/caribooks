@@ -386,6 +386,7 @@ export default function AdminNewBookPage() {
             {loading ? 'Création…' : 'Créer'}
           </button>
         </form>
+        )}
 
         {scanning ? (
           <div className="modal">
