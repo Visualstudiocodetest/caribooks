@@ -19,6 +19,7 @@ from sqlalchemy.sql import func
 
 from infrastructure.db import Base
 
+
 class Article(Base):
     __tablename__ = "article"
     id_article = Column(BigInteger, primary_key=True, autoincrement=True)

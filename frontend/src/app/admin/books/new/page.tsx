@@ -42,6 +42,37 @@ export default function AdminNewBookPage() {
   const [scanSaved, setScanSaved] = useState<string | null>(null)
   const videoRef = useRef<HTMLVideoElement | null>(null)
 
+  async function autofill(isbnValue: string) {
+    setError(null)
+    setAutofillLoading(true)
+    try {
+      const data = await lookupIsbn(isbnValue)
+      if (!data) {
+        setError('Aucune donnée trouvée sur OpenLibrary pour cet ISBN.')
+        return
+      }
+      const title = [data.title, data.subtitle].filter(Boolean).join(' — ')
+      if (title) setTitre(title)
+      const author = data.authors?.map((a) => a.name).filter(Boolean).join(', ')
+      if (author) setAuteur(author)
+      const cover = data.cover?.large || data.cover?.medium || data.cover?.small
+      if (cover) {
+        try {
+          const served = await fetchRemoteImage(cover)
+          setImageLink(served)
+        } catch {
+          setImageLink(cover)
+        }
+      }
+      const desc = typeof data.notes === 'string' ? data.notes : ''
+      if (desc) setDescription(desc)
+    } catch {
+      setError('Impossible de contacter OpenLibrary.')
+    } finally {
+      setAutofillLoading(false)
+    }
+  }
+
   async function handleIsbn(cleaned: string) {
     setIsbn(cleaned)
     setScanSaved(null)
@@ -92,37 +123,6 @@ export default function AdminNewBookPage() {
     cameraErrorMessage: 'Impossible d’accéder à la caméra',
     videoUnavailableMessage: 'Caméra introuvable',
   })
-
-  async function autofill(isbnValue: string) {
-    setError(null)
-    setAutofillLoading(true)
-    try {
-      const data = await lookupIsbn(isbnValue)
-      if (!data) {
-        setError('Aucune donnée trouvée sur OpenLibrary pour cet ISBN.')
-        return
-      }
-      const title = [data.title, data.subtitle].filter(Boolean).join(' — ')
-      if (title) setTitre(title)
-      const author = data.authors?.map((a) => a.name).filter(Boolean).join(', ')
-      if (author) setAuteur(author)
-      const cover = data.cover?.large || data.cover?.medium || data.cover?.small
-      if (cover) {
-        try {
-          const served = await fetchRemoteImage(cover)
-          setImageLink(served)
-        } catch {
-          setImageLink(cover)
-        }
-      }
-      const desc = typeof data.notes === 'string' ? data.notes : ''
-      if (desc) setDescription(desc)
-    } catch {
-      setError('Impossible de contacter OpenLibrary.')
-    } finally {
-      setAutofillLoading(false)
-    }
-  }
 
   async function onAutofill() {
     await handleIsbn(cleanIsbn(isbn))

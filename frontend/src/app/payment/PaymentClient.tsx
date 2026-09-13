@@ -300,25 +300,9 @@ export function PaymentClient() {
   const { isLoggedIn } = useAuth()
   const { clear } = useCart()
 
-  // After releasing a reservation (cancel / failed payment), the freed stock must
-  // be reflected everywhere: invalidate the cached availability queries and refresh
-  // the server components (catalogue) so the book is buyable again immediately.
-  const refreshAvailability = useCallback(() => {
-    queryClient.invalidateQueries({ queryKey: ['availability'] })
-    router.refresh()
-  }, [queryClient, router])
-
-  // Single place that marks a payment as done: empty the cart (so the paid items
-  // can't be re-ordered) and switch to the success screen (which has no pay
-  // button, so the customer can't be charged a second time). Stock is finalized
-  // server-side by finalize_commande.
-  const markPaymentSucceeded = useCallback(() => {
-    clear()
-    setPaying(false)
-    setError(null)
-    setPhase('success')
-  }, [clear])
-
+  // Hook state declared before any callback below that references a setter,
+  // so those callbacks close over an already-initialized binding rather than
+  // one still in its temporal dead zone at declaration time.
   const [commande, setCommande] = useState<CommandeRead | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
@@ -343,6 +327,25 @@ export function PaymentClient() {
     const returning = (Number.isFinite(pid) && pid > 0) || searchParams.get('status') === 'failed'
     return returning ? 'confirming' : 'form'
   })
+
+  // After releasing a reservation (cancel / failed payment), the freed stock must
+  // be reflected everywhere: invalidate the cached availability queries and refresh
+  // the server components (catalogue) so the book is buyable again immediately.
+  const refreshAvailability = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ['availability'] })
+    router.refresh()
+  }, [queryClient, router])
+
+  // Single place that marks a payment as done: empty the cart (so the paid items
+  // can't be re-ordered) and switch to the success screen (which has no pay
+  // button, so the customer can't be charged a second time). Stock is finalized
+  // server-side by finalize_commande.
+  const markPaymentSucceeded = useCallback(() => {
+    clear()
+    setPaying(false)
+    setError(null)
+    setPhase('success')
+  }, [clear])
 
   const handlerRef = useRef<PostFinanceIframeHandler | null>(null)
   const handlerMethodRef = useRef<number | null>(null)
@@ -435,7 +438,10 @@ export function PaymentClient() {
 
     handler.create('postfinance-payment-form')
   },
-  [],
+  // Every dependency here is a useState setter -- guaranteed stable by React
+  // across renders, so listing them changes no runtime behavior. Included so
+  // static dependency analysis can verify that instead of guessing.
+  [setError, setIframeReady, setValidationErrors, setUsePrimaryTrigger, setPayButtonLabel, setPaying, setIframeHeight],
 )
 
   useEffect(() => {
@@ -671,7 +677,9 @@ export function PaymentClient() {
         setError(e instanceof ApiError ? e.message : 'Erreur lors de l’annulation.')
       }
     },
-    [commandeId, clear, refreshAvailability, router],
+    // setCancelling/setError are useState setters -- stable across renders,
+    // listed so static dependency analysis can verify that instead of guessing.
+    [commandeId, clear, refreshAvailability, router, setCancelling, setError],
   )
 
   if (!isLoggedIn) {
