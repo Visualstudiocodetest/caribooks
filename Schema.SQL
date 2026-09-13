@@ -28,18 +28,6 @@ CREATE TABLE IF NOT EXISTS `etat_usure` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 --
--- Table structure for table `categorie`
---
-
-CREATE TABLE IF NOT EXISTS `categorie` (
-  `id_categorie` bigint NOT NULL AUTO_INCREMENT,
-  `libelle` varchar(100) NOT NULL,
-  `description` text,
-  PRIMARY KEY (`id_categorie`),
-  UNIQUE KEY `libelle` (`libelle`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-
---
 -- Table structure for table `source_stock`
 --
 
@@ -97,19 +85,6 @@ CREATE TABLE IF NOT EXISTS `article` (
   CONSTRAINT `article_ibfk_1` FOREIGN KEY (`id_type_objet`) REFERENCES `type_objet` (`id_type_objet`) ON DELETE RESTRICT ON UPDATE CASCADE,
   CONSTRAINT `article_ibfk_2` FOREIGN KEY (`id_etat_usure`) REFERENCES `etat_usure` (`id_etat_usure`) ON DELETE RESTRICT ON UPDATE CASCADE,
   CONSTRAINT `article_chk_1` CHECK ((`prix_chf` >= 0))
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-
---
--- Table structure for table `article_categorie`
---
-
-CREATE TABLE IF NOT EXISTS `article_categorie` (
-  `id_article` bigint NOT NULL,
-  `id_categorie` bigint NOT NULL,
-  PRIMARY KEY (`id_article`,`id_categorie`),
-  KEY `id_categorie` (`id_categorie`),
-  CONSTRAINT `article_categorie_ibfk_1` FOREIGN KEY (`id_article`) REFERENCES `article` (`id_article`) ON DELETE CASCADE ON UPDATE CASCADE,
-  CONSTRAINT `article_categorie_ibfk_2` FOREIGN KEY (`id_categorie`) REFERENCES `categorie` (`id_categorie`) ON DELETE RESTRICT ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 --

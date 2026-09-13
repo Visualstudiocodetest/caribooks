@@ -13,12 +13,10 @@ export type BookRead = {
   prix_chf: number
   actif: boolean
   date_creation: string
-  categorie_ids: number[]
   etat_libelle?: string | null
-  categorie_libelles?: string[]
 }
 
-export type BookCreate = Omit<BookRead, 'id_article' | 'date_creation' | 'categorie_ids' | 'categorie_libelles' | 'etat_libelle'> & {
+export type BookCreate = Omit<BookRead, 'id_article' | 'date_creation' | 'etat_libelle'> & {
   id_type_objet?: number
   id_etat_usure?: number
 }
@@ -148,5 +146,12 @@ export type Stock = {
   quantite_disponible: number
   quantite_reservee?: number
   date_creation: string
+}
+
+export type SourceStock = {
+  id_source_stock: number
+  libelle: string
+  type_source: string
+  description?: string | null
 }
 

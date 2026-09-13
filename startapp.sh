@@ -17,8 +17,14 @@ BACKEND_PORT="${BACKEND_PORT:-8000}"
 FRONTEND_PORT="${FRONTEND_PORT:-3000}"
 BACKEND_BASE_URL="${BACKEND_BASE_URL:-http://${BACKEND_HOST}:${BACKEND_PORT}}"
 
-command -v python3 >/dev/null 2>&1 || { echo "python3 not found"; exit 1; }
 command -v npm >/dev/null 2>&1 || { echo "npm not found"; exit 1; }
+
+# Use the backend's own venv rather than whatever `python3` resolves to on
+# PATH -- a system/global interpreter won't have the project's dependencies
+# installed, and can even be a different architecture (e.g. an x86_64 build
+# on Apple Silicon), which fails obscurely deep inside a C-extension import.
+PYTHON_BIN="${ROOT_DIR}/backend/venv/bin/python3"
+[[ -x "$PYTHON_BIN" ]] || { echo "backend/venv not found -- run: python3 -m venv backend/venv && backend/venv/bin/pip install -r backend/requirements.txt"; exit 1; }
 
 backend_pid=""
 frontend_pid=""
@@ -36,7 +42,7 @@ trap cleanup INT TERM EXIT
 echo "Starting backend on ${BACKEND_BASE_URL}..."
 cd "${ROOT_DIR}/backend"
 FRONTEND_ORIGINS="http://127.0.0.1:${FRONTEND_PORT},http://localhost:${FRONTEND_PORT}" \
-	python3 -m uvicorn main:app --reload --host "${BACKEND_HOST}" --port "${BACKEND_PORT}" &
+	"${PYTHON_BIN}" -m uvicorn main:app --reload --host "${BACKEND_HOST}" --port "${BACKEND_PORT}" &
 backend_pid=$!
 
 echo "Starting frontend on http://127.0.0.1:${FRONTEND_PORT} (calling FastAPI directly)..."

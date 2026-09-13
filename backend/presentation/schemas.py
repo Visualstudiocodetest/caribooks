@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import date, datetime
-from typing import List, Optional
+from typing import Optional
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -44,9 +44,7 @@ class BookUpdate(BaseModel):
 class BookRead(BookBase, ORMBase):
     id_article: int
     date_creation: datetime
-    categorie_ids: List[int] = Field(default_factory=list)
     etat_libelle: Optional[str] = None
-    categorie_libelles: List[str] = Field(default_factory=list)
 
 
 class TypeObjetBase(BaseModel):
@@ -87,24 +85,6 @@ class EtatUsureRead(EtatUsureBase, ORMBase):
     id_etat_usure: int
 
 
-class CategorieBase(BaseModel):
-    libelle: str
-    description: Optional[str] = None
-
-
-class CategorieCreate(CategorieBase):
-    pass
-
-
-class CategorieUpdate(BaseModel):
-    libelle: Optional[str] = None
-    description: Optional[str] = None
-
-
-class CategorieRead(CategorieBase, ORMBase):
-    id_categorie: int
-
-
 class ArticleBase(BaseModel):
     id_type_objet: int
     id_etat_usure: int
@@ -117,7 +97,7 @@ class ArticleBase(BaseModel):
 
 
 class ArticleCreate(ArticleBase):
-    categorie_ids: List[int] = Field(default_factory=list)
+    pass
 
 
 class ArticleUpdate(BaseModel):
@@ -129,13 +109,11 @@ class ArticleUpdate(BaseModel):
     image_link: Optional[str] = None
     prix_chf: Optional[float] = Field(default=None, ge=0)
     actif: Optional[bool] = None
-    categorie_ids: Optional[List[int]] = None
 
 
 class ArticleRead(ArticleBase, ORMBase):
     id_article: int
     date_creation: datetime
-    categorie_ids: List[int] = Field(default_factory=list)
 
 
 class SourceStockBase(BaseModel):

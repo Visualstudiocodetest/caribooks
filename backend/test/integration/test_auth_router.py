@@ -122,6 +122,25 @@ def test_google_auth_accepts_verified_email(client: TestClient, uniq: str, monke
     assert r.json()["access_token"]
 
 
+def test_google_auth_fails_closed_when_client_id_unconfigured(client: TestClient, uniq: str, monkeypatch):
+    """A misconfigured deployment (GOOGLE_CLIENT_ID unset) must reject every
+    Google login outright, not silently skip the audience check -- otherwise a
+    valid Google ID token issued to a completely different OAuth client could
+    be replayed against this app."""
+    from presentation import auth_router
+
+    monkeypatch.setattr(auth_router, "GOOGLE_CLIENT_ID", "")
+
+    def fake_get(url, params=None, timeout=None):
+        return _FakeGoogleResponse(
+            {"sub": f"gid-{uniq}", "email": f"x_{uniq}@example.com", "email_verified": "true", "aud": "some-other-app"}
+        )
+
+    monkeypatch.setattr(auth_router.httpx, "get", fake_get)
+    r = client.post("/auth/google", json={"credential": "valid"})
+    assert r.status_code == 503, r.text
+
+
 def test_login_is_rate_limited_per_account(client: TestClient, register_and_login, uniq: str):
     email = f"ratelimited_{uniq}@example.com"
     register_and_login(email)

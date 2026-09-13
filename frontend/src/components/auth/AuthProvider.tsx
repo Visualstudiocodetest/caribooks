@@ -12,12 +12,18 @@ type AuthContextValue = {
   role: string | null
   isAdmin: boolean
   setToken: (token: string | null) => void
+  // False for the one tick before localStorage has actually been read (SSR/
+  // first render always starts from `null`, since localStorage doesn't exist
+  // server-side). Callers that redirect on "not logged in" -- e.g. the admin
+  // layout -- must wait for this, or a real, logged-in admin gets bounced to
+  // /login on every full page load/refresh before the true token is read.
+  hydrated: boolean
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const { value: token, setValue: setTokenRaw } = useLocalStorageState<string | null>('caribooks_token', null)
+  const { value: token, setValue: setTokenRaw, hydrated } = useLocalStorageState<string | null>('caribooks_token', null)
   const expired = isTokenExpired(token)
   const role = expired ? null : getJwtRole(token)
 
@@ -42,8 +48,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const isLoggedIn = Boolean(token) && !expired
   const value = useMemo<AuthContextValue>(
-    () => ({ token: isLoggedIn ? token : null, isLoggedIn, role, isAdmin: role === 'admin', setToken: setTokenRaw }),
-    [token, isLoggedIn, role, setTokenRaw],
+    () => ({ token: isLoggedIn ? token : null, isLoggedIn, role, isAdmin: role === 'admin', setToken: setTokenRaw, hydrated }),
+    [token, isLoggedIn, role, setTokenRaw, hydrated],
   )
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }

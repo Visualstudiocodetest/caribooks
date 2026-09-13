@@ -1,10 +1,8 @@
-%% Modèle Logique de Données (MLD) — 13 tables MySQL
+%% Modèle Logique de Données (MLD) — 11 tables MySQL
 erDiagram
     type_objet ||--o{ article : "id_type_objet"
     etat_usure ||--o{ article : "id_etat_usure"
     article ||--o| livre : "id_article (PK partagée)"
-    article ||--o{ article_categorie : ""
-    categorie ||--o{ article_categorie : ""
     article ||--o{ stock : "id_article"
     source_stock ||--o{ stock : "id_source_stock"
     utilisateur ||--o{ commande : "id_utilisateur"
@@ -21,10 +19,6 @@ erDiagram
     }
     etat_usure {
         bigint id_etat_usure PK
-        string libelle
-    }
-    categorie {
-        bigint id_categorie PK
         string libelle
     }
     source_stock {
@@ -48,10 +42,6 @@ erDiagram
         string editeur
         date date_publication
         string langue
-    }
-    article_categorie {
-        bigint id_article PK,FK
-        bigint id_categorie PK,FK
     }
     stock {
         bigint id_stock PK

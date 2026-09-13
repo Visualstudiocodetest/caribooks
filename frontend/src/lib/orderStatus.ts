@@ -52,3 +52,12 @@ export const ALL_STATUSES = [
   'CANCELLED',
   'REFUNDED',
 ] as const
+
+// CANCELLED and REFUNDED are deliberately excluded from the "force status"
+// override: both have dedicated endpoints (cancel/refund) that reconcile
+// stock and payment records. Setting them via the raw status override does
+// a bare `commande.statut = ...` write with no reconciliation, which silently
+// strands sold stock as unavailable-but-never-released.
+export const FORCE_STATUS_OPTIONS = ALL_STATUSES.filter(
+  (s) => s !== 'CANCELLED' && s !== 'REFUNDED'
+)

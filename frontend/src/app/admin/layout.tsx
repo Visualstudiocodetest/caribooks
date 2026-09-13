@@ -9,7 +9,7 @@ import { getCurrentUser } from '@/services/auth'
 type Check = 'checking' | 'admin' | 'not-admin' | 'anon'
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
-  const { isLoggedIn } = useAuth()
+  const { isLoggedIn, hydrated } = useAuth()
   const router = useRouter()
   const pathname = usePathname()
   // The role is NOT trusted from the client-side (unsigned) JWT decode. We verify
@@ -18,6 +18,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const [check, setCheck] = useState<Check>('checking')
 
   useEffect(() => {
+    // Before localStorage has actually been read, `isLoggedIn` is always
+    // false (SSR/first render starts from null) even for an admin with a
+    // perfectly valid token — treating that as "anon" here would redirect a
+    // logged-in admin to /login on every full page load/refresh, before the
+    // real value ever arrives.
+    if (!hydrated) return
     let active = true
     if (!isLoggedIn) {
       setCheck('anon')
@@ -30,7 +36,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     return () => {
       active = false
     }
-  }, [isLoggedIn])
+  }, [isLoggedIn, hydrated])
 
   useEffect(() => {
     // Not connected at all: send straight to the login page with a message,

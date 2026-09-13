@@ -6,6 +6,8 @@ import { useState } from 'react'
 import { useAuth } from '@/components/auth/AuthProvider'
 import { useCart } from '@/components/cart/CartProvider'
 import { usePathname } from 'next/navigation'
+import { ADMIN_NAV_GROUPS } from '@/lib/adminNav'
+import { AdminMenu } from './AdminMenu'
 
 export function Header() {
   const { isLoggedIn, isAdmin, setToken } = useAuth()
@@ -20,23 +22,21 @@ export function Header() {
   return (
     <header className="site-header">
       <div className="container header-inner">
-        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
           <Link href="/" className="brand" style={{ display: 'flex', alignItems: 'center', gap: 8 }} onClick={closeMenu}>
             <Image src="/logo-caritas.jpg" alt="Caritas" width={40} height={40} style={{ borderRadius: 6 }} priority />
             <span>Caribooks</span>
           </Link>
           <nav className="main-nav">
             <Link className="muted" href="/">Catalogue</Link>
-            {isAdmin ? (
+            {isAdmin ? <Link className="muted" href="/admin/books/new">Ajouter un livre</Link> : null}
+            {isLoggedIn ? (
               <>
-                <Link className="muted" href="/admin/books/new">Ajouter un livre</Link>
-                <Link className="muted" href="/admin/books">Admin</Link>
-                <Link className="muted" href="/admin/orders">Commandes</Link>
+                <Link className="muted" href="/account">Mon compte</Link>
+                <Link className="muted" href="/account/orders">Mes commandes</Link>
               </>
             ) : null}
-            {isLoggedIn ? (
-              <Link className="muted" href="/account">Mon compte</Link>
-            ) : null}
+            {isAdmin ? <AdminMenu /> : null}
           </nav>
         </div>
 
@@ -96,11 +96,34 @@ export function Header() {
       <div className={`mobile-nav ${open ? 'open' : ''}`}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           <Link href="/" onClick={closeMenu}>Catalogue</Link>
-          {isAdmin ? <Link href="/admin/books/new" onClick={closeMenu}>Ajouter un livre</Link> : null}
-          {isAdmin ? <Link href="/admin/books" onClick={closeMenu}>Interface admin</Link> : null}
-          {isAdmin ? <Link href="/admin/orders" onClick={closeMenu}>Commandes (admin)</Link> : null}
-          {isLoggedIn ? <Link href="/account" onClick={closeMenu}>Mon compte</Link> : null}
-          {isLoggedIn ? <Link href="/account/orders" onClick={closeMenu}>Mes commandes</Link> : null}
+          {isAdmin ? <Link href="/admin/books/new" onClick={closeMenu}>➕ Ajouter un livre</Link> : null}
+
+          {isAdmin ? ADMIN_NAV_GROUPS.map((group) => (
+            <div key={group.label} style={{ display: 'grid', gap: 8, paddingTop: 4 }}>
+              <div className="muted" style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                {group.label}
+              </div>
+              {group.items
+                .filter((item) => item.href !== '/admin/books/new')
+                .map((item) => (
+                <Link key={item.href} href={item.href} onClick={closeMenu} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span aria-hidden="true">{item.icon}</span>
+                  {item.label}
+                </Link>
+              ))}
+            </div>
+          )) : null}
+
+          {isLoggedIn ? (
+            <div style={{ display: 'grid', gap: 8, paddingTop: 4 }}>
+              <div className="muted" style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                Mon espace
+              </div>
+              <Link href="/account" onClick={closeMenu}>Mon compte</Link>
+              <Link href="/account/orders" onClick={closeMenu}>Mes commandes</Link>
+            </div>
+          ) : null}
+
           <Link href="/cart" onClick={closeMenu}>
             Panier {count > 0 ? `(${count})` : ''}
           </Link>

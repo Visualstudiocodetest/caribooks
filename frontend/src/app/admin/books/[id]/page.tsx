@@ -8,7 +8,6 @@ import { deleteBook, getBook, updateBook } from '@/services/books'
 import { listCatalog } from '@/services/catalog'
 
 type EtatItem = { id_etat_usure: number; libelle: string }
-type CategorieItem = { id_categorie: number; libelle: string }
 
 export default function AdminEditBookPage({ params }: { params: Promise<{ id: string }> }) {
   const { id: idStr } = use(params)
@@ -17,8 +16,6 @@ export default function AdminEditBookPage({ params }: { params: Promise<{ id: st
 
   const [book, setBook] = useState<BookRead | null>(null)
   const [etats, setEtats] = useState<EtatItem[]>([])
-  const [categories, setCategories] = useState<CategorieItem[]>([])
-  const [selectedCats, setSelectedCats] = useState<number[]>([])
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
@@ -29,23 +26,16 @@ export default function AdminEditBookPage({ params }: { params: Promise<{ id: st
     Promise.all([
       getBook(id),
       listCatalog<EtatItem>('etat-usures').catch(() => []),
-      listCatalog<CategorieItem>('categories').catch(() => []),
-    ]).then(([b, e, c]) => {
+    ]).then(([b, e]) => {
       if (!mounted) return
       setBook(b)
       setEtats(e)
-      setCategories(c)
-      setSelectedCats(b.categorie_ids ?? [])
     }).catch((e: unknown) => {
       if (!mounted) return
       setError(e instanceof ApiError ? e.message : 'Erreur de chargement')
     })
     return () => { mounted = false }
   }, [id])
-
-  function toggleCat(id: number) {
-    setSelectedCats((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id])
-  }
 
   async function onSave() {
     if (!book) return
@@ -65,10 +55,8 @@ export default function AdminEditBookPage({ params }: { params: Promise<{ id: st
         image_link: book.image_link,
         description: book.description,
         id_etat_usure: book.id_etat_usure,
-        categorie_ids: selectedCats,
       })
       setBook(updated)
-      setSelectedCats(updated.categorie_ids ?? [])
       setSaved(true)
       setTimeout(() => setSaved(false), 2500)
     } catch (e) {
@@ -158,26 +146,6 @@ export default function AdminEditBookPage({ params }: { params: Promise<{ id: st
               placeholder="Description…"
             />
           </div>
-          {categories.length > 0 ? (
-            <div style={{ gridColumn: '1 / -1' }}>
-              <label style={{ fontSize: 12, fontWeight: 600, display: 'block', marginBottom: 8 }}>Catégories</label>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                {categories.map((c) => {
-                  const checked = selectedCats.includes(c.id_categorie)
-                  return (
-                    <button
-                      key={c.id_categorie}
-                      type="button"
-                      onClick={() => toggleCat(c.id_categorie)}
-                      style={{ padding: '4px 12px', borderRadius: 999, fontSize: 13, fontWeight: 600, border: '1.5px solid', cursor: 'pointer', background: checked ? 'var(--color-primary)' : 'transparent', color: checked ? 'white' : 'var(--color-text)', borderColor: checked ? 'var(--color-primary)' : 'var(--color-border)' }}
-                    >
-                      {c.libelle}
-                    </button>
-                  )
-                })}
-              </div>
-            </div>
-          ) : null}
           <div style={{ gridColumn: '1 / -1' }}>
             <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
               <input type="checkbox" checked={book.actif} onChange={(e) => setBook({ ...book, actif: e.target.checked })} />

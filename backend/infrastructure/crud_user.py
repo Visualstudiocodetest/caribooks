@@ -86,7 +86,11 @@ def create_user(db: Session, user_data: dict) -> models.Utilisateur:
         prenom=user_data["prenom"],
         email=user_data["email"],
         mot_de_passe_hash=get_password_hash(user_data["mot_de_passe"]),
-        role="user",
+        # Only ever comes from a trusted caller: the public registration
+        # schema (UserCreate) has no `role` field, so a client can never
+        # inject this via POST /auth/register -- only backend/scripts/
+        # seed_full.py explicitly passes role="admin" for the seeded account.
+        role=user_data.get("role", "user"),
         billing_address_line1=user_data.get("billing_address_line1"),
         billing_address_line2=user_data.get("billing_address_line2"),
         billing_postal_code=user_data.get("billing_postal_code"),

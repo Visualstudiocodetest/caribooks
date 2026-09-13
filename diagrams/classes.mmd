@@ -11,10 +11,6 @@ classDiagram
         +id_etat_usure
         +libelle
     }
-    class Categorie {
-        +id_categorie
-        +libelle
-    }
     class SourceStock {
         +id_source_stock
         +libelle
@@ -76,7 +72,6 @@ classDiagram
     Article <|-- Livre : héritage (PK partagée)
     Article "*" --> "1" TypeObjet
     Article "*" --> "1" EtatUsure
-    Article "*" --> "*" Categorie : article_categorie
     Stock "*" --> "1" Article
     Stock "*" --> "1" SourceStock
     Commande "*" --> "1" Utilisateur

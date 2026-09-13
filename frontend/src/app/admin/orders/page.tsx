@@ -1,10 +1,10 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { listAdminCommandes, adminAdvanceCommande, adminGetLignes, adminCancelCommande, adminSetSent, adminSetAtReception, adminSetCommandeStatus } from '@/services/admin'
+import { listAdminCommandes, adminAdvanceCommande, adminGetLignes, adminCancelCommande, adminRefundCommande, adminSetSent, adminSetAtReception, adminSetCommandeStatus } from '@/services/admin'
 import { Money } from '@/components/ui/Money'
 import { StatusBadge } from '@/components/ui/StatusBadge'
-import { ALL_STATUSES, statusLabel } from '@/lib/orderStatus'
+import { FORCE_STATUS_OPTIONS, statusLabel } from '@/lib/orderStatus'
 import type { CommandeAdminRead, LigneCommandeAdminRead } from '@/types/api'
 
 const PAID_STATUSES = new Set(['PAID', 'CAPTURED', 'COMPLETED'])
@@ -109,10 +109,16 @@ function OrderRow({ commande, onAdvanced, defaultExpanded }: { commande: Command
               {busy ? '…' : 'Terminer'}
             </button>
           ) : null}
-          {!isTerminal ? (
+          {!isPaid && !isTerminal ? (
             <button className="btn" style={{ fontSize: 12, padding: '4px 10px', color: '#dc2626', borderColor: '#dc262640' }} disabled={busy}
               onClick={() => { if (confirm('Annuler cette commande ?')) runAction(() => adminCancelCommande(commande.id_commande)) }}>
               {busy ? '…' : 'Annuler'}
+            </button>
+          ) : null}
+          {isPaid && !isTerminal ? (
+            <button className="btn" style={{ fontSize: 12, padding: '4px 10px', color: '#dc2626', borderColor: '#dc262640' }} disabled={busy}
+              onClick={() => { if (confirm(`Rembourser ${commande.numero_commande} ?\nLe stock vendu sera restauré et le paiement marqué remboursé.`)) runAction(() => adminRefundCommande(commande.id_commande)) }}>
+              {busy ? '…' : 'Rembourser'}
             </button>
           ) : null}
           <button className="btn" style={{ fontSize: 12, padding: '4px 10px' }} onClick={toggleExpand}>
@@ -121,28 +127,33 @@ function OrderRow({ commande, onAdvanced, defaultExpanded }: { commande: Command
         </div>
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '0 8px 12px', flexWrap: 'wrap' }}>
-        <span className="muted" style={{ fontSize: 11 }}>Forcer le statut :</span>
-        <select
-          className="input"
-          style={{ fontSize: 12, padding: '3px 6px' }}
-          value={overrideStatus}
-          disabled={busy}
-          onChange={(e) => setOverrideStatus(e.target.value)}
-        >
-          {ALL_STATUSES.map((s) => (
-            <option key={s} value={s}>{statusLabel(s)}</option>
-          ))}
-        </select>
-        <button
-          className="btn"
-          style={{ fontSize: 12, padding: '3px 10px' }}
-          disabled={busy || overrideStatus === key}
-          onClick={applyOverride}
-        >
-          Appliquer
-        </button>
-      </div>
+      {!isTerminal ? (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '0 8px 12px', flexWrap: 'wrap' }}>
+          <span className="muted" style={{ fontSize: 11 }}>Forcer le statut :</span>
+          <select
+            className="input"
+            style={{ fontSize: 12, padding: '3px 6px' }}
+            value={overrideStatus}
+            disabled={busy}
+            onChange={(e) => setOverrideStatus(e.target.value)}
+          >
+            {FORCE_STATUS_OPTIONS.map((s) => (
+              <option key={s} value={s}>{statusLabel(s)}</option>
+            ))}
+          </select>
+          <button
+            className="btn"
+            style={{ fontSize: 12, padding: '3px 10px' }}
+            disabled={busy || overrideStatus === key}
+            onClick={applyOverride}
+          >
+            Appliquer
+          </button>
+          <span className="muted" style={{ fontSize: 11 }}>
+            (annulation/remboursement : utiliser les boutons dédiés ci-dessus, qui réconcilient le stock)
+          </span>
+        </div>
+      ) : null}
 
       {expanded ? (
         <div style={{ padding: '0 8px 12px', display: 'grid', gap: 4 }}>

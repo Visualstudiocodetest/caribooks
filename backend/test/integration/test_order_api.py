@@ -25,7 +25,6 @@ def _make_article(client: TestClient, admin_headers: dict, uniq: str, prix_chf: 
             "titre": "Order article",
             "prix_chf": prix_chf,
             "actif": True,
-            "categorie_ids": [],
         },
         headers=admin_headers,
     )

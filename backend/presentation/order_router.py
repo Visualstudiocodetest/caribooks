@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import text
 from sqlalchemy.orm import Session
@@ -30,6 +32,7 @@ from services.order_service import (
 )
 
 router = APIRouter(prefix="/orders", tags=["orders"])
+logger = logging.getLogger("caribooks.orders")
 
 commande_crud = CrudBase[models.Commande](models.Commande, "id_commande")
 
@@ -202,7 +205,8 @@ def create_ligne(payload: LigneCommandeCreate, db: Session = Depends(get_db), cu
         raise
     except Exception as e:
         db.rollback()
-        raise HTTPException(status_code=500, detail=f"Could not create ligne: {e}") from e
+        logger.exception("Could not create ligne")
+        raise HTTPException(status_code=500, detail="Could not create ligne") from e
 
 
 @router.put("/lignes/{id_ligne_commande}", response_model=LigneCommandeRead)
@@ -249,7 +253,8 @@ def update_ligne(
         raise
     except Exception as e:
         db.rollback()
-        raise HTTPException(status_code=500, detail=f"Could not update ligne: {e}") from e
+        logger.exception("Could not update ligne")
+        raise HTTPException(status_code=500, detail="Could not update ligne") from e
 
 
 @router.delete("/lignes/{id_ligne_commande}", status_code=status.HTTP_204_NO_CONTENT)

@@ -39,10 +39,6 @@ def seed():
         for lib in ('Neuf', 'Très bon état', 'Bon état', 'Usagé'):
             upsert(db, models.EtatUsure, 'libelle', lib)
 
-        # ── Catégories ───────────────────────────────────────────────────────
-        for lib in ('Fiction', 'Non-fiction', 'Sciences', 'Jeunesse', 'Histoire', 'Biographie'):
-            upsert(db, models.Categorie, 'libelle', lib)
-
         # ── Source stock par défaut ──────────────────────────────────────────
         ss = upsert(db, models.SourceStock, 'libelle', 'Magasin', type_source='ADMIN')
 

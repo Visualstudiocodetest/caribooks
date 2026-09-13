@@ -11,7 +11,6 @@ from sqlalchemy import (
     ForeignKey,
     Integer,
     String,
-    Table,
     Text,
     UniqueConstraint,
 )
@@ -20,22 +19,6 @@ from sqlalchemy.sql import func
 
 from infrastructure.db import Base
 
-article_categorie = Table(
-    "article_categorie",
-    Base.metadata,
-    Column(
-        "id_article",
-        BigInteger,
-        ForeignKey("article.id_article", ondelete="CASCADE", onupdate="CASCADE"),
-        primary_key=True,
-    ),
-    Column(
-        "id_categorie",
-        BigInteger,
-        ForeignKey("categorie.id_categorie", ondelete="RESTRICT", onupdate="CASCADE"),
-        primary_key=True,
-    ),
-)
 
 class Article(Base):
     __tablename__ = "article"
@@ -59,7 +42,6 @@ class Article(Base):
     type_objet = relationship("TypeObjet")
     etat_usure = relationship("EtatUsure")
     livre = relationship("Livre", back_populates="article", uselist=False)
-    categories = relationship("Categorie", secondary=article_categorie, back_populates="articles")
     stocks = relationship("Stock", back_populates="article")
     lignes_commande = relationship("LigneCommande", back_populates="article")
 
@@ -96,15 +78,6 @@ class EtatUsure(Base):
     description = Column(Text)
 
     articles = relationship("Article", back_populates="etat_usure")
-
-
-class Categorie(Base):
-    __tablename__ = "categorie"
-    id_categorie = Column(BigInteger, primary_key=True, autoincrement=True)
-    libelle = Column(String(100), nullable=False, unique=True)
-    description = Column(Text)
-
-    articles = relationship("Article", secondary=article_categorie, back_populates="categories")
 
 
 class SourceStock(Base):

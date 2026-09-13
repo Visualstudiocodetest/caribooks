@@ -31,6 +31,13 @@ export async function adminCancelCommande(id_commande: number) {
   })
 }
 
+export async function adminRefundCommande(id_commande: number) {
+  return apiFetch<CommandeAdminRead>(`/orders/admin/commandes/${id_commande}/refund`, {
+    method: 'POST',
+    auth: true,
+  })
+}
+
 export async function adminSetSent(id_commande: number) {
   return apiFetch<CommandeAdminRead>(`/orders/admin/commandes/${id_commande}/sent`, {
     method: 'POST',

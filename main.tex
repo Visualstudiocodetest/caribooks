@@ -371,7 +371,7 @@ Le choix de PostFinance comme prestataire de paiement s'est imposé pour plusieu
 
 \subsection{Problématique et public cible}
 
-L'association Caritas dispose d'un stock de livres d'occasion qu'elle ne parvient pas à écouler entièrement en magasin. L'enjeu est de permettre une mise en vente en ligne simple et rapide, sans contraindre les bénévoles à saisir manuellement toutes les informations de chaque ouvrage. La plateforme CARIBOOKS cible trois profils d'utilisateurs distincts :
+L'association Caritas dispose d'un stock de livres d'occasion qu'elle ne parvient pas à écouler entièrement en magasin. L'enjeu est de permettre une mise en vente en ligne simple et rapide, sans contraindre les bénévoles à saisir manuellement toutes les informations de chaque ouvrage. La plateforme CARIBOOKS cible trois segments de public cible distincts (à ne pas confondre avec les \textit{rôles techniques} du système, détaillés en \ref{tab:acteurs} — il n'y en a que deux) :
 
 \begin{itemize}
     \item \textbf{Les associations caritatives} (notamment Caritas) qui souhaitent éviter de jeter leurs livres invendus en les proposant à la vente en ligne.
@@ -393,7 +393,6 @@ L'acheteur peut parcourir le catalogue et filtrer les livres disponibles selon l
 \begin{itemize}
     \item Titre
     \item Auteur
-    \item Catégorie / genre
     \item État du livre (\textit{comme neuf}, \textit{bon état}, \textit{état correct})
     \item Prix en CHF
 \end{itemize}
@@ -429,20 +428,22 @@ Du point de vue utilisateur, le MVP est considéré comme réussi si l'applicati
 
 \subsection{Acteurs et responsabilités}
 
+\noindent Le système ne définit techniquement que \textbf{deux rôles d'authentification} (colonne \texttt{role} de la table \texttt{utilisateur}, valeurs \texttt{admin} / \texttt{user}, vérifiées par les dépendances FastAPI \texttt{get\_current\_user} / \texttt{require\_admin}). \og Vendeur (bénévole Caritas) \fg{}, \og Administrateur du site \fg{} et \og Modérateur \fg{} décrivent trois \textbf{responsabilités métier} réelles assumées par la même association Caritas, mais correspondent tous au \textbf{même rôle technique} \texttt{admin} : il n'existe pas de compte \og vendeur \fg{} ou \og modérateur \fg{} distinct dans le système. \og Acheteur \fg{} correspond au rôle \texttt{user}.
+
 \begin{table}[h]
 \centering
 \renewcommand{\arraystretch}{1.4}
-\begin{tabular}{@{}p{3.2cm}p{4.5cm}p{6.5cm}@{}}
+\begin{tabular}{@{}p{3.2cm}p{2cm}p{3.3cm}p{5.9cm}@{}}
 \toprule
-\textbf{Acteur} & \textbf{Objectif principal} & \textbf{Actions autorisées} \\
+\textbf{Acteur (métier)} & \textbf{Rôle technique} & \textbf{Objectif principal} & \textbf{Actions autorisées} \\
 \midrule
-Administrateur du site & Assurer le bon fonctionnement et la qualité des annonces & CRUD sur les annonces, modération, gestion des comptes utilisateurs \\
-Vendeur (bénévole Caritas) & Mettre en vente rapidement les livres du stock & Ajouter un livre (scan ISBN ou saisie manuelle), fixer un prix en CHF, modifier ou supprimer ses annonces \\
-Acheteur & Trouver et acheter un livre d'occasion à bon prix & Rechercher, filtrer, consulter les fiches, choisir un mode de livraison (envoi postal ou retrait en magasin), acheter via PostFinance \\
-Modérateur & Garantir la qualité et la conformité des contenus & Vérifier, masquer ou supprimer les annonces non conformes \\
+Administrateur du site & \texttt{admin} & Assurer le bon fonctionnement et la qualité des annonces & CRUD sur les annonces, modération, gestion des comptes utilisateurs \\
+Vendeur (bénévole Caritas) & \texttt{admin} & Mettre en vente rapidement les livres du stock & Ajouter un livre (scan ISBN ou saisie manuelle), fixer un prix en CHF, modifier ou supprimer ses annonces \\
+Modérateur & \texttt{admin} & Garantir la qualité et la conformité des contenus & Vérifier, masquer ou supprimer les annonces non conformes \\
+Acheteur & \texttt{user} & Trouver et acheter un livre d'occasion à bon prix & Rechercher, filtrer, consulter les fiches, choisir un mode de livraison (envoi postal ou retrait en magasin), acheter via PostFinance \\
 \bottomrule
 \end{tabular}
-\caption{Acteurs du système CARIBOOKS et leurs responsabilités}
+\caption{Acteurs métier du système CARIBOOKS, leurs responsabilités et le rôle technique correspondant}
 \label{tab:acteurs}
 \end{table}
 
@@ -538,7 +539,7 @@ Sprint 3 & Semaines 5–6 &
   Module scan ISBN : intégration librairie de scan dans le frontend, appel API OpenLibrary, préremplissage du formulaire, saisie manuelle en secours &
   Formulaire d'ajout de livre opérationnel, scan ISBN fonctionnel \\[6pt]
 Sprint 4 & Semaines 7–8 &
-  Catalogue et recherche : affichage des livres disponibles, filtres (titre, auteur, catégorie, état, fourchette de prix), fiche détaillée ; la liste de favoris initialement prévue a été reportée au backlog &
+  Catalogue et recherche : affichage des livres disponibles, filtres (titre, auteur, état, fourchette de prix), fiche détaillée ; la liste de favoris initialement prévue a été reportée au backlog &
   Pages catalogue et fiche livre, moteur de recherche avec filtres \\[6pt]
 Sprint 5 & Semaines 9–10 &
   Intégration PostFinance : tunnel de paiement, gestion des webhooks, mise à jour des statuts de commande, tests sur sandbox PostFinance &
@@ -648,7 +649,7 @@ Sprint 6 & Semaines 11–12 &
     \label{fig:classes}
 \end{figure}
 
-\noindent Le diagramme de classes présente les entités principales du domaine métier : \texttt{Utilisateur}, \texttt{Article}, \texttt{Livre} (sous-classe d'\texttt{Article}), \texttt{Categorie}, \texttt{EtatUsure}, \texttt{TypeObjet}, \texttt{Stock}, \texttt{Commande}, \texttt{LigneCommande}, \texttt{Paiement}, \texttt{ScanIsbn}. La relation d'héritage entre \texttt{Article} et \texttt{Livre} reflète la table \texttt{livre} liée à la table \texttt{article} par une clé primaire partagée.
+\noindent Le diagramme de classes présente les entités principales du domaine métier : \texttt{Utilisateur}, \texttt{Article}, \texttt{Livre} (sous-classe d'\texttt{Article}), \texttt{EtatUsure}, \texttt{TypeObjet}, \texttt{Stock}, \texttt{Commande}, \texttt{LigneCommande}, \texttt{Paiement}, \texttt{ScanIsbn}. La relation d'héritage entre \texttt{Article} et \texttt{Livre} reflète la table \texttt{livre} liée à la table \texttt{article} par une clé primaire partagée.
 
 \subsection{Diagramme d'objets}
 
@@ -686,12 +687,11 @@ Sprint 6 & Semaines 11–12 &
     \label{fig:mld}
 \end{figure}
 
-\noindent La base de données CARIBOOKS repose sur \textbf{13 tables} organisées autour d'une architecture en héritage de table (\textit{table per class}) pour les articles : la table \texttt{article} contient les attributs communs à tout objet en vente, et la table \texttt{livre} étend \texttt{article} avec les attributs spécifiques aux livres (ISBN, auteur, éditeur, date de publication, langue). Ce design permet d'étendre la plateforme à d'autres types d'objets (vêtements, jouets, etc.) sans restructurer le schéma de base.
+\noindent La base de données CARIBOOKS repose sur \textbf{11 tables} organisées autour d'une architecture en héritage de table (\textit{table per class}) pour les articles : la table \texttt{article} contient les attributs communs à tout objet en vente, et la table \texttt{livre} étend \texttt{article} avec les attributs spécifiques aux livres (ISBN, auteur, éditeur, date de publication, langue). Ce design permet d'étendre la plateforme à d'autres types d'objets (vêtements, jouets, etc.) sans restructurer le schéma de base.
 
 \noindent Les principales relations sont :
 \begin{itemize}
     \item \texttt{article} $\leftrightarrow$ \texttt{livre} : héritage 1-1 (clé primaire partagée)
-    \item \texttt{article} $\leftrightarrow$ \texttt{categorie} : association N-N via \texttt{article\_categorie}
     \item \texttt{article} $\leftrightarrow$ \texttt{stock} : 1-N par source de stock
     \item \texttt{utilisateur} $\leftrightarrow$ \texttt{commande} : 1-N
     \item \texttt{commande} $\leftrightarrow$ \texttt{ligne\_commande} $\leftrightarrow$ \texttt{article} : N-N décomposée
@@ -822,7 +822,7 @@ Le module d'authentification expose trois endpoints : \texttt{POST /auth/registe
 
 \subsection{Module catalogue, articles et stock}
 
-Le catalogue s'appuie sur une classe CRUD générique typée (\texttt{CrudBase}) réutilisée par tous les routers, ce qui factorise les opérations \texttt{list / get / create / update / delete}. Le \texttt{catalog\_router} gère les référentiels (types d'objet, états d'usure, catégories), le \texttt{book\_router} expose les livres (notamment \texttt{GET /books/by-isbn/\{isbn\}} et \texttt{GET /books/\{id\}}) via un \texttt{BookService} dédié, et le \texttt{stock\_router} pilote les quantités disponibles et réservées. Les lectures du catalogue sont publiques ; les opérations d'écriture exigent un utilisateur authentifié (et un rôle \texttt{admin} pour la création de livres). Côté frontend, la page d'accueil (\texttt{app/page.tsx}) \textbf{est} le catalogue complet (recherche, filtres état/catégorie, tri, pagination visuelle) : une ancienne page \texttt{/catalog} redondante, qui dupliquait le même appel \texttt{listBooks}/\texttt{getAvailabilityMap} en version tronquée, a été supprimée afin de n'avoir plus qu'un seul point d'entrée pour parcourir le catalogue.
+Le catalogue s'appuie sur une classe CRUD générique typée (\texttt{CrudBase}) réutilisée par tous les routers, ce qui factorise les opérations \texttt{list / get / create / update / delete}. Le \texttt{catalog\_router} gère les référentiels (types d'objet, états d'usure), le \texttt{book\_router} expose les livres (notamment \texttt{GET /books/by-isbn/\{isbn\}} et \texttt{GET /books/\{id\}}) via un \texttt{BookService} dédié, et le \texttt{stock\_router} pilote les quantités disponibles et réservées. Les lectures du catalogue sont publiques ; les opérations d'écriture exigent un utilisateur authentifié (et un rôle \texttt{admin} pour la création de livres). Côté frontend, la page d'accueil (\texttt{app/page.tsx}) \textbf{est} le catalogue complet (recherche, filtre par état, tri, pagination visuelle) : une ancienne page \texttt{/catalog} redondante, qui dupliquait le même appel \texttt{listBooks}/\texttt{getAvailabilityMap} en version tronquée, a été supprimée afin de n'avoir plus qu'un seul point d'entrée pour parcourir le catalogue. Une classification par catégorie/genre (table \texttt{categorie}, association N-N \texttt{article\_categorie}) avait été mise en place au niveau de l'API générique \texttt{/articles}, mais n'a jamais été reliée au parcours de création/édition d'un livre (\texttt{/books}) : le formulaire d'ajout n'exposait pas ce champ, et celui d'édition l'exposait sans que le schéma \texttt{BookUpdate} ne le transmette au service, si bien qu'aucun livre n'a jamais reçu de catégorie en pratique. Ces tables, la case à cocher correspondante côté back-office et le filtre catalogue associé ont été supprimés (migration \texttt{20260912\_drop\_categorie\_tables.sql}) plutôt que maintenus non fonctionnels.
 
 \subsection{Module scan ISBN}
 
@@ -928,7 +928,6 @@ ISBN & Scan ISBN inconnu & ISBN non référencé & 404, fallback saisie manuelle
 Articles & Création article & Données valides, token utilisateur & 201, article créé \\
 Articles & Création sans auth & Données valides, sans token & 403 \\
 Articles & Récupération catalogue & — & 200, liste paginée \\
-Articles & Filtre par catégorie & id\_categorie valide & 200, liste filtrée \\
 Commande & Passer commande & Panier non vide, user connecté & 201, commande créée \\
 Paiement & Initiation paiement & Commande valide, sandbox PostFinance & Redirection URL PostFinance \\
 Paiement & Webhook succès & Callback PostFinance success & Statut commande = PAYÉE \\
@@ -1321,12 +1320,6 @@ CREATE TABLE etat_usure (
     description TEXT
 );
 
-CREATE TABLE categorie (
-    id_categorie BIGINT AUTO_INCREMENT PRIMARY KEY,
-    libelle VARCHAR(100) NOT NULL UNIQUE,
-    description TEXT
-);
-
 CREATE TABLE article (
     id_article BIGINT AUTO_INCREMENT PRIMARY KEY,
     id_type_objet BIGINT NOT NULL,
@@ -1356,18 +1349,6 @@ CREATE TABLE livre (
     FOREIGN KEY (id_article)
         REFERENCES article(id_article)
         ON DELETE CASCADE ON UPDATE CASCADE
-);
-
-CREATE TABLE article_categorie (
-    id_article BIGINT NOT NULL,
-    id_categorie BIGINT NOT NULL,
-    PRIMARY KEY (id_article, id_categorie),
-    FOREIGN KEY (id_article)
-        REFERENCES article(id_article)
-        ON DELETE CASCADE ON UPDATE CASCADE,
-    FOREIGN KEY (id_categorie)
-        REFERENCES categorie(id_categorie)
-        ON DELETE RESTRICT ON UPDATE CASCADE
 );
 
 CREATE TABLE source_stock (

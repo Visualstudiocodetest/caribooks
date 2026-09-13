@@ -31,6 +31,16 @@ default_origins = ",".join([
 ])
 origins_env = os.getenv("FRONTEND_ORIGINS", default_origins)
 allow_origins = [o.strip() for o in origins_env.split(",") if o.strip()]
+# allow_credentials=True below means Starlette's CORSMiddleware will never
+# collapse "*" into a real wildcard -- it instead reflects whatever Origin the
+# browser sent, with credentials allowed, for every request. A FRONTEND_ORIGINS
+# misconfiguration containing "*" would silently become "any origin, with
+# auth," so refuse to start rather than allow that combination.
+if "*" in allow_origins:
+    raise RuntimeError(
+        "FRONTEND_ORIGINS must not contain '*': combined with allow_credentials=True "
+        "this would allow any origin to make authenticated requests."
+    )
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allow_origins,

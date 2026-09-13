@@ -84,7 +84,7 @@ F01 & Inscription / connexion & Compte, authentification, rôles utilisateur / a
 F02 & Ajout d'un livre & Scan ISBN (préremplissage) ou saisie manuelle en secours. \\
 F03 & Prix et état & Prix en CHF, état parmi \textit{comme neuf}, \textit{bon état}, \textit{état correct}. \\
 F04 & Gestion des annonces & Publication, modification, suppression. \\
-F05 & Catalogue et recherche & Filtres combinés (titre, auteur, genre, prix, état). \\
+F05 & Catalogue et recherche & Filtres combinés (titre, auteur, prix, état). \\
 F06 & Fiche détaillée & Informations complètes du livre et du vendeur. \\
 F07 & Panier et réservation de stock & Réservation temporaire, libération automatique en cas d'abandon. \\
 F08 & Paiement sécurisé & CHF via PostFinance (TWINT, Visa, Mastercard). \\
@@ -104,14 +104,16 @@ Google OAuth (connexion optionnelle) ; ne gère ni comptabilité ni logistique p
 
 \section{Acteurs}
 
-\begin{longtable}{@{}L{2.8cm}L{4.5cm}L{7.2cm}@{}}
+\noindent Le système ne définit que \textbf{deux rôles techniques} (\texttt{admin} / \texttt{user}) : Administrateur et Vendeur (bénévole) partagent le même rôle \texttt{admin} (même type de compte, aucune distinction en base) ; Acheteur correspond au rôle \texttt{user}.
+
+\begin{longtable}{@{}L{2.6cm}L{1.6cm}L{3.9cm}L{6cm}@{}}
 \toprule
-\textbf{Acteur} & \textbf{Objectif} & \textbf{Actions autorisées} \\
+\textbf{Acteur (métier)} & \textbf{Rôle} & \textbf{Objectif} & \textbf{Actions autorisées} \\
 \midrule
 \endhead
-Administrateur & Qualité et bon fonctionnement des annonces & CRUD annonces, modération, gestion des comptes \\
-Vendeur (bénévole) & Vendre rapidement les livres du stock & Ajouter, fixer un prix, modifier, supprimer ses annonces \\
-Acheteur & Trouver et acheter un livre & Rechercher, filtrer, consulter, acheter via PostFinance \\
+Administrateur & \texttt{admin} & Qualité et bon fonctionnement des annonces & CRUD annonces, modération, gestion des comptes \\
+Vendeur (bénévole) & \texttt{admin} & Vendre rapidement les livres du stock & Ajouter, fixer un prix, modifier, supprimer ses annonces \\
+Acheteur & \texttt{user} & Trouver et acheter un livre & Rechercher, filtrer, consulter, acheter via PostFinance \\
 \bottomrule
 \caption{Acteurs du système}
 \end{longtable}

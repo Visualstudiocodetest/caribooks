@@ -89,8 +89,14 @@ def google_auth(payload: GoogleAuthRequest, request: Request, db: Session = Depe
     except Exception as e:
         raise HTTPException(status_code=400, detail="Token Google invalide") from e
 
-    # Validate audience when GOOGLE_CLIENT_ID is configured
-    if GOOGLE_CLIENT_ID and info.get("aud") != GOOGLE_CLIENT_ID:
+    # Fail closed, not open: a missing GOOGLE_CLIENT_ID must reject every
+    # Google login, never silently skip the audience check. Google's tokeninfo
+    # endpoint already verifies the token's signature/expiry, but not that it
+    # was issued *for this app* -- skipping "aud" would let a valid Google ID
+    # token issued to a completely different OAuth client be replayed here.
+    if not GOOGLE_CLIENT_ID:
+        raise HTTPException(status_code=503, detail="Google sign-in is not configured")
+    if info.get("aud") != GOOGLE_CLIENT_ID:
         raise HTTPException(status_code=400, detail="Token Google invalide (audience)")
 
     google_id: str = info.get("sub", "")

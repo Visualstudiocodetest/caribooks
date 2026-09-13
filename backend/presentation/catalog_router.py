@@ -7,9 +7,6 @@ from infrastructure import models
 from infrastructure.crud_base import CrudBase
 from presentation.deps import get_db, require_admin
 from presentation.schemas import (
-    CategorieCreate,
-    CategorieRead,
-    CategorieUpdate,
     EtatUsureCreate,
     EtatUsureRead,
     EtatUsureUpdate,
@@ -22,7 +19,6 @@ router = APIRouter(prefix="/catalog", tags=["catalog"])
 
 type_objet_crud = CrudBase[models.TypeObjet](models.TypeObjet, "id_type_objet")
 etat_usure_crud = CrudBase[models.EtatUsure](models.EtatUsure, "id_etat_usure")
-categorie_crud = CrudBase[models.Categorie](models.Categorie, "id_categorie")
 
 
 @router.get("/type-objets", response_model=list[TypeObjetRead])
@@ -117,51 +113,3 @@ def delete_etat_usure(
     if not etat_usure_crud.delete(db, id_etat_usure):
         raise HTTPException(status_code=404, detail="EtatUsure not found")
     return None
-
-
-@router.get("/categories", response_model=list[CategorieRead])
-def list_categories(db: Session = Depends(get_db)):
-    return categorie_crud.list(db)
-
-
-@router.get("/categories/{id_categorie}", response_model=CategorieRead)
-def get_categorie(id_categorie: int, db: Session = Depends(get_db)):
-    obj = categorie_crud.get(db, id_categorie)
-    if obj is None:
-        raise HTTPException(status_code=404, detail="Categorie not found")
-    return obj
-
-
-@router.post("/categories", response_model=CategorieRead, status_code=status.HTTP_201_CREATED)
-def create_categorie(
-    payload: CategorieCreate,
-    db: Session = Depends(get_db),
-    _admin=Depends(require_admin),
-):
-    obj = models.Categorie(**payload.model_dump())
-    return categorie_crud.create(db, obj)
-
-
-@router.put("/categories/{id_categorie}", response_model=CategorieRead)
-def update_categorie(
-    id_categorie: int,
-    payload: CategorieUpdate,
-    db: Session = Depends(get_db),
-    _admin=Depends(require_admin),
-):
-    updated = categorie_crud.update(db, id_categorie, payload.model_dump(exclude_unset=True))
-    if updated is None:
-        raise HTTPException(status_code=404, detail="Categorie not found")
-    return updated
-
-
-@router.delete("/categories/{id_categorie}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_categorie(
-    id_categorie: int,
-    db: Session = Depends(get_db),
-    _admin=Depends(require_admin),
-):
-    if not categorie_crud.delete(db, id_categorie):
-        raise HTTPException(status_code=404, detail="Categorie not found")
-    return None
-

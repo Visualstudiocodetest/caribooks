@@ -38,7 +38,16 @@ def _serialize_user(u: models.Utilisateur, *, with_billing: bool = True) -> dict
 
 
 @router.get("/", response_model=list[UserRead])
+@router.get("", response_model=list[UserRead], include_in_schema=False)
 def list_users(db: Session = Depends(get_db), _admin=Depends(require_admin)):
+    # One handler serves both "/users" and "/users/" -- see book_router.list_books
+    # for why: without this, a missing/extra trailing slash gets 307-redirected
+    # by FastAPI straight to this backend's own absolute origin, breaking the
+    # frontend's /api/proxy rewrite (the browser follows the redirect itself,
+    # turning a same-origin proxied call into a cross-origin one that also
+    # drops the Authorization header per the fetch spec) -- this is exactly
+    # what broke the admin Utilisateurs page.
+    #
     # Keep output minimal: no password hash
     return [_serialize_user(u, with_billing=False) for u in user_crud.list(db)]
 
@@ -135,13 +144,18 @@ def get_user(id_utilisateur: int, db: Session = Depends(get_db), _admin=Depends(
 
 @router.delete("/{id_utilisateur}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_user(id_utilisateur: int, db: Session = Depends(get_db), _admin=Depends(require_admin)):
+    if int(_admin.id_utilisateur) == id_utilisateur:
+        raise HTTPException(status_code=400, detail="Cannot delete your own account from the admin panel")
     if not user_crud.delete(db, id_utilisateur):
         raise HTTPException(status_code=404, detail="User not found")
     return None
 
 @router.put("/{id_utilisateur}", response_model=UserRead)
-def update_user(id_utilisateur: int, user_update: dict, db: Session = Depends(get_db), _admin=Depends(require_admin)):
-    updated = crud_user.update_user(db, id_utilisateur, user_update)
+def update_user(id_utilisateur: int, payload: UserUpdate, db: Session = Depends(get_db), _admin=Depends(require_admin)):
+    data = payload.model_dump(exclude_unset=True)
+    if int(_admin.id_utilisateur) == id_utilisateur and data.get("role") not in (None, "admin"):
+        raise HTTPException(status_code=400, detail="Cannot change your own role away from admin")
+    updated = crud_user.update_user(db, id_utilisateur, data)
     if updated is None:
         raise HTTPException(status_code=404, detail="User not found")
     return _serialize_user(updated)

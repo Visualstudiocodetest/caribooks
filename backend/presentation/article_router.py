@@ -25,12 +25,16 @@ def _to_article_read(obj: models.Article) -> ArticleRead:
         prix_chf=float(obj.prix_chf),
         actif=bool(obj.actif),
         date_creation=obj.date_creation,
-        categorie_ids=[int(c.id_categorie) for c in (obj.categories or [])],
     )
 
 
 @router.get("/", response_model=list[ArticleRead])
+@router.get("", response_model=list[ArticleRead], include_in_schema=False)
 def list_articles(db: Session = Depends(get_db)):
+    # One handler serves both "/articles" and "/articles/" -- see
+    # book_router.list_books for why (avoids a FastAPI redirect_slashes
+    # redirect leaking the backend's own absolute origin to the browser
+    # through the frontend's /api/proxy rewrite).
     objs = db.query(models.Article).all()
     return [_to_article_read(o) for o in objs]
 
@@ -44,6 +48,7 @@ def get_article(id_article: int, db: Session = Depends(get_db)):
 
 
 @router.post("/", response_model=ArticleRead, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=ArticleRead, status_code=status.HTTP_201_CREATED, include_in_schema=False)
 def create_article(
     payload: ArticleCreate,
     db: Session = Depends(get_db),
@@ -59,9 +64,6 @@ def create_article(
         prix_chf=payload.prix_chf,
         actif=payload.actif,
     )
-    if payload.categorie_ids:
-        cats = db.query(models.Categorie).filter(models.Categorie.id_categorie.in_(payload.categorie_ids)).all()
-        obj.categories = cats
     db.add(obj)
     db.commit()
     db.refresh(obj)
@@ -79,13 +81,9 @@ def update_article(
     if obj is None:
         raise HTTPException(status_code=404, detail="Article not found")
     data = payload.model_dump(exclude_unset=True)
-    categorie_ids = data.pop("categorie_ids", None)
     for k, v in data.items():
         if hasattr(obj, k):
             setattr(obj, k, v)
-    if categorie_ids is not None:
-        cats = db.query(models.Categorie).filter(models.Categorie.id_categorie.in_(categorie_ids)).all()
-        obj.categories = cats
     db.commit()
     db.refresh(obj)
     return _to_article_read(obj)

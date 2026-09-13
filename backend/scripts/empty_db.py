@@ -19,6 +19,20 @@ from infrastructure.db import SessionLocal
 
 
 def empty_db():
+    # Guard against running this against a real database by accident (e.g. a
+    # production `.env` sourced into the shell out of habit). Not reachable
+    # via any API route, so this only protects the deliberate/manual case --
+    # but that's exactly the case where a wrong-env mistake actually happens.
+    env = os.getenv('ENVIRONMENT', 'development').strip().lower()
+    if env not in ('development', 'test'):
+        print(
+            f"Refusing to empty the database: ENVIRONMENT={env!r} is not "
+            "'development' or 'test'. Set ENVIRONMENT explicitly if this is "
+            "really what you want.",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
     db = SessionLocal()
     try:
         print('Deleting all data from database (foreign key checks disabled)')
@@ -29,12 +43,10 @@ def empty_db():
             'ligne_commande',
             'commande',
             'stock',
-            'article_categorie',
             'livre',
             'article',
             'utilisateur',
             'source_stock',
-            'categorie',
             'etat_usure',
             'type_objet',
         ]

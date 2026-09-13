@@ -2,6 +2,7 @@
 
 import { Suspense, useEffect, useState } from 'react'
 
+import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useAuth } from '@/components/auth/AuthProvider'
 import { ApiError } from '@/services/api'
@@ -91,6 +92,12 @@ function LoginForm() {
         </div>
         <GoogleSignInButton onCredential={handleGoogleCredential} text="signin_with" />
       </form>
+      <div className="muted" style={{ textAlign: 'center', fontSize: 14 }}>
+        Pas encore de compte ?{' '}
+        <Link className="btn" href="/register" style={{ display: 'inline-flex', marginLeft: 6 }}>
+          Créer un compte
+        </Link>
+      </div>
     </div>
   )
 }

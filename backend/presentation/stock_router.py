@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import func
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from infrastructure import models
@@ -71,7 +72,14 @@ def delete_source(
 
 
 @router.get("/", response_model=list[StockRead])
+@router.get("", response_model=list[StockRead], include_in_schema=False)
 def list_stock(db: Session = Depends(get_db)):
+    # One handler serves both "/stock" and "/stock/" -- see book_router.list_books
+    # for why: without this, a missing/extra trailing slash gets 307-redirected
+    # by FastAPI straight to this backend's own absolute origin, breaking the
+    # frontend's /api/proxy rewrite (the browser follows the redirect itself,
+    # turning a same-origin proxied call into a cross-origin one).
+    #
     # Release stock reserved by carts whose 20-min window has expired, so the
     # catalogue reflects truly available quantities on every read.
     from services.order_service import cleanup_expired_carts
@@ -112,13 +120,21 @@ def get_stock(id_stock: int, db: Session = Depends(get_db)):
 
 
 @router.post("/", response_model=StockRead, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=StockRead, status_code=status.HTTP_201_CREATED, include_in_schema=False)
 def create_stock(
     payload: StockCreate,
     db: Session = Depends(get_db),
     _admin=Depends(require_admin),
 ):
     obj = models.Stock(**payload.model_dump())
-    return stock_crud.create(db, obj)
+    try:
+        return stock_crud.create(db, obj)
+    except IntegrityError as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=400,
+            detail="Ce livre a déjà une entrée de stock pour cette source.",
+        ) from e
 
 
 @router.put("/{id_stock}", response_model=StockRead)

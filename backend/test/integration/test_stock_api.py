@@ -24,7 +24,6 @@ def test_stock_and_sources_crud(client: TestClient, register_and_login, uniq: st
             "titre": "Stocked article",
             "prix_chf": 10.0,
             "actif": True,
-            "categorie_ids": [],
         },
         headers=headers,
     )
@@ -86,7 +85,6 @@ def test_stock_availability_batch(client: TestClient, register_and_login, uniq: 
             "titre": "Av",
             "prix_chf": 10.0,
             "actif": True,
-            "categorie_ids": [],
         },
         headers=headers,
     )
