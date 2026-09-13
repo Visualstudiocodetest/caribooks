@@ -36,19 +36,7 @@ def test_catalog_crud(client: TestClient, register_and_login, uniq: str):
     r = client.get("/catalog/etat-usures")
     assert r.status_code == 200
 
-    # Categorie
-    r = client.post("/catalog/categories", json={"libelle": f"Cat_{uniq}", "description": "d"}, headers=headers)
-    assert r.status_code == 201, r.text
-    cat = r.json()
-    r = client.get(f"/catalog/categories/{cat['id_categorie']}")
-    assert r.status_code == 200
-    r = client.put(f"/catalog/categories/{cat['id_categorie']}", json={"description": "u"}, headers=headers)
-    assert r.status_code == 200
-    r = client.get("/catalog/categories")
-    assert r.status_code == 200
-
     # delete
-    assert client.delete(f"/catalog/categories/{cat['id_categorie']}", headers=headers).status_code == 204
     assert client.delete(f"/catalog/etat-usures/{etat['id_etat_usure']}", headers=headers).status_code == 204
     assert client.delete(f"/catalog/type-objets/{type_objet['id_type_objet']}", headers=headers).status_code == 204
 
@@ -59,8 +47,5 @@ def test_catalog_write_requires_admin(client: TestClient, register_and_login, un
         "/catalog/type-objets",
         json={"libelle": "x", "code": f"NA_{uniq}"},
         headers=user_headers,
-    ).status_code == 403
-    assert client.post(
-        "/catalog/categories", json={"libelle": "x"}, headers=user_headers
     ).status_code == 403
 

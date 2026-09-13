@@ -15,7 +15,6 @@ router = APIRouter(prefix="/books", tags=["books"])
 def _to_book_read(db_livre: models.Livre) -> BookRead:
     article = db_livre.article
     etat_label = article.etat_usure.libelle if getattr(article, "etat_usure", None) else None
-    categorie_labels = [c.libelle for c in (article.categories or [])]
     return BookRead(
         id_article=int(db_livre.id_article),
         id_type_objet=int(article.id_type_objet),
@@ -31,9 +30,7 @@ def _to_book_read(db_livre: models.Livre) -> BookRead:
         prix_chf=float(article.prix_chf),
         actif=bool(article.actif),
         date_creation=article.date_creation,
-        categorie_ids=[int(c.id_categorie) for c in (article.categories or [])],
         etat_libelle=etat_label,
-        categorie_libelles=categorie_labels,
     )
 
 

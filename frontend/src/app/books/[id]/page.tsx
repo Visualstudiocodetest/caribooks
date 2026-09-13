@@ -100,11 +100,6 @@ export default async function BookDetailPage({ params }: { params: Promise<{ id:
               {book.date_publication ? (
                 <span className="muted" style={{ fontSize: 13 }}>Pub.&nbsp;: {book.date_publication}</span>
               ) : null}
-              {book.categorie_libelles && book.categorie_libelles.length ? (
-                <span className="muted" style={{ fontSize: 13 }}>
-                  Catégorie&nbsp;: {book.categorie_libelles.join(', ')}
-                </span>
-              ) : null}
             </div>
 
             {book.description ? (

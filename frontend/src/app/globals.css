@@ -74,6 +74,8 @@ a {
 }
 .main-nav {
   display: flex;
+  flex-wrap: wrap;
+  row-gap: 6px;
   gap: 12px;
   align-items: center;
   font-weight: 600;
@@ -145,11 +147,19 @@ a {
   min-height: 40px;
 }
 
-@media (max-width: 640px) {
+/* The nav switches to the hamburger menu well before the "phone" breakpoint
+   below: at 640px, a signed-in admin's header (logo, catalogue, the
+   back-office dropdown, account links, cart, login/logout) has no room left
+   in a flex row and was overflowing/crowding on any tablet or narrow-laptop
+   width (641-1024px) that this rule didn't cover. */
+@media (max-width: 900px) {
   .main-nav { display: none; }
   .nav-toggle { display: inline-flex; }
   .mobile-nav { display: none; }
   .mobile-nav.open { display: block; }
+}
+
+@media (max-width: 640px) {
   :root {
     --container: 100%;
   }

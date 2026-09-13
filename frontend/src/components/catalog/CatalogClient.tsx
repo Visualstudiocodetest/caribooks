@@ -5,28 +5,24 @@ import type { BookRead } from '@/types/api'
 import { BookGrid } from '@/components/books/BookGrid'
 
 export type EtatItem = { id_etat_usure: number; libelle: string }
-export type CategorieItem = { id_categorie: number; libelle: string }
 
 export function CatalogClient({
   books,
   availability,
   etatList,
-  categorieList,
 }: {
   books: BookRead[]
   availability?: Record<number, number>
   etatList: EtatItem[]
-  categorieList: CategorieItem[]
 }) {
   const [query, setQuery] = useState('')
   const [selectedEtat, setSelectedEtat] = useState('')
-  const [selectedCategorie, setSelectedCategorie] = useState('')
   const [sortBy, setSortBy] = useState('')
   const [minPrix, setMinPrix] = useState('')
   const [maxPrix, setMaxPrix] = useState('')
   const [showFilters, setShowFilters] = useState(false)
 
-  const activeFilterCount = [selectedEtat, selectedCategorie, sortBy, minPrix, maxPrix].filter(Boolean).length
+  const activeFilterCount = [selectedEtat, sortBy, minPrix, maxPrix].filter(Boolean).length
   const hasActiveFilters = activeFilterCount > 0
 
   const filtered = useMemo(() => {
@@ -40,7 +36,6 @@ export function CatalogClient({
         if (!hay.includes(q)) return false
       }
       if (selectedEtat && String(b.id_etat_usure) !== selectedEtat) return false
-      if (selectedCategorie && !b.categorie_ids.map(String).includes(selectedCategorie)) return false
       if (min !== null && b.prix_chf < min) return false
       if (max !== null && b.prix_chf > max) return false
       return true
@@ -62,11 +57,10 @@ export function CatalogClient({
     }
 
     return res
-  }, [books, query, selectedEtat, selectedCategorie, sortBy, minPrix, maxPrix])
+  }, [books, query, selectedEtat, sortBy, minPrix, maxPrix])
 
   function clearFilters() {
     setSelectedEtat('')
-    setSelectedCategorie('')
     setSortBy('')
     setMinPrix('')
     setMaxPrix('')
@@ -107,20 +101,6 @@ export function CatalogClient({
               {etatList.map((et) => (
                 <option key={et.id_etat_usure} value={String(et.id_etat_usure)}>
                   {et.libelle}
-                </option>
-              ))}
-            </select>
-
-            <select
-              className="input"
-              value={selectedCategorie}
-              onChange={(e) => setSelectedCategorie(e.target.value)}
-              style={{ flex: '1 1 160px' }}
-            >
-              <option value="">Toutes catégories</option>
-              {categorieList.map((c) => (
-                <option key={c.id_categorie} value={String(c.id_categorie)}>
-                  {c.libelle}
                 </option>
               ))}
             </select>

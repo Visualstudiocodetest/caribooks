@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { listBooks } from '@/services/books'
 import { getAvailabilityMap } from '@/services/stocks'
 import { listCatalog } from '@/services/catalog'
-import { CatalogClient, type EtatItem, type CategorieItem } from '@/components/catalog/CatalogClient'
+import { CatalogClient, type EtatItem } from '@/components/catalog/CatalogClient'
 
 export const dynamic = 'force-dynamic'
 
@@ -14,7 +14,6 @@ export default async function HomePage() {
   // Reference lists fetched server-side alongside books/availability, instead of
   // a client-side waterfall after CatalogClient mounts.
   const etatList = await listCatalog<EtatItem>('etat-usures').catch(() => [])
-  const categorieList = await listCatalog<CategorieItem>('categories').catch(() => [])
 
   // Show only books with remaining stock. availability keys are numbers server-side
   // but arrive as string keys once JSON-serialized — index defensively.
@@ -86,7 +85,6 @@ export default async function HomePage() {
         books={available}
         availability={availability}
         etatList={etatList}
-        categorieList={categorieList}
       />
     </div>
   )

@@ -29,7 +29,7 @@ const connectSrc = ["'self'", 'https://checkout.postfinance.ch', 'https://oauth2
 const googleOrigins = 'https://accounts.google.com https://apis.google.com'
 const csp = [
   "default-src 'self'",
-  `script-src 'self' 'unsafe-inline' 'unsafe-eval' ${googleOrigins} https://checkout.postfinance.ch`,
+  `script-src 'self' 'unsafe-inline' 'unsafe-eval' ${googleOrigins} https://checkout.postfinance.ch https://va.vercel-scripts.com`,
   `style-src 'self' 'unsafe-inline' https://accounts.google.com`,
   "img-src 'self' data: https:",
   "font-src 'self' data:",
@@ -43,6 +43,11 @@ const csp = [
 
 const nextConfig = {
   reactStrictMode: true,
+  // Next 16 regenerates frontend/AGENTS.md + CLAUDE.md on every `next dev`
+  // start by default. The project already has its own root-level AGENTS.MD/
+  // CLAUDE.MD with real, specific directives -- a second, generic, auto-
+  // regenerated pair one level down would just be confusing clutter.
+  agentRules: false,
   images: {
     remotePatterns: [
       { protocol: 'http',  hostname: '127.0.0.1' },
@@ -53,6 +58,22 @@ const nextConfig = {
     ],
   },
   output: 'standalone',
+  // Without this, Next's own trailing-slash normalization runs *before* the
+  // /api/proxy/:path* rewrite below and 308-redirects e.g. "/api/proxy/users/"
+  // to "/api/proxy/users" client-side. FastAPI's routes are all defined with
+  // a trailing slash (e.g. GET /users/), so the rewrite then hits the backend
+  // without one, the backend's own redirect_slashes 307s back to the
+  // trailing-slash form with an *absolute backend URL* (its own host:port,
+  // not the frontend's), and the browser follows that redirect directly to
+  // the backend -- defeating the whole point of the proxy: the request
+  // becomes genuinely cross-origin, the browser drops the Authorization
+  // header on that cross-origin redirect per the fetch spec, and every
+  // affected admin/list fetch fails ("Failed to fetch" / empty lists), which
+  // is exactly what broke the admin Utilisateurs page. This flag is Next's
+  // documented escape hatch for custom proxy/rewrite setups: it disables the
+  // automatic redirect so the rewrite sees (and forwards) the exact path the
+  // browser requested, keeping the proxy transparent end-to-end.
+  skipTrailingSlashRedirect: true,
   // Proxy all /api/proxy/* requests to the backend.
   // Browser requests stay on the same Vercel origin → no CORS needed.
   // Server Components bypass this and call backendBaseUrl directly.

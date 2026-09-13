@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from services.image_service import _assert_safe_url, _is_public_ip, download_image
+from services.image_service import _ALLOWED_EXTENSIONS, _is_public_ip, _resolve_pinned_ip, download_image
 
 
 def test_is_public_ip_rejects_private_and_reserved_ranges():
@@ -20,13 +20,13 @@ def test_is_public_ip_accepts_public_addresses():
     assert _is_public_ip("1.1.1.1") is True
 
 
-def test_assert_safe_url_rejects_loopback_and_metadata_hosts():
+def test_resolve_pinned_ip_rejects_loopback_and_metadata_hosts():
     with pytest.raises(ValueError):
-        _assert_safe_url("http://127.0.0.1/secret")
+        _resolve_pinned_ip("127.0.0.1")
     with pytest.raises(ValueError):
-        _assert_safe_url("http://169.254.169.254/latest/meta-data/")
+        _resolve_pinned_ip("169.254.169.254")
     with pytest.raises(ValueError):
-        _assert_safe_url("http://localhost/x")
+        _resolve_pinned_ip("localhost")
 
 
 def test_download_image_rejects_ssrf_targets_without_making_a_request():
@@ -38,3 +38,13 @@ def test_download_image_rejects_ssrf_targets_without_making_a_request():
     ):
         with pytest.raises(Exception):  # noqa: B017 — deliberately broad: covers both ValueError (SSRF) and unsupported-scheme errors
             download_image(url)
+
+
+def test_allowed_extensions_exclude_svg_to_prevent_stored_xss():
+    # SVG can embed <script>; served back from our own /static origin that
+    # would be stored XSS, not just an SSRF concern -- so it must never be a
+    # format download_image is willing to save, no matter what a remote server
+    # claims its Content-Type is.
+    assert "svg" not in _ALLOWED_EXTENSIONS
+    assert "svg+xml" not in _ALLOWED_EXTENSIONS
+    assert {"jpg", "png", "webp"} <= _ALLOWED_EXTENSIONS

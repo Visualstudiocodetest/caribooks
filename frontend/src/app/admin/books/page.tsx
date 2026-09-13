@@ -88,7 +88,6 @@ export default function AdminBooksPage() {
                   <div className="muted" style={{ fontSize: 12, display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 2 }}>
                     <span>{b.auteur || '—'}</span>
                     {b.etat_libelle ? <span>· {b.etat_libelle}</span> : null}
-                    {b.categorie_libelles?.length ? <span>· {b.categorie_libelles[0]}</span> : null}
                     <span>· {b.prix_chf.toFixed(2)} CHF</span>
                   </div>
                 </div>

@@ -34,8 +34,8 @@ métadonnées ISBN via **OpenLibrary**, principes **SOLID / KISS**.
       `usePostFinanceHandler` / `useCountdown` + présentation ; `admin/books/new` (~400 l.)
       → hook scanner/caméra + autofill OpenLibrary. (Reporté : zone de paiement fragile, à
       faire avec une couverture de tests renforcée.)
-- [ ] **Composant générique de liste-CRUD admin** pour remplacer les 4 pages quasi
-      identiques `admin/lists/*` (categories, etat-usures, type-objets, article-categories).
+- [ ] **Composant générique de liste-CRUD admin** pour remplacer les 2 pages quasi
+      identiques `admin/lists/*` (etat-usures, type-objets).
 - [ ] **Rate limiter partagé (Redis)** — l'actuel est en mémoire par worker ; suffisant pour
       une VM unique, à remplacer si passage multi-instances.
 - [ ] **Dockerfile** : ajouter un superviseur de process (ou séparer backend/frontend en deux

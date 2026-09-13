@@ -1,0 +1,31 @@
+# Secrets: never bake these into an image layer. Real credentials (DB
+# password, SECRET_KEY, PostFinance keys, SSH user, etc.) live in these files
+# on the host and must be supplied at runtime instead (docker run --env-file).
+.env
+.env.*
+backend/.env
+frontend/.env.local
+frontend/.env*.local
+
+# Git history — may contain past secrets, and is never needed at runtime.
+.git
+.gitignore
+
+# Dependencies / build artifacts — reinstalled and rebuilt inside the image;
+# copying host copies in would also risk host-arch binaries leaking in.
+backend/venv/
+venv/
+backend/__pycache__/
+**/__pycache__/
+*.pyc
+*.pyo
+*.pyd
+frontend/node_modules/
+frontend/.next/
+frontend/.pytest_cache/
+
+# Editor/OS cruft, logs, docs not needed inside the image.
+.DS_Store
+.vscode/
+*.log
+docs/

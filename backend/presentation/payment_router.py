@@ -18,6 +18,7 @@ from services.order_service import (
     load_commande_context,
 )
 from services.postfinance_service import (
+    amount_matches_commande,
     build_postfinance_checkout_data,
     confirm_postfinance_transaction,
     create_postfinance_iframe_session,
@@ -60,6 +61,32 @@ def _finalize_paid_order(db: Session, id_commande: int, source: str) -> bool:
             exc_info=True,
         )
         return False
+
+
+def _assert_amount_matches_commande(db: Session, id_commande: int, provider_amount, source: str) -> None:
+    """Refuse to finalize an order if the amount PostFinance reports for the
+    transaction doesn't match the commande's own server-computed total.
+
+    A verified webhook signature only proves the payload wasn't tampered with
+    in transit; it doesn't protect against a misconfigured PostFinance space
+    or an upstream bug associating the wrong transaction with our
+    merchantReference. `provider_amount` of None (e.g. local/dev simulation)
+    is treated as "can't verify" rather than a mismatch -- see
+    amount_matches_commande.
+    """
+    commande = db.query(models.Commande).filter(models.Commande.id_commande == id_commande).first()
+    if commande is None:
+        return
+    if not amount_matches_commande(float(commande.montant_total_chf), provider_amount):
+        logger.error(
+            "postfinance amount mismatch for commande=%s (source=%s): commande total=%.2f CHF, "
+            "provider reported=%s -- refusing to finalize",
+            id_commande,
+            source,
+            float(commande.montant_total_chf),
+            provider_amount,
+        )
+        raise HTTPException(status_code=409, detail="Payment amount does not match order total")
 
 
 @router.get("/paiements", response_model=list[PaiementRead])
@@ -180,6 +207,7 @@ def confirm_paiement_postfinance(
 
     current_tx = get_postfinance_transaction(str(transaction_id))
     version = int(current_tx.get("version") or 1)
+    _assert_amount_matches_commande(db, int(commande.id_commande), current_tx.get("amount"), source="confirm")
 
     pf_resp = confirm_postfinance_transaction(
         transaction_id=str(transaction_id),
@@ -248,6 +276,7 @@ def poll_paiement_postfinance(id_paiement: int, db: Session = Depends(get_db), c
         db.refresh(obj)
 
         if is_postfinance_success_status(str(new_status)):
+            _assert_amount_matches_commande(db, int(obj.id_commande), pf_resp.get("amount"), source="poll")
             _finalize_paid_order(db, int(obj.id_commande), source="poll")  # type: ignore[arg-type]
 
     return {"paiement": obj, "raw": pf_resp}
@@ -293,6 +322,12 @@ async def postfinance_webhook(request: Request, db: Session = Depends(get_db)):
     db.refresh(obj)
 
     if not already_finalized and is_postfinance_success_status(str(new_status)):
+        # The webhook payload itself may not carry a reliable amount field, so
+        # re-fetch the transaction from PostFinance directly for the figure to
+        # cross-check against, rather than trusting whatever (if anything) was
+        # in the notification body.
+        provider_tx = get_postfinance_transaction(str(pay_id or ref or obj.reference_externe))
+        _assert_amount_matches_commande(db, int(obj.id_commande), provider_tx.get("amount"), source="webhook")  # type: ignore[arg-type]
         _finalize_paid_order(db, int(obj.id_commande), source="webhook")  # type: ignore[arg-type]
 
     return {"ok": True}

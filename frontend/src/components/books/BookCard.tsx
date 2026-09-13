@@ -70,9 +70,6 @@ export function BookCard({ book, available = null }: { book: BookRead; available
         </div>
         <div className="book-meta" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 6 }}>
           <Money amount={book.prix_chf} />
-          {book.categorie_libelles && book.categorie_libelles.length ? (
-            <div className="muted" style={{ fontSize: 11 }}>{book.categorie_libelles[0]}</div>
-          ) : null}
         </div>
         <button
           onClick={handleAddToCart}

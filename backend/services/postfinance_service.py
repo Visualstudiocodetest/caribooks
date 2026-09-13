@@ -233,12 +233,18 @@ def get_postfinance_transaction(transaction_id: str) -> Dict[str, Any]:
             id=int(transaction_id), space=_space_id()
         )
         status = _state_str(tx.state)
+        # Prefer completedAmount (the amount actually captured); fall back to
+        # authorizationAmount (sum of line items) while the transaction is
+        # still only authorized. Either lets callers cross-check the provider's
+        # own figure against the local commande total before finalizing.
+        amount = tx.completed_amount if tx.completed_amount is not None else tx.authorization_amount
         return {
             "id": tx.id or transaction_id,
             "status": status,
             "state": status,
             "version": tx.version,
             "merchantReference": tx.merchant_reference,
+            "amount": amount,
         }
     except Exception as exc:
         return {"id": transaction_id, "status": None, "state": None, "error": str(exc)}
@@ -402,3 +408,17 @@ def is_postfinance_success_status(status: Optional[str]) -> bool:
     if not status:
         return False
     return str(status).upper() in SUCCESS_STATUSES
+
+
+def amount_matches_commande(commande_total_chf: float, provider_amount: Optional[float], tolerance: float = 0.01) -> bool:
+    """True if the amount PostFinance reports for a transaction matches the
+    commande's own server-computed total (within a cent, for float rounding).
+
+    A `None` provider_amount means the field wasn't available (e.g. local/dev
+    simulation mode, which has no real provider figure to compare) -- callers
+    should treat that as "can't verify" rather than a mismatch, since refusing
+    to finalize every local-mode payment would break dev/test entirely.
+    """
+    if provider_amount is None:
+        return True
+    return abs(float(commande_total_chf) - float(provider_amount)) <= tolerance

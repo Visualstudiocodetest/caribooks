@@ -8,7 +8,6 @@ export default function AdminListsIndex() {
       <h1 style={{ margin: 0 }}>Gérer les listes</h1>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 12 }}>
         {[
-          { href: '/admin/lists/categories', label: 'Catégories', icon: '🏷️', desc: 'Romans, BD, Sciences…' },
           { href: '/admin/lists/etat-usures', label: 'États d\'usure', icon: '⭐', desc: 'Neuf, Bon état, Acceptable…' },
           { href: '/admin/lists/type-objets', label: 'Types d\'objets', icon: '🗂️', desc: 'Livre, DVD, Jeu…' },
         ].map((item) => (

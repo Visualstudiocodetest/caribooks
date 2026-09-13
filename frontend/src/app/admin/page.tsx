@@ -4,16 +4,9 @@ import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { listBooks } from '@/services/books'
 import { listAdminCommandes } from '@/services/admin'
+import { ADMIN_NAV_GROUPS } from '@/lib/adminNav'
 
 type Stats = { books: number; pending: number; paid: number; total: number }
-
-const NAV_ITEMS = [
-  { href: '/admin/books', label: 'Livres', icon: '📚', desc: 'Ajouter, modifier, supprimer des livres' },
-  { href: '/admin/orders', label: 'Commandes', icon: '📦', desc: 'Consulter et faire avancer les commandes' },
-  { href: '/admin/lists/categories', label: 'Catégories', icon: '🏷️', desc: 'Gérer les catégories de livres' },
-  { href: '/admin/lists/etat-usures', label: 'États d\'usure', icon: '⭐', desc: 'Neuf, Bon état, Acceptable…' },
-  { href: '/admin/lists/type-objets', label: 'Types d\'objets', icon: '🗂️', desc: 'Livre, DVD, Jeu…' },
-]
 
 export default function AdminHomePage() {
   const [stats, setStats] = useState<Stats | null>(null)
@@ -54,20 +47,25 @@ export default function AdminHomePage() {
         </div>
       ) : null}
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 12 }}>
-        {NAV_ITEMS.map((item) => (
-          <Link
-            key={item.href}
-            href={item.href}
-            className="card"
-            style={{ padding: '16px', display: 'grid', gap: 6, textDecoration: 'none', transition: 'box-shadow 0.15s' }}
-          >
-            <div style={{ fontSize: 24 }}>{item.icon}</div>
-            <div style={{ fontWeight: 800, fontSize: 15, color: 'var(--color-text)' }}>{item.label}</div>
-            <div className="muted" style={{ fontSize: 12 }}>{item.desc}</div>
-          </Link>
-        ))}
-      </div>
+      {ADMIN_NAV_GROUPS.map((group) => (
+        <div key={group.label} style={{ display: 'grid', gap: 10 }}>
+          <h2 className="muted" style={{ margin: 0, fontSize: 13, textTransform: 'uppercase', letterSpacing: '0.04em' }}>{group.label}</h2>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 12 }}>
+            {group.items.map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                className="card"
+                style={{ padding: '16px', display: 'grid', gap: 6, textDecoration: 'none', transition: 'box-shadow 0.15s' }}
+              >
+                <div style={{ fontSize: 24 }}>{item.icon}</div>
+                <div style={{ fontWeight: 800, fontSize: 15, color: 'var(--color-text)' }}>{item.label}</div>
+                <div className="muted" style={{ fontSize: 12 }}>{item.desc}</div>
+              </Link>
+            ))}
+          </div>
+        </div>
+      ))}
     </div>
   )
 }

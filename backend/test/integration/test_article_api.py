@@ -19,10 +19,6 @@ def test_article_crud(client: TestClient, register_and_login, uniq: str):
     assert r.status_code == 201, r.text
     etat_id = r.json()["id_etat_usure"]
 
-    r = client.post("/catalog/categories", json={"libelle": f"Cat_{uniq}", "description": "d"}, headers=headers)
-    assert r.status_code == 201, r.text
-    cat_id = r.json()["id_categorie"]
-
     # create article
     payload = {
         "id_type_objet": type_id,
@@ -33,31 +29,24 @@ def test_article_crud(client: TestClient, register_and_login, uniq: str):
         "image_link": "http://img",
         "prix_chf": 12.5,
         "actif": True,
-        "categorie_ids": [cat_id],
     }
     r = client.post("/articles/", json=payload, headers=headers)
     assert r.status_code == 201, r.text
     art = r.json()
-    assert cat_id in art["categorie_ids"]
 
     # public read
     assert client.get("/articles/").status_code == 200
     r = client.get(f"/articles/{art['id_article']}")
     assert r.status_code == 200
 
-    # update categories
-    r2 = client.post("/catalog/categories", json={"libelle": f"Cat2_{uniq}", "description": "d"}, headers=headers)
-    assert r2.status_code == 201, r2.text
-    cat2_id = r2.json()["id_categorie"]
-
+    # update
     r = client.put(
         f"/articles/{art['id_article']}",
-        json={"titre": "Updated", "categorie_ids": [cat2_id]},
+        json={"titre": "Updated"},
         headers=headers,
     )
     assert r.status_code == 200, r.text
     assert r.json()["titre"] == "Updated"
-    assert cat2_id in r.json()["categorie_ids"]
 
     # delete
     assert client.delete(f"/articles/{art['id_article']}", headers=headers).status_code == 204
@@ -75,4 +64,3 @@ def test_article_write_requires_admin(client: TestClient, register_and_login, un
     assert client.post("/articles/", json=payload, headers=user_headers).status_code == 403
     assert client.put("/articles/1", json={"titre": "x"}, headers=user_headers).status_code == 403
     assert client.delete("/articles/1", headers=user_headers).status_code == 403
-

@@ -32,6 +32,11 @@ jobs:
       MYSQL_DB: caribooks
       SECRET_KEY: test-secret-key
       ENVIRONMENT: test
+      # /auth/google now fails closed (rejects the request) rather than silently
+      # skipping the audience check when this is unset -- so CI needs a value,
+      # even a fake one, for the existing Google-auth tests (which fake the
+      # upstream Google response entirely) to exercise that check at all.
+      DEV_GOOGLE_OAUTH_CLIENT_ID: test-google-client-id
       PYTHONPATH: .
 
     defaults:

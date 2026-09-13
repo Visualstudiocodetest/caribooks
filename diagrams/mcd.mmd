@@ -2,7 +2,6 @@
 erDiagram
     ARTICLE }o--|| TYPE_OBJET : "est de type"
     ARTICLE }o--|| ETAT_USURE : "a pour état"
-    ARTICLE }o--o{ CATEGORIE : "classé dans"
     ARTICLE ||--o{ STOCK : "stocké (quantité)"
     STOCK }o--|| SOURCE_STOCK : "provient de"
     ARTICLE ||--o| LIVRE : "est un"
@@ -15,7 +14,6 @@ erDiagram
 
     TYPE_OBJET { string libelle string code }
     ETAT_USURE { string libelle }
-    CATEGORIE { string libelle }
     SOURCE_STOCK { string libelle string type_source }
     ARTICLE { string sku string titre decimal prix_chf }
     LIVRE { string isbn string auteur string editeur string langue }
