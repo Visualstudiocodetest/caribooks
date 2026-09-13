@@ -57,7 +57,23 @@ const nextConfig = {
       { protocol: 'https', hostname: '*.googleusercontent.com' },
     ],
   },
-  output: 'standalone',
+  // 'standalone' packages a fully self-contained Node server for the
+  // Dockerfile (which manually copies .next/static and public/ next to it --
+  // see the standalone-output step there; standalone mode does not include
+  // them on its own). Vercel packages and serves Next.js apps itself and
+  // explicitly does not need this option -- and this repo's vercel.json
+  // pins an old-style explicit `@vercel/next` builder rather than Vercel's
+  // zero-config Next.js detection, so it builds straight from whatever this
+  // file says. With 'standalone' forced on unconditionally, Vercel was
+  // deploying the standalone server as-is, without that manual static-copy
+  // step, so every hashed /_next/static/chunks/*.js request 404'd (with the
+  // wrong Content-Type, since Vercel's edge falls back to serving its
+  // generic error response for the missing path) -- which is exactly why
+  // /admin/users (and any other client-rendered admin page) never finished
+  // hydrating and got stuck on "Vérification des droits…" forever. VERCEL=1
+  // is set automatically in Vercel's own build environment, so this only
+  // takes effect for the Docker build.
+  output: process.env.VERCEL ? undefined : 'standalone',
   // Without this, Next's own trailing-slash normalization runs *before* the
   // /api/proxy/:path* rewrite below and 308-redirects e.g. "/api/proxy/users/"
   // to "/api/proxy/users" client-side. FastAPI's routes are all defined with
