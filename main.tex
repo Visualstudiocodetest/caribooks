@@ -610,7 +610,7 @@ Documentation et certification &
     \label{fig:sequence_isbn}
 \end{figure}
 
-\noindent Le diagramme de séquence du scan ISBN illustre l'enchaînement suivant : le bénévole scanne le code-barres depuis le navigateur → la librairie de décodage extrait l'ISBN → une requête est envoyée à l'API FastAPI → le backend réutilise les métadonnées OpenLibrary si disponibles → les métadonnées sont retournées au frontend pour préremplissage → le bénévole complète l'état et le prix → publication de l'annonce.
+\noindent Le diagramme de séquence du scan ISBN illustre l'enchaînement suivant : le bénévole scanne le code-barres depuis le navigateur → la librairie de décodage extrait l'ISBN → l'API vérifie d'abord si ce livre est déjà au catalogue (\texttt{GET /books/by-isbn/\{isbn\}}). S'il existe déjà, sa fiche est affichée avec la possibilité d'enregistrer un simple scan de traçabilité (\texttt{POST /scans}) ; sinon, l'API interroge OpenLibrary (source unique, connexion HTTP réutilisée d'un scan à l'autre pour limiter la latence) et retourne les métadonnées pour préremplissage, la couverture étant prévisualisée directement depuis OpenLibrary sans passer par le backend. Le bénévole complète l'état et le prix ; à la validation, l'image est téléchargée et stockée localement (\texttt{POST /images/fetch}) puis le livre est créé (\texttt{POST /books}). La page affiche alors une confirmation et un bouton \og Ajouter un nouveau livre \fg{}, sans redirection vers la fiche créée, pour enchaîner rapidement les ajouts.
 
 \begin{figure}[h]
     \centering
@@ -626,7 +626,7 @@ Documentation et certification &
     \label{fig:sequence_auth}
 \end{figure}
 
-\noindent Le diagramme de séquence d'authentification décrit deux flux alternatifs. Par mot de passe : l'utilisateur soumet ses identifiants → FastAPI valide l'email/mot de passe en base (SQLAlchemy + bcrypt) → si valide, un JWT signé est généré et retourné. Via Google Sign-In : le frontend obtient un jeton d'identité Google → l'API le fait vérifier par \texttt{oauth2.googleapis.com/tokeninfo} → l'email vérifié est utilisé pour retrouver ou créer le compte via son \texttt{google\_id} → un JWT est émis de la même façon. Dans les deux cas, le frontend stocke le token, chaque requête protégée envoie le token dans l'en-tête \texttt{Authorization: Bearer <token>}, et la dépendance FastAPI \texttt{get\_current\_user} vérifie la signature et extrait le rôle.
+\noindent Le diagramme de séquence d'authentification décrit deux flux alternatifs. Par mot de passe : l'utilisateur soumet ses identifiants → FastAPI valide l'email/mot de passe en base (SQLAlchemy + bcrypt) → si valide, un JWT signé est généré et retourné. Via Google Sign-In : le frontend obtient un jeton d'identité Google → l'API le fait vérifier par \texttt{oauth2.googleapis.com/tokeninfo} → l'audience du jeton (\texttt{aud}) doit correspondre au \texttt{GOOGLE\_CLIENT\_ID} configuré, échec fermé si celui-ci est absent, pour empêcher qu'un jeton Google valide mais émis pour une autre application soit rejoué ici → l'email vérifié est utilisé pour retrouver ou créer le compte via son \texttt{google\_id} → un JWT est émis de la même façon. Dans les deux cas, le frontend stocke le token, chaque requête protégée envoie le token dans l'en-tête \texttt{Authorization: Bearer <token>}, et la dépendance FastAPI \texttt{get\_current\_user} vérifie la signature et extrait le rôle.
 
 \begin{figure}[h]
     \centering
@@ -1563,7 +1563,11 @@ def google_auth(payload: GoogleAuthRequest, request: Request,
     r.raise_for_status()
     info = r.json()
 
-    if GOOGLE_CLIENT_ID and info.get("aud") != GOOGLE_CLIENT_ID:
+    # Echec ferme : une GOOGLE_CLIENT_ID absente doit rejeter toute connexion
+    # Google plutot que sauter silencieusement la verification d'audience.
+    if not GOOGLE_CLIENT_ID:
+        raise HTTPException(503, "Google sign-in is not configured")
+    if info.get("aud") != GOOGLE_CLIENT_ID:
         raise HTTPException(400, "Token Google invalide (audience)")
 
     google_id, email = info.get("sub", ""), info.get("email", "")
@@ -1596,16 +1600,23 @@ from fastapi import APIRouter, HTTPException
 
 router = APIRouter(prefix="/books", tags=["books"])
 
+# Module-level, shared across requests: reuses the TCP/TLS connection to
+# openlibrary.org instead of paying a fresh handshake on every scan
+# (~2-3s cold vs ~0.3-0.8s warm).
+_openlibrary_client = httpx.Client(
+    timeout=8.0,
+    limits=httpx.Limits(max_keepalive_connections=5, max_connections=10),
+)
+
 @router.get("/isbn-metadata/{isbn}")
 def get_isbn_metadata(isbn: str):
     """Proxy ISBN metadata lookup via OpenLibrary (single external source)."""
     clean = isbn.strip().upper().replace("-", "")
 
     try:
-        r = httpx.get(
+        r = _openlibrary_client.get(
             f"https://openlibrary.org/api/books?bibkeys=ISBN:{clean}"
             "&format=json&jscmd=data",
-            timeout=8,
         )
         if r.status_code == 200:
             data = r.json()

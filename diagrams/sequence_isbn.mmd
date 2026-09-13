@@ -1,4 +1,4 @@
-%% Diagramme de séquence — Scan ISBN et préremplissage des métadonnées
+%% Diagramme de séquence — Scan ISBN, préremplissage et création du livre
 sequenceDiagram
     autonumber
     actor Ben as Bénévole
@@ -9,11 +9,30 @@ sequenceDiagram
 
     Ben->>Nav: scanne le code-barres
     Nav->>Nav: décode l'ISBN
-    Nav->>API: GET /books/isbn-metadata/{isbn}
-    API->>OL: requête métadonnées (OpenLibrary, source unique)
-    OL-->>API: titre, auteur, éditeur
-    note over API,OL: 404 si absent → saisie manuelle côté frontend
-    API-->>Nav: JSON métadonnées
-    Ben->>Nav: complète état + prix
-    Nav->>API: POST /books + POST /scans
-    API->>BD: INSERT livre / scan_isbn
+    Nav->>API: GET /books/by-isbn/{isbn}
+    API->>BD: SELECT livre (par ISBN)
+
+    alt Livre déjà au catalogue
+        BD-->>API: livre existant
+        API-->>Nav: fiche du livre
+        Nav-->>Ben: affiche la fiche existante<br/>+ bouton "Enregistrer le scan"
+        Ben->>Nav: confirme le scan de traçabilité
+        Nav->>API: POST /scans
+        API->>BD: INSERT scan_isbn
+    else Nouveau livre
+        BD-->>API: aucun résultat
+        Nav->>API: GET /books/isbn-metadata/{isbn}
+        API->>OL: requête métadonnées (OpenLibrary, source unique,<br/>connexion HTTP réutilisée entre scans)
+        OL-->>API: titre, auteur, éditeur, couverture
+        note over API,OL: 404 si absent → saisie manuelle côté frontend
+        API-->>Nav: JSON métadonnées
+        Nav-->>Ben: préremplit titre/auteur/description<br/>+ aperçu direct de la couverture OpenLibrary<br/>(hotlink, sans passer par l'API)
+        Ben->>Nav: complète état + prix, valide
+        Nav->>API: POST /images/fetch (si couverture externe)
+        API->>OL: télécharge l'image (SSRF-protégé,<br/>IP figée, redirection suivie manuellement)
+        API-->>Nav: /static/images/books/{hash}.jpg
+        Nav->>API: POST /books
+        API->>BD: INSERT livre
+        API-->>Nav: livre créé
+        Nav-->>Ben: confirmation "livre ajouté au catalogue"<br/>+ bouton "Ajouter un nouveau livre" (pas de redirection)
+    end
