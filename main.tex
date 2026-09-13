@@ -829,14 +829,21 @@ Le catalogue s'appuie sur une classe CRUD générique typée (\texttt{CrudBase})
 Côté frontend, le code-barres est décodé directement dans le navigateur, puis l'ISBN est envoyé à l'API qui interroge \textbf{OpenLibrary} (\texttt{GET /books/isbn-metadata/\{isbn\}}, cf. annexe~\ref{lst:isbn}) ; un \texttt{404} déclenche la saisie manuelle. Les images de couverture distantes sont rapatriées via \texttt{image\_service.download\_image} et re-servies depuis \texttt{/static} afin de ne pas dépendre d'URL tierces. Le \texttt{scan\_router} assure la traçabilité : chaque scan est enregistré dans la table \texttt{scan\_isbn} (rattaché à l'utilisateur courant et au livre concerné), avec vérification préalable de l'existence du livre. Le frontend ne propose plus qu'un \textbf{unique} écran pour cette fonctionnalité, \og Ajouter un livre \fg{} (\texttt{app/admin/books/new}, réservé au rôle \texttt{admin}) : les deux pages précédentes (\texttt{/scan}, accessible à tout utilisateur connecté, et \texttt{/admin/books/new}) dupliquaient la même logique de scan caméra et de préremplissage OpenLibrary. Sur cette page unique, l'ISBN saisi ou scanné est d'abord recherché dans le catalogue Caribooks (\texttt{GET /books/by-isbn/\{isbn\}}) : s'il correspond à un livre déjà existant, sa fiche est affichée avec la possibilité d'enregistrer un scan de traçabilité (\texttt{POST /scans}) plutôt que de tenter une création qui échouerait de toute façon sur la contrainte d'unicité de l'ISBN ; sinon, le formulaire de création est préempli via OpenLibrary comme précédemment.
 
 \subsection{Module commande et paiement PostFinance}
+\label{sec:module-commande-paiement}
 
 Le \texttt{order\_router} gère le cycle de vie des commandes (\texttt{commande}, \texttt{ligne\_commande}, \texttt{paiement}). À l'ajout au panier, le stock est \textbf{réservé temporairement} (verrou \texttt{with\_for\_update} pour éviter les accès concurrents) pour une durée de \textbf{20 minutes} (\texttt{cart\_expires\_at}) ; passé ce délai, la réservation expire et le stock est automatiquement relibéré. Le client choisit un mode de livraison — \texttt{POST} (envoi postal, 9 CHF) ou \texttt{CLICK\_COLLECT} (retrait en magasin, 1 CHF) — enregistré dans \texttt{shipping\_method} et \texttt{frais\_port\_chf}. À la validation, une transaction PostFinance est créée (\texttt{create\_postfinance\_iframe\_session}) à partir des lignes et de l'adresse de facturation, et l'utilisateur est redirigé vers le tunnel de paiement. Le retour est traité par \textbf{webhook} : la signature est vérifiée (\texttt{verify\_postfinance\_webhook\_signature}) avant toute mise à jour, puis le statut de paiement est interprété (\texttt{is\_postfinance\_success\_status}). Un endpoint de \textbf{polling} (\texttt{GET /orders/paiements/\{id\}/poll-postfinance}) permet en complément au frontend d'interroger activement le statut après la redirection, pour couvrir les cas où le webhook est retardé ou la session navigateur expirée. En cas de succès, la commande passe au statut payé et la fonction \texttt{\_finalize\_commande} transforme le stock réservé en stock vendu. Un prestataire alternatif (Payrexx) avait été initialement intégré puis abandonné au profit de PostFinance.
+
+\paragraph{Vérification du montant PostFinance.} Les trois points d'entrée qui peuvent déclencher \texttt{\_finalize\_commande} (confirmation iframe, \textit{polling} et webhook) ne se fiaient auparavant qu'au \textbf{statut} renvoyé par PostFinance pour décider de finaliser une commande, sans jamais comparer le \textbf{montant} réellement associé à la transaction chez PostFinance au montant total attendu (\texttt{commande.montant\_total\_chf}). La signature du webhook garantit certes l'authenticité de l'expéditeur, mais ne protège pas contre un espace PostFinance mal configuré ou un rapprochement erroné de transaction en amont. Une fonction dédiée (\texttt{amount\_matches\_commande}) compare désormais, avec une tolérance d'un centime pour les arrondis flottants, le montant rapporté par PostFinance (\texttt{completedAmount} ou, à défaut, \texttt{authorizationAmount}) au montant de la commande avant toute finalisation ; en cas d'écart, la finalisation est refusée (\texttt{HTTP 409}) et l'incident est journalisé. Un montant absent (cas du mode local de développement, qui ne dispose pas de figure PostFinance réelle) est traité comme \og impossible à vérifier \fg{} plutôt que comme un écart, afin de ne pas bloquer les tests et le développement local.
 
 \subsection{Back-office bénévole}
 
 Le back-office réutilise les mêmes endpoints sécurisés pour offrir aux bénévoles une interface de gestion des annonces (création via scan ISBN ou saisie manuelle, modification, suppression) et de suivi du stock, sans exposer la complexité technique sous-jacente. Un module dédié, \texttt{order\_admin\_router}, permet en outre à un administrateur de piloter le cycle de vie d'une commande : avancement au statut suivant, annulation, remboursement, marquage \og envoyée \fg{} / \og à réception \fg{}, ainsi qu'une \textbf{surcharge manuelle du statut} vers n'importe quelle valeur (\texttt{PUT /orders/admin/commandes/\{id\}/status}) pour les cas exceptionnels. L'ensemble de ces routes est réservé au rôle \texttt{admin} et fait l'objet d'un test d'isolation inter-utilisateurs dédié (\texttt{test\_orders\_cross\_user\_isolation}), qui vérifie qu'un client ne peut ni consulter ni modifier les commandes d'un autre client, et qu'un utilisateur non-administrateur reçoit un \texttt{403} sur toutes les routes \texttt{/orders/admin/*}.
 
 Côté frontend, l'ensemble de la section \texttt{/admin} est protégé par un layout dédié (\texttt{app/admin/layout.tsx}) qui revérifie le rôle auprès du backend (\texttt{GET /users/me}) plutôt que de faire confiance au rôle décodé localement depuis le JWT. Un visiteur non connecté qui tente d'accéder à une page d'administration est \textbf{redirigé automatiquement} vers \texttt{/login} avec un message (\og Vous devez être connecté avec un compte administrateur pour accéder à cette page \fg{}) et un paramètre \texttt{returnTo} pour revenir sur la page demandée après connexion ; un utilisateur connecté mais non-administrateur reste en revanche sur une page \og Accès refusé \fg{}, une redirection vers la connexion n'ayant pas de sens pour un compte déjà authentifié.
+
+\paragraph{Gestion des utilisateurs et du stock.} Deux écrans complètent le back-office. La page \texttt{/admin/stock} liste l'ensemble des articles avec leurs quantités disponibles et réservées, avec recherche par titre. La page \texttt{/admin/users} liste tous les comptes (recherche par nom ou e-mail) et permet à un administrateur de promouvoir un utilisateur au rôle \texttt{admin}, de rétrograder un administrateur, ou de supprimer un compte — trois actions exposées par le \texttt{user\_router} (\texttt{GET /users/}, \texttt{PUT /users/\{id\}}, \texttt{DELETE /users/\{id\}}), réservées au rôle \texttt{admin} et validées par le schéma Pydantic \texttt{UserUpdate} (plutôt qu'un dictionnaire libre, afin que les mêmes contraintes de validation — notamment la longueur minimale du mot de passe — s'appliquent qu'un utilisateur modifie son propre profil ou qu'un administrateur modifie celui d'un tiers). Un administrateur ne peut ni changer son propre rôle, ni supprimer son propre compte depuis cette interface, ce qui évite qu'il se prive lui-même de ses droits par erreur.
+
+\paragraph{Fiabilité du proxy \texttt{/api/proxy}.} Le frontend appelle systématiquement le backend via une réécriture Next.js (\texttt{/api/proxy/:path*} $\rightarrow$ l'origine du backend), afin que le navigateur ne fasse que des requêtes de même origine et n'ait jamais besoin de CORS. Les routes de collection du backend (\texttt{GET /books/}, \texttt{/scans/}, \texttt{/stock/}, \texttt{/users/}, \texttt{/articles/}) sont enregistrées côté FastAPI avec un slash final ; une requête envoyée sans ce slash y était auparavant redirigée par FastAPI (\texttt{redirect\_slashes}) vers l'URL absolue \textbf{du backend lui-même}, que le navigateur suivait alors directement — transformant de facto un appel censé rester de même origine en un appel réellement inter-origines, avec pour conséquence la perte de l'en-tête \texttt{Authorization} (comportement standard des navigateurs sur une redirection inter-origines) et un blocage CORS. C'est ce défaut, combiné à la normalisation automatique des barres obliques finales par Next.js lui-même en amont de la règle de réécriture, qui rendait la page \texttt{/admin/users} inutilisable (\og Échec de la récupération \fg{}, page bloquée sur \og Vérification des droits… \fg{}). La correction repose sur deux volets : la désactivation de la normalisation automatique de Next.js (\texttt{skipTrailingSlashRedirect}) et l'acceptation, par chacune des routes de collection concernées, des deux formes (avec ou sans slash final) sans jamais émettre de redirection.
 
 \section{Sécurité et architecture logicielle}
 
@@ -885,6 +892,7 @@ L'utilisation de l'\textbf{ORM SQLAlchemy} protège nativement l'application con
     \item \textbf{Changement de prestataire de paiement :} Le prestataire initialement envisagé (Payrexx) a été remplacé par \textbf{PostFinance}, dont l'environnement de test sandbox ne nécessite pas de carte bancaire réelle avant la mise en production, ce qui a considérablement facilité le développement et les tests du tunnel de paiement.
     \item \textbf{Gestion du périmètre fonctionnel :} La demandeuse, dans son rôle de Product Owner informelle, souhaitait régulièrement ajouter de nouvelles fonctionnalités. Appliquer une gestion stricte du périmètre MVP, en expliquant les contraintes de temps et en reportant les demandes aux phases suivantes, a été un apprentissage professionnel important.
     \item \textbf{Conciliation apprentissage / projet personnel :} Le développement réalisé uniquement en soirée (17h–20h, 3 jours par semaine) a imposé une discipline de planification rigoureuse pour maintenir la progression du projet tout en respectant les engagements de la formation en alternance.
+    \item \textbf{Incompatibilité \texttt{output: 'standalone'} avec Vercel :} cette option Next.js, ajoutée pour permettre un déploiement conteneurisé (\texttt{Dockerfile}) sans dépendre du répertoire de travail du processus, était appliquée sans condition dans \texttt{next.config.js} — y compris lors des builds sur \textbf{Vercel}, qui empaquette pourtant les applications Next.js lui-même et ne l'attend pas. Combinée à un \texttt{vercel.json} historique qui fixe explicitement le \textit{builder} \texttt{@vercel/next} plutôt que de laisser Vercel détecter le projet automatiquement, cette option faisait déployer le serveur \og standalone \fg{} sans l'étape de copie manuelle des fichiers statiques (\texttt{.next/static}, \texttt{public/}) que seul le \texttt{Dockerfile} effectue : chaque script JavaScript ou feuille de style hachée renvoyait un \texttt{404} en production, empêchant toute page nécessitant de l'hydratation côté client (dont le back-office) de se charger. Diagnostiqué en reproduisant localement le même mode de \textit{build} (\texttt{next start} avec \texttt{output: standalone}), puis corrigé en n'appliquant cette option que hors de l'environnement Vercel (détecté via la variable \texttt{VERCEL}, positionnée automatiquement par sa propre chaîne de build).
 \end{itemize}
 
 % --- CHAPITRE 4 ---
@@ -1000,9 +1008,9 @@ ISBN ou un contrôle de cohérence titre/couverture avant préremplissage).
 
 \section{Résultats obtenus}
 
-La suite de tests automatisés a été exécutée avec \textbf{pytest} et l'extension \texttt{pytest-cov} côté backend, et avec \textbf{Vitest} côté frontend. L'intégralité des tests passe : \textbf{68 tests backend sur 68} (unitaires, d'intégration via \texttt{TestClient}, et un test fonctionnel de bout en bout) et \textbf{31 tests frontend sur 31}, soit \textbf{99 tests au total, 100\,\% de réussite}.
+La suite de tests automatisés a été exécutée avec \textbf{pytest} et l'extension \texttt{pytest-cov} côté backend, et avec \textbf{Vitest} côté frontend. L'intégralité des tests passe : \textbf{70 tests backend sur 70} (unitaires, d'intégration via \texttt{TestClient}, et un test fonctionnel de bout en bout) et \textbf{31 tests frontend sur 31}, soit \textbf{101 tests au total, 100\,\% de réussite}.
 
-\noindent Sur le code de production backend (hors fichiers de tests), la \textbf{couverture atteint 79\,\%} (2\,099 instructions analysées, 439 non couvertes) ; en incluant les fichiers de tests eux-mêmes dans le calcul, \texttt{pytest-cov} rapporte 85\,\% sur l'ensemble du dépôt \texttt{backend/}. Le tableau ci-dessous synthétise la couverture des principaux modules :
+\noindent Sur le code de production backend (hors fichiers de tests), la \textbf{couverture atteint 78\,\%} (2\,113 instructions analysées, 457 non couvertes) ; en incluant les fichiers de tests eux-mêmes dans le calcul, \texttt{pytest-cov} rapporte 85\,\% sur l'ensemble du dépôt \texttt{backend/}. Le tableau ci-dessous synthétise la couverture des principaux modules :
 
 \vspace{5pt}
 
@@ -1013,32 +1021,32 @@ La suite de tests automatisés a été exécutée avec \textbf{pytest} et l'exte
 \toprule
 \textbf{Module} & \textbf{Instructions} & \textbf{Couverture} \\
 \midrule
-\texttt{infrastructure/models.py}         & 137 & 100\,\% \\
+\texttt{infrastructure/models.py}         & 129 & 100\,\% \\
 \texttt{infrastructure/db.py}             & 13  & 100\,\% \\
 \texttt{presentation/auth\_schemas.py}    & 45  & 100\,\% \\
 \texttt{services/jwt\_service.py}         & 14  & 100\,\% \\
 \texttt{services/rate\_limit.py}          & 18  & 100\,\% \\
-\texttt{presentation/schemas.py}          & 205 & 97\,\% \\
-\texttt{presentation/article\_router.py}  & 52  & 94\,\% \\
+\texttt{presentation/schemas.py}          & 191 & 97\,\% \\
+\texttt{presentation/article\_router.py}  & 47  & 94\,\% \\
 \texttt{presentation/deps.py}             & 41  & 93\,\% \\
-\texttt{presentation/auth\_router.py}     & 71  & 90\,\% \\
-\texttt{presentation/catalog\_router.py}  & 83  & 89\,\% \\
-\texttt{presentation/order\_router.py}    & 159 & 81\,\% \\
-\texttt{services/postfinance\_service.py} & 146 & 79\,\% \\
-\texttt{services/order\_service.py}       & 164 & 76\,\% \\
-\texttt{presentation/payment\_router.py}  & 183 & 74\,\% \\
-\texttt{presentation/user\_router.py}     & 69  & 51\,\% \\
-\texttt{presentation/order\_admin\_router.py} & 103 & 40\,\% \\
-\texttt{services/image\_service.py}       & 78  & 36\,\% \\
+\texttt{presentation/auth\_router.py}     & 73  & 90\,\% \\
+\texttt{presentation/catalog\_router.py}  & 58  & 90\,\% \\
+\texttt{presentation/order\_router.py}    & 163 & 80\,\% \\
+\texttt{services/postfinance\_service.py} & 151 & 82\,\% \\
+\texttt{services/order\_service.py}       & 164 & 77\,\% \\
+\texttt{presentation/payment\_router.py}  & 194 & 73\,\% \\
+\texttt{presentation/user\_router.py}     & 74  & 47\,\% \\
+\texttt{presentation/order\_admin\_router.py} & 103 & 38\,\% \\
+\texttt{services/image\_service.py}       & 103 & 41\,\% \\
 \midrule
-\textbf{TOTAL (code de production)} & \textbf{2\,099} & \textbf{79\,\%} \\
+\textbf{TOTAL (code de production)} & \textbf{2\,113} & \textbf{78\,\%} \\
 \bottomrule
 \end{tabular}
 \caption{Couverture de code par module (\texttt{pytest --cov})}
 \label{tab:couverture}
 \end{table}
 
-\noindent Les modèles de données, les schémas de validation et les modules d'authentification et de catalogue sont très bien couverts (89\,\% à 100\,\%). Après la refactorisation SOLID/KISS qui a scindé l'ancien \texttt{order\_router} monolithique en trois modules (\texttt{order\_router}, \texttt{payment\_router}, \texttt{order\_admin\_router}), le routeur de commandes proprement dit atteint désormais 81\,\% de couverture. Les modules les moins couverts sont désormais le service de traitement d'images (\texttt{image\_service}, 36\,\%), le nouveau routeur d'administration des commandes (\texttt{order\_admin\_router}, 40\,\%, ajouté récemment et dont les chemins de succès sont couverts mais pas encore tous les cas d'erreur) et le routeur utilisateur (\texttt{user\_router}, 51\,\%) :
+\noindent Les modèles de données, les schémas de validation et les modules d'authentification et de catalogue sont très bien couverts (90\,\% à 100\,\%). Après la refactorisation SOLID/KISS qui a scindé l'ancien \texttt{order\_router} monolithique en trois modules (\texttt{order\_router}, \texttt{payment\_router}, \texttt{order\_admin\_router}), le routeur de commandes proprement dit atteint désormais 80\,\% de couverture, et le service PostFinance (\texttt{postfinance\_service}, 82\,\%) a gagné plusieurs points grâce aux nouveaux tests du contrôle de cohérence du montant payé (voir \og Vérification du montant PostFinance \fg{}, section~\ref{sec:module-commande-paiement}). Les modules les moins couverts sont désormais le service de traitement d'images (\texttt{image\_service}, 41\,\%), le routeur d'administration des commandes (\texttt{order\_admin\_router}, 38\,\%, dont les chemins de succès sont couverts mais pas encore tous les cas d'erreur) et le routeur utilisateur (\texttt{user\_router}, 47\,\%) :
 \vspace{5px}
 ce sont les parties identifiées comme prioritaires pour la consolidation (voir la section \og Limites et bugs restants \fg{}). Aucun test de charge ni de performance n'a été réalisé dans le cadre de ce MVP.
 
@@ -1055,8 +1063,8 @@ Aucune campagne formelle de tests de performance ou de charge (\textit{benchmark
 \begin{itemize}
     \item \textbf{Fiabilisation du paiement :} plusieurs correctifs ont déjà été apportés (bug de fuseau horaire provoquant de fausses expirations de réservation, session de paiement obsolète après redirection, en-tête CSP bloquant les scripts PostFinance/Google) mais le module reste celui dont la couverture de tests est la plus faible parmi les routeurs (\texttt{payment\_router} à 74\,\%) et mérite une consolidation continue.
     \item \textbf{Interface mobile :} certains écrans de l'interface mobile restent à affiner pour une expérience pleinement responsive.
-    \item \textbf{Suivi des commandes côté administrateur :} la fonctionnalité de base (avancement, annulation, remboursement, surcharge de statut) est désormais implémentée et testée ; il reste à enrichir l'ergonomie (filtres avancés, export) et le traitement d'erreurs plus fin (\texttt{order\_admin\_router} à 40\,\% de couverture).
-    \item \textbf{Couverture de tests :} le service de traitement d'images (36\,\%) et le routeur utilisateur (51\,\%) restent les modules à renforcer en priorité.
+    \item \textbf{Suivi des commandes côté administrateur :} la fonctionnalité de base (avancement, annulation, remboursement, surcharge de statut) est désormais implémentée et testée ; il reste à enrichir l'ergonomie (filtres avancés, export) et le traitement d'erreurs plus fin (\texttt{order\_admin\_router} à 38\,\% de couverture).
+    \item \textbf{Couverture de tests :} le service de traitement d'images (41\,\%) et le routeur utilisateur (47\,\%) restent les modules à renforcer en priorité.
     \item \textbf{Sauvegarde et restauration de la base de données :} seule la \textbf{structure} du schéma est reproductible de façon fiable, via les scripts SQL versionnés du dossier \texttt{backend/migrations/} appliqués automatiquement au déploiement (annexe~\ref{lst:ddl}). Il n'existe en revanche aucune procédure de sauvegarde/restauration automatisée des \textbf{données} de production (ex. \texttt{mysqldump} planifié) : c'est une limite assumée de ce MVP, identifiée comme axe prioritaire avant une montée en charge réelle du service.
 \end{itemize}
 
@@ -1084,6 +1092,7 @@ Informations sensibles en clair & Variables d'environnement & Fichiers \texttt{.
 Force brute / credential stuffing & Limitation du nombre de tentatives & \texttt{services/rate\_limit.py} sur \texttt{/auth/*} \\
 SSRF via récupération d'images distantes & Validation de l'URL et de la cible réseau & \texttt{image\_service.py}, testé (\texttt{test\_image\_service\_ssrf.py}) \\
 Clé secrète faible ou par défaut & Refus des valeurs \og placeholder \fg{} connues au démarrage & Garde dans \texttt{deps.py}, testée (\texttt{test\_secret\_key\_guard.py}) \\
+Montant falsifié d'une transaction PostFinance & Comparaison du montant rapporté par PostFinance au total de la commande avant finalisation (confirmation, \textit{polling} et webhook) & \texttt{amount\_matches\_commande}, testée (\texttt{test\_postfinance\_service.py}) \\
 \bottomrule
 \end{tabular}
 \caption{Mesures de cybersécurité implémentées dans CARIBOOKS}
@@ -1121,12 +1130,30 @@ En complément des tests automatisés, deux outils d'analyse statique ont été 
     dépôt est désormais \textbf{intégralement conforme} (\texttt{ruff check .} : \og All checks
     passed \fg{}).
     \item \textbf{ESLint} (frontend Next.js) : configuré dans \texttt{frontend/eslint.config.mjs}
-    avec le \textit{preset} \texttt{next/core-web-vitals} et \texttt{next/typescript}.
-    L'exécution initiale a relevé 3 erreurs et 9 avertissements sur le code applicatif (hors
-    build \texttt{.next/} exclu de l'analyse) ; après correction (entités HTML non échappées,
-    variables et imports inutilisés, directives \texttt{eslint-disable} obsolètes), il ne reste
-    qu'un avertissement volontairement non corrigé (dépendance manquante d'un \texttt{useEffect}
-    dont l'ajout automatique risquerait de modifier le comportement du formulaire concerné).
+    avec le \textit{preset} \texttt{next/core-web-vitals} et \texttt{next/typescript}. La
+    configuration bridgeait ces \textit{presets} via \texttt{FlatCompat.extends(...)} (le motif
+    généré par les anciennes versions de \texttt{create-next-app}) ; cette passerelle, prévue pour
+    des configurations \og eslintrc \fg{} classiques, ne supportait plus la forme désormais
+    utilisée par \texttt{eslint-config-next} (des tableaux \textit{flat config} natifs dont les
+    objets de \textit{plugin} s'auto-référencent), et faisait planter \texttt{eslint .} avant même
+    l'analyse du premier fichier (\og Converting circular structure to JSON \fg{}) — donc en CI
+    comme en local. Corrigé en important directement \texttt{eslint-config-next/core-web-vitals}
+    et \texttt{eslint-config-next/typescript} (déjà des tableaux \textit{flat config}), sans passer
+    par cette passerelle. Une fois le blocage levé, l'analyse a pu tourner pour de vrai et a
+    remonté 18 erreurs jusque-là invisibles : deux bogues réels d'ordre de déclaration (variable
+    utilisée avant sa déclaration dans le même composant), corrigés par réordonnancement sans
+    changement de comportement ; deux tableaux de dépendances de \texttt{useCallback} incomplets,
+    corrigés en y ajoutant les \textit{setters} \texttt{useState} manquants (stables par
+    construction, donc sans effet sur le comportement) ; et douze occurrences de la règle
+    \texttt{react-hooks/set-state-in-effect}, qui signale comme une erreur le motif \og charger les
+    données au montage \fg{} utilisé de façon idiomatique dans tout le projet — y compris dans le
+    contrôle d'accès du back-office (\texttt{admin/layout.tsx}), déjà vérifié fonctionnel de bout en
+    bout. Réécrire ces douze composants pour satisfaire cette règle récente aurait constitué une
+    refactorisation à part entière, pas une correction de bogue, avec un risque réel sur un code
+    d'authentification déjà validé ; cette règle a donc été abaissée au niveau avertissement
+    (plutôt que désactivée) dans \texttt{eslint.config.mjs}, avec le raisonnement documenté en
+    commentaire. L'état actuel est \textbf{0 erreur, 16 avertissements} (\texttt{npm run lint}
+    retourne un code de sortie 0).
 \end{itemize}
 
 \noindent Les deux outils sont exécutés en CI (\texttt{ruff check .} et \texttt{npm run lint}) en
@@ -1233,7 +1260,7 @@ Malgré l'atteinte des objectifs du MVP, plusieurs limites subsistent à la fin 
     \item \textbf{Suivi des commandes :} la gestion des commandes côté administrateur (avancement, annulation, remboursement, surcharge de statut) est implémentée et testée ; son ergonomie et sa couverture de tests (40\,\%) restent perfectibles.
     \item \textbf{Interface mobile :} certains écrans restent à affiner pour une expérience pleinement responsive.
     \item \textbf{Fonctionnalités hors MVP :} la messagerie acheteur-vendeur, les favoris, les avis et l'estimation automatique de prix n'ont pas été implémentés (renvoyés aux phases 2 et 3).
-    \item \textbf{Couverture de tests :} à renforcer en priorité sur le service de traitement d'images (36\,\%) et le routeur utilisateur (51\,\%).
+    \item \textbf{Couverture de tests :} à renforcer en priorité sur le service de traitement d'images (41\,\%) et le routeur utilisateur (47\,\%).
 \end{itemize}
 
 \section*{Perspectives d'évolution}

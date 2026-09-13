@@ -786,6 +786,7 @@ def _lock_stock_rows(db, ids_article):
     \item \textbf{Paiement Payrexx $\rightarrow$ PostFinance} --- sandbox sans CB réelle
     \item \textbf{Gestion du périmètre} --- demandes récurrentes (favoris, chat) reportées au backlog
     \item \textbf{Formation + projet perso} --- développement en soirée, 3 j/semaine
+    \item \textbf{Vercel + \texttt{output: standalone}} --- assets statiques en 404 en prod, corrigé (option conditionnée à la variable \texttt{VERCEL})
   \end{itemize}
   \vspace{6pt}
   \begin{exampleblock}{\small Gestion du commanditaire}
@@ -816,6 +817,7 @@ def _lock_stock_rows(db, ids_article):
     Secrets en clair            & Variables d'environnement   & \texttt{.env} + python-dotenv \\
     Race condition stock        & Verrou SQL transactionnel   & \texttt{with\_for\_update()} \\
     Non-conformité RGPD/nLPD    & Export + effacement + consentement & \texttt{/users/me}, bannière cookies \\
+    Montant PostFinance falsifié & Vérification vs total commande avant finalisation & \texttt{amount\_matches\_commande} \\
     \bottomrule
   \end{tabular}
   \end{center}
@@ -872,7 +874,7 @@ def _lock_stock_rows(db, ids_article):
 
 \section{Tests et déploiement}
 
-\begin{frame}{Tests et couverture --- 99/99, 79\,\%}
+\begin{frame}{Tests et couverture --- 101/101, 78\,\%}
   \begin{columns}[T]
     \column{0.48\textwidth}
     \begin{block}{Stratégie de test à 3 niveaux}
@@ -885,13 +887,13 @@ def _lock_stock_rows(db, ids_article):
       \end{itemize}
     \end{block}
     \vspace{5pt}
-    \badgegreen{99 / 99 tests passants (68 pytest + 31 Vitest)}
+    \badgegreen{101 / 101 tests passants (70 pytest + 31 Vitest)}
     \vspace{5pt}
     \begin{alertblock}{\small Axes de renforcement (Phase 2)}
       \begin{itemize}\small
-        \item \texttt{image\_service} (36\,\%)
-        \item \texttt{order\_admin\_router} (40\,\%)
-        \item \texttt{user\_router} (51\,\%)
+        \item \texttt{image\_service} (41\,\%)
+        \item \texttt{order\_admin\_router} (38\,\%)
+        \item \texttt{user\_router} (47\,\%)
       \end{itemize}
     \end{alertblock}
     \column{0.50\textwidth}
@@ -905,18 +907,18 @@ def _lock_stock_rows(db, ids_article):
       \texttt{infrastructure/models.py}    & 100\,\% \\
       \texttt{presentation/schemas.py}     & 97\,\% \\
       \texttt{presentation/deps.py}        & 93\,\% \\
-      \texttt{catalog\_router.py}          & 89\,\% \\
+      \texttt{catalog\_router.py}          & 90\,\% \\
       \texttt{presentation/auth\_router.py}& 90\,\% \\
-      \texttt{order\_router.py}            & 81\,\% \\
-      \texttt{postfinance\_service.py}     & 79\,\% \\
-      \texttt{presentation/payment\_router.py}& 74\,\% \\
-      \texttt{presentation/user\_router.py}& 51\,\% \\
+      \texttt{order\_router.py}            & 80\,\% \\
+      \texttt{postfinance\_service.py}     & 82\,\% \\
+      \texttt{presentation/payment\_router.py}& 73\,\% \\
+      \texttt{presentation/user\_router.py}& 47\,\% \\
       \rowcolor{myaccent!20}
-      \texttt{presentation/order\_admin\_router.py}&40\,\% \\
+      \texttt{presentation/order\_admin\_router.py}&38\,\% \\
       \rowcolor{myaccent!20}
-      \texttt{services/image\_service.py}  & 36\,\% \\
+      \texttt{services/image\_service.py}  & 41\,\% \\
       \midrule
-      \textbf{TOTAL (2\,099 instructions)} & \textbf{79\,\%} \\
+      \textbf{TOTAL (2\,113 instructions)} & \textbf{78\,\%} \\
       \bottomrule
     \end{tabular}
     \end{center}
@@ -930,7 +932,7 @@ def _lock_stock_rows(db, ids_article):
       \begin{enumerate}\small
         \item Push sur branche \texttt{main}
         \item Lint \textbf{Ruff + ESLint} (0 erreur requis)
-        \item Exécution \textbf{pytest + Vitest} (99/99 requis)
+        \item Exécution \textbf{pytest + Vitest} (101/101 requis)
         \item \textit{Rolling deploy} SSH séquentiel vers \textbf{VM1} puis \textbf{VM2}
         \item Migrations SQL appliquées automatiquement
         \item \textbf{Vercel} auto-deploy frontend
