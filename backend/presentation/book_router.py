@@ -1,11 +1,10 @@
 from typing import Any, Dict, List, Optional
 
 import httpx
-from fastapi import APIRouter, Depends, HTTPException, Request, status
-from sqlalchemy.orm import Session
+from fastapi import APIRouter, HTTPException, Request, status
 
 from infrastructure import models
-from presentation.deps import get_db, require_admin
+from presentation.deps import AdminUser, DbSession
 from presentation.schemas import BookCreate, BookRead, BookUpdate
 from services.book_service import BookService
 
@@ -46,7 +45,7 @@ def _to_book_read(db_livre: models.Livre) -> BookRead:
 
 @router.get("/", response_model=List[BookRead])
 @router.get("", response_model=List[BookRead], include_in_schema=False)
-def list_books(db: Session = Depends(get_db)):
+def list_books(db: DbSession):
     # One handler serves both "/books" and "/books/" (Next.js and direct callers
     # hit both). Release stock from expired carts so delisted books reappear once
     # available.
@@ -57,7 +56,7 @@ def list_books(db: Session = Depends(get_db)):
 
 
 @router.get("/by-isbn/{isbn}", response_model=Optional[BookRead])
-def get_book_by_isbn(isbn: str, db: Session = Depends(get_db)):
+def get_book_by_isbn(isbn: str, db: DbSession):
     # Returns null (HTTP 200) when the ISBN is not in the catalogue. This is an
     # expected case during scanning, so it must not surface as a 404 error.
     service = BookService(db)
@@ -85,7 +84,7 @@ def get_isbn_metadata(isbn: str) -> Dict[str, Any]:
 
 
 @router.get("/{id_article}", response_model=BookRead)
-def get_book(id_article: int, db: Session = Depends(get_db)):
+def get_book(id_article: int, db: DbSession):
     service = BookService(db)
     book = service.get_book(id_article)
     if not book:
@@ -94,7 +93,7 @@ def get_book(id_article: int, db: Session = Depends(get_db)):
 
 @router.post("/", response_model=BookRead, status_code=status.HTTP_201_CREATED)
 @router.post("", response_model=BookRead, status_code=status.HTTP_201_CREATED, include_in_schema=False)
-def create_book(book_in: BookCreate, request: Request, db: Session = Depends(get_db), _admin=Depends(require_admin)):
+def create_book(book_in: BookCreate, request: Request, db: DbSession, _admin: AdminUser):
     # Thin adapter: all the business logic (image download, validation, FK
     # defaulting) lives in BookService.create_book_from_input. One handler serves
     # both "/books" and "/books/".
@@ -104,7 +103,7 @@ def create_book(book_in: BookCreate, request: Request, db: Session = Depends(get
 
 
 @router.put("/{id_article}", response_model=BookRead)
-def update_book(id_article: int, book_update: BookUpdate, db: Session = Depends(get_db), _admin=Depends(require_admin)):
+def update_book(id_article: int, book_update: BookUpdate, db: DbSession, _admin: AdminUser):
     service = BookService(db)
     updated = service.update_book(id_article, book_update.model_dump(exclude_unset=True))
     if not updated:
@@ -112,7 +111,7 @@ def update_book(id_article: int, book_update: BookUpdate, db: Session = Depends(
     return _to_book_read(updated)
 
 @router.delete("/{id_article}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_book(id_article: int, db: Session = Depends(get_db), _admin=Depends(require_admin)):
+def delete_book(id_article: int, db: DbSession, _admin: AdminUser):
     service = BookService(db)
     deleted = service.delete_book(id_article)
     if not deleted:

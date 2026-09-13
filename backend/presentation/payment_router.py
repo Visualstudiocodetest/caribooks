@@ -4,12 +4,12 @@ import logging
 import os
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
 from infrastructure import models
 from infrastructure.crud_base import CrudBase
-from presentation.deps import get_current_user, get_db, require_admin
+from presentation.deps import AdminUser, CurrentUser, DbSession
 from presentation.schemas import PaiementCreate, PaiementRead, PaiementUpdate
 from services.order_service import (
     build_pending_paiement,
@@ -90,7 +90,7 @@ def _assert_amount_matches_commande(db: Session, id_commande: int, provider_amou
 
 
 @router.get("/paiements", response_model=list[PaiementRead])
-def list_paiements(db: Session = Depends(get_db), current_user=Depends(get_current_user)):
+def list_paiements(db: DbSession, current_user: CurrentUser):
     return (
         db.query(models.Paiement)
         .join(models.Commande, models.Paiement.id_commande == models.Commande.id_commande)
@@ -100,7 +100,7 @@ def list_paiements(db: Session = Depends(get_db), current_user=Depends(get_curre
 
 
 @router.get("/paiements/{id_paiement}", response_model=PaiementRead)
-def get_paiement(id_paiement: int, db: Session = Depends(get_db), current_user=Depends(get_current_user)):
+def get_paiement(id_paiement: int, db: DbSession, current_user: CurrentUser):
     obj = (
         db.query(models.Paiement)
         .join(models.Commande, models.Paiement.id_commande == models.Commande.id_commande)
@@ -113,7 +113,7 @@ def get_paiement(id_paiement: int, db: Session = Depends(get_db), current_user=D
 
 
 @router.post("/paiements", response_model=PaiementRead, status_code=status.HTTP_201_CREATED)
-def create_paiement(payload: PaiementCreate, db: Session = Depends(get_db), current_user=Depends(get_current_user)):
+def create_paiement(payload: PaiementCreate, db: DbSession, current_user: CurrentUser):
     commande = get_commande_owned(db, payload.id_commande, int(current_user.id_utilisateur))
     if commande is None:
         raise HTTPException(status_code=404, detail="Commande not found")
@@ -126,8 +126,8 @@ def create_paiement(payload: PaiementCreate, db: Session = Depends(get_db), curr
 def create_paiement_postfinance(
     payload: PaiementCreate,
     request: Request,
-    db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
+    db: DbSession,
+    current_user: CurrentUser,
 ):
     """Create a local paiement and initialize a PostFinance iframe checkout session."""
     commande, lignes, user = load_commande_context(db, payload.id_commande, int(current_user.id_utilisateur))
@@ -179,8 +179,8 @@ def create_paiement_postfinance(
 @router.post("/paiements/{id_paiement}/confirm-postfinance")
 def confirm_paiement_postfinance(
     id_paiement: int,
-    db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
+    db: DbSession,
+    current_user: CurrentUser,
 ):
     """Confirm a PostFinance transaction after iframe validation, before submit()."""
     obj = (
@@ -242,7 +242,7 @@ def confirm_paiement_postfinance(
 
 
 @router.get("/paiements/{id_paiement}/poll-postfinance")
-def poll_paiement_postfinance(id_paiement: int, db: Session = Depends(get_db), current_user=Depends(get_current_user)):
+def poll_paiement_postfinance(id_paiement: int, db: DbSession, current_user: CurrentUser):
     """Poll PostFinance for the status of a payment (alternative to webhooks).
 
     This endpoint queries PostFinance using the stored `reference_externe` (link id)
@@ -283,7 +283,7 @@ def poll_paiement_postfinance(id_paiement: int, db: Session = Depends(get_db), c
 
 
 @router.post("/paiements/webhook/postfinance")
-async def postfinance_webhook(request: Request, db: Session = Depends(get_db)):
+async def postfinance_webhook(request: Request, db: DbSession):
     # PostFinance webhook signature verification
     sig_header = request.headers.get("x-signature") or request.headers.get("X-Signature")
 
@@ -334,7 +334,7 @@ async def postfinance_webhook(request: Request, db: Session = Depends(get_db)):
 
 
 @router.post("/paiements/webhook/local")
-def local_payment_webhook(payload: dict, db: Session = Depends(get_db)):
+def local_payment_webhook(payload: dict, db: DbSession):
     """Development/test-only webhook simulator for local iframe payments.
 
     Fail-closed: only enabled when ENVIRONMENT is explicitly "development" or
@@ -378,8 +378,8 @@ def local_payment_webhook(payload: dict, db: Session = Depends(get_db)):
 def update_paiement(
     id_paiement: int,
     payload: PaiementUpdate,
-    db: Session = Depends(get_db),
-    _admin=Depends(require_admin),
+    db: DbSession,
+    _admin: AdminUser,
 ):
     """Admin-only. Payments are financial/audit records: a customer must never be
     able to edit or delete them (previously the owner could, via id_utilisateur
@@ -400,7 +400,7 @@ def update_paiement(
 
 
 @router.delete("/paiements/{id_paiement}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_paiement(id_paiement: int, db: Session = Depends(get_db), _admin=Depends(require_admin)):
+def delete_paiement(id_paiement: int, db: DbSession, _admin: AdminUser):
     """Admin-only — see update_paiement. Deleting a payment record is a back-office
     action, never customer self-service."""
     obj = db.query(models.Paiement).filter(models.Paiement.id_paiement == id_paiement).first()

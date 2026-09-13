@@ -21,7 +21,38 @@ from presentation.user_router import router as user_router
 env_path = Path(__file__).resolve().parent.parent / ".env"
 load_dotenv(dotenv_path=env_path)
 
-app = FastAPI()
+# OpenAPI metadata: FastAPI builds the whole Swagger/ReDoc page from this, and
+# the tag order below is the order the operations are grouped in the docs.
+tags_metadata = [
+    {"name": "auth", "description": "Inscription, connexion par mot de passe et Google Sign-In (JWT HS256)."},
+    {"name": "users", "description": "Profil de l'utilisateur connecté (RGPD/nLPD : export et effacement) et administration des comptes."},
+    {"name": "books", "description": "Catalogue des livres et récupération des métadonnées ISBN via OpenLibrary."},
+    {"name": "articles", "description": "Articles génériques du catalogue (surtype du livre)."},
+    {"name": "catalog", "description": "Listes de référence : types d'objet et états d'usure."},
+    {"name": "stock", "description": "Sources de stock et quantités disponibles (réservé aux administrateurs)."},
+    {"name": "scans", "description": "Historique des scans ISBN réalisés en recyclerie."},
+    {"name": "orders", "description": "Panier et commandes de l'utilisateur connecté."},
+    {"name": "orders-payments", "description": "Paiements PostFinance Checkout et webhooks associés."},
+    {"name": "orders-admin", "description": "Suivi et transitions de statut des commandes (réservé aux administrateurs)."},
+    {"name": "images", "description": "Récupération et stockage des couvertures distantes (protégé contre le SSRF)."},
+    {"name": "system", "description": "Sonde de disponibilité du service."},
+]
+
+app = FastAPI(
+    title="CARIBOOKS API",
+    summary="API de la librairie solidaire en ligne de la recyclerie Caritas.",
+    description=(
+        "Backend FastAPI de CARIBOOKS : catalogue de livres d'occasion, scan ISBN, "
+        "panier, commandes et paiements.\n\n"
+        "**Contraintes métier** : toutes les transactions sont libellées en **CHF** et "
+        "la livraison est limitée à la **Suisse**.\n\n"
+        "L'authentification se fait par **JWT** (schéma `HTTPBearer`) : appelez "
+        "`POST /auth/token`, puis renseignez le jeton obtenu via le bouton *Authorize*."
+    ),
+    version="1.0.0",
+    license_info={"name": "MIT", "identifier": "MIT"},
+    openapi_tags=tags_metadata,
+)
 
 default_origins = ",".join([
     "https://caribooks.vercel.app",
@@ -49,12 +80,15 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-@app.get("/")
-async def root():
+@app.get("/", tags=["system"], summary="Racine du service")
+async def root() -> dict[str, str]:
+    """Point d'entrée minimal, utile pour vérifier que l'API répond."""
     return {"message": "Hello World"}
 
-@app.get("/health")
-async def health():
+
+@app.get("/health", tags=["system"], summary="Sonde de disponibilité")
+async def health() -> dict[str, str | int]:
+    """Sonde consommée par le healthcheck du conteneur et par le monitoring."""
     return {"status": "ok",
             "code": 200,
             "message": "Health check passed"}

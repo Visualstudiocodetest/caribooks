@@ -1,55 +1,54 @@
 import binascii
 import hashlib
 import hmac
-import os
 from typing import Optional
 
+from pwdlib import PasswordHash
+from pwdlib.exceptions import UnknownHashError
+from pwdlib.hashers.bcrypt import BcryptHasher
 from sqlalchemy.orm import Session
 
 from infrastructure import models
 
+# FastAPI's security docs moved off passlib (unmaintained since 2020, and it
+# imports the `crypt` module that Python 3.13 removed) to pwdlib. Bcrypt is
+# kept as the algorithm so existing `$2b$...` hashes in the database stay
+# verifiable with no re-hash and no migration.
+_password_hash = PasswordHash((BcryptHasher(),))
 
-def _get_pwd_context():
-    try:
-        from passlib.context import CryptContext
-    except Exception:
-        return None
-    return CryptContext(schemes=["bcrypt"], deprecated="auto")
+# Legacy prefix: a previous revision fell back to hand-rolled PBKDF2 whenever
+# the passlib/bcrypt backend failed to load. Those hashes may still exist in
+# older databases, so they stay verifiable here -- but are never produced any
+# more: every hash written from now on is bcrypt.
+_PBKDF2_PREFIX = "pbkdf2_sha256$"
+_PBKDF2_ITERATIONS = 100_000
 
 
 def get_password_hash(password: str) -> str:
-    ctx = _get_pwd_context()
-    if ctx is not None:
-        try:
-            return ctx.hash(password)
-        except Exception:
-            # bcrypt backend can be broken/mismatched in some envs; fallback to pbkdf2_hmac
-            pass
-    # fallback to simple pbkdf2_hmac
-    salt = os.urandom(16)
-    dk = hashlib.pbkdf2_hmac('sha256', password.encode(), salt, 100000)
-    return "pbkdf2_sha256$" + binascii.hexlify(salt).decode() + "$" + binascii.hexlify(dk).decode()
+    return _password_hash.hash(password)
 
 
-def verify_password(plain_password: str, hashed_password: str) -> bool:
-    ctx = _get_pwd_context()
-    if ctx is not None:
-        try:
-            return ctx.verify(plain_password, hashed_password)
-        except Exception:
-            # fallback to pbkdf2 verifier below
-            pass
-    # fallback verify for pbkdf2_sha256
+def _verify_legacy_pbkdf2(plain_password: str, hashed_password: str) -> bool:
     try:
-        if not hashed_password.startswith("pbkdf2_sha256$"):
-            return False
         _, salt_hex, dk_hex = hashed_password.split("$")
         salt = binascii.unhexlify(salt_hex)
         expected = binascii.unhexlify(dk_hex)
-        dk = hashlib.pbkdf2_hmac('sha256', plain_password.encode(), salt, 100000)
+        dk = hashlib.pbkdf2_hmac("sha256", plain_password.encode(), salt, _PBKDF2_ITERATIONS)
         return hmac.compare_digest(dk, expected)
-    except Exception:
+    except (ValueError, binascii.Error):
         return False
+
+
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    if hashed_password.startswith(_PBKDF2_PREFIX):
+        return _verify_legacy_pbkdf2(plain_password, hashed_password)
+    try:
+        return _password_hash.verify(plain_password, hashed_password)
+    except (UnknownHashError, ValueError, TypeError):
+        # Stored value isn't a hash pwdlib recognises (corrupt or truncated
+        # column): treat as a failed login rather than a 500.
+        return False
+
 
 def get_user_by_email(db: Session, email: str) -> Optional[models.Utilisateur]:
     return db.query(models.Utilisateur).filter(models.Utilisateur.email == email).first()

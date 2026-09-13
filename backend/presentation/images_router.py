@@ -1,7 +1,7 @@
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 
-from presentation.deps import require_admin
+from presentation.deps import AdminUser
 from services.image_service import download_image
 from services.rate_limit import check_rate_limit
 
@@ -13,7 +13,7 @@ class ImageFetchIn(BaseModel):
 
 
 @router.post("/fetch")
-def fetch_image(payload: ImageFetchIn, request: Request, admin=Depends(require_admin)):
+def fetch_image(payload: ImageFetchIn, request: Request, admin: AdminUser):
     # Even though this is admin-gated, a compromised/malicious admin session
     # could otherwise use it to rapidly probe internal network ranges (the
     # SSRF allowlist blocks the request, but response timing/error differences

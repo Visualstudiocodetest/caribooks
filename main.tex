@@ -256,7 +256,7 @@ Ce projet couvre l'intégralité des trois blocs de compétences du référentie
 \textbf{Bloc} & \textbf{Intitulé} & \textbf{Compétences mobilisées dans CARIBOOKS} \\
 \midrule
 1 & Développer une application sécurisée &
-  Authentification JWT avec \texttt{python-jose} et hashage \texttt{bcrypt}, connexion \textbf{Google Sign-In} en complément de l'authentification par mot de passe, validation des données avec Pydantic, contrôle des permissions par rôle (admin / user) et isolation inter-utilisateurs testée, requêtes SQL préparées via SQLAlchemy (ORM), gestion des sessions sécurisées, protection des routes FastAPI avec la dépendance \texttt{Depends(require\_admin)}, limitation du taux de requêtes sur l'authentification, protection SSRF sur la récupération d'images distantes, conformité \textbf{RGPD / nLPD} (export et effacement des données personnelles), interfaces \textbf{accessibles} (WCAG / RGAA). \\
+  Authentification JWT avec \texttt{PyJWT} et hashage \texttt{bcrypt}, connexion \textbf{Google Sign-In} en complément de l'authentification par mot de passe, validation des données avec Pydantic, contrôle des permissions par rôle (admin / user) et isolation inter-utilisateurs testée, requêtes SQL préparées via SQLAlchemy (ORM), gestion des sessions sécurisées, protection des routes FastAPI avec la dépendance \texttt{AdminUser} (alias \texttt{Annotated[..., Depends(require\_admin)]}), limitation du taux de requêtes sur l'authentification, protection SSRF sur la récupération d'images distantes, conformité \textbf{RGPD / nLPD} (export et effacement des données personnelles), interfaces \textbf{accessibles} (WCAG / RGAA). \\
 \midrule
 2 & Concevoir et développer une application multicouche &
   Modélisation de la base de données (MCD/MLD MySQL), architecture REST API (FastAPI) en couches \texttt{presentation}/\texttt{services}/\texttt{infrastructure}, frontend découplé (Next.js / React / TypeScript), accès aux données via SQLAlchemy (composant générique \texttt{CrudBase}), choix relationnel justifié (cf. absence de NoSQL), intégration d'APIs tierces (OpenLibrary, PostFinance, Google OAuth). \\
@@ -793,7 +793,7 @@ l'écran de scan ISBN telle qu'implémentée.
     \item \textbf{Backend :} FastAPI (Python) — avec Pydantic pour la validation des données
     \item \textbf{ORM :} SQLAlchemy
     \item \textbf{Base de données :} MySQL
-    \item \textbf{Authentification :} JWT (\texttt{python-jose}), hashage \texttt{bcrypt} via \texttt{passlib}, Google Sign-In (OAuth)
+    \item \textbf{Authentification :} JWT (\texttt{PyJWT}), hashage \texttt{bcrypt} via \texttt{pwdlib}, Google Sign-In (OAuth)
     \item \textbf{Paiement :} API PostFinance (TWINT, Visa/Mastercard en CHF)
     \item \textbf{API externe :} OpenLibrary (récupération des métadonnées ISBN)
     \item \textbf{CI/CD :} GitHub Actions
@@ -815,7 +815,7 @@ Le backend suit une \textbf{architecture en couches} inspirée des principes de 
 
 \subsection{Module authentification}
 
-Le module d'authentification expose trois endpoints : \texttt{POST /auth/register} (création de compte, renvoie un \texttt{201} ou un \texttt{400} si l'email existe déjà), \texttt{POST /auth/token} (connexion par email/mot de passe, convention OAuth2) et \texttt{POST /auth/google} (connexion via \textbf{Google Sign-In} : le jeton d'identité Google est vérifié auprès de \texttt{oauth2.googleapis.com/tokeninfo}, l'email doit être vérifié côté Google, puis le compte est retrouvé ou créé via son \texttt{google\_id}). Pour la connexion par mot de passe, l'utilisateur est récupéré par email via \texttt{crud\_user}, et le mot de passe est vérifié avec \texttt{passlib} (bcrypt) ; le champ \texttt{mot\_de\_passe\_hash} est nullable, car les comptes créés via Google n'en possèdent pas. Si les identifiants sont valides, un JWT signé en \textbf{HS256} est généré (\texttt{jwt\_service.create\_access\_token}), contenant l'email (\texttt{sub}), le rôle et une expiration de \textbf{480 minutes}. Les trois routes d'authentification sont protégées par un \textit{rate limiting} applicatif (\texttt{services/rate\_limit.py}) contre le \textit{credential stuffing}. La protection des routes repose sur deux dépendances FastAPI : \texttt{get\_current\_user} (décode et valide le token via le schéma \texttt{HTTPBearer}) et \texttt{require\_admin} (contrôle du rôle \texttt{admin}) — il n'existe que deux rôles, \texttt{admin} et \texttt{user}. Au démarrage, l'application refuse de fonctionner avec une \texttt{SECRET\_KEY} correspondant à une valeur faible ou de type \og placeholder \fg{} connue (quel que soit l'environnement) ; en son absence totale, une clé aléatoire est générée pour la session en cours.
+Le module d'authentification expose trois endpoints : \texttt{POST /auth/register} (création de compte, renvoie un \texttt{201} ou un \texttt{400} si l'email existe déjà), \texttt{POST /auth/token} (connexion par email/mot de passe, convention OAuth2) et \texttt{POST /auth/google} (connexion via \textbf{Google Sign-In} : le jeton d'identité Google est vérifié auprès de \texttt{oauth2.googleapis.com/tokeninfo}, l'email doit être vérifié côté Google, puis le compte est retrouvé ou créé via son \texttt{google\_id}). Pour la connexion par mot de passe, l'utilisateur est récupéré par email via \texttt{crud\_user}, et le mot de passe est vérifié avec \texttt{pwdlib} (bcrypt) ; le champ \texttt{mot\_de\_passe\_hash} est nullable, car les comptes créés via Google n'en possèdent pas. Si les identifiants sont valides, un JWT signé en \textbf{HS256} est généré (\texttt{jwt\_service.create\_access\_token}), contenant l'email (\texttt{sub}), le rôle et une expiration de \textbf{480 minutes}. Les trois routes d'authentification sont protégées par un \textit{rate limiting} applicatif (\texttt{services/rate\_limit.py}) contre le \textit{credential stuffing}. La protection des routes repose sur deux dépendances FastAPI : \texttt{get\_current\_user} (décode et valide le token via le schéma \texttt{HTTPBearer}) et \texttt{require\_admin} (contrôle du rôle \texttt{admin}) — il n'existe que deux rôles, \texttt{admin} et \texttt{user}. Au démarrage, l'application refuse de fonctionner avec une \texttt{SECRET\_KEY} correspondant à une valeur faible ou de type \og placeholder \fg{} connue (quel que soit l'environnement) ; en son absence totale, une clé aléatoire est générée pour la session en cours.
 
 \subsection{Module catalogue, articles et stock}
 
@@ -846,11 +846,11 @@ Côté frontend, l'ensemble de la section \texttt{/admin} est protégé par un l
 
 \subsection{Authentification JWT et gestion des rôles}
 
-L'authentification repose sur le standard \textbf{JSON Web Token (JWT)}, implémenté côté backend avec la librairie \texttt{python-jose}. Le flux est le suivant :
+L'authentification repose sur le standard \textbf{JSON Web Token (JWT)}, implémenté côté backend avec la librairie \texttt{PyJWT}. Le flux est le suivant :
 
 \begin{enumerate}
     \item L'utilisateur soumet son email et son mot de passe via \texttt{POST /auth/token}.
-    \item FastAPI récupère l'utilisateur en base via SQLAlchemy et vérifie le mot de passe avec \texttt{passlib} (bcrypt).
+    \item FastAPI récupère l'utilisateur en base via SQLAlchemy et vérifie le mot de passe avec \texttt{pwdlib} (bcrypt).
     \item Si les identifiants sont valides, un JWT signé est généré, contenant l'identifiant utilisateur, son rôle et une date d'expiration.
     \item Le token est retourné au client, qui le stocke et l'inclut dans l'en-tête HTTP \texttt{Authorization: Bearer <token>} de chaque requête protégée.
     \item Un middleware FastAPI (dépendance \texttt{get\_current\_user}) intercepte chaque requête, vérifie la signature JWT et extrait les informations de l'utilisateur.
@@ -864,7 +864,7 @@ L'authentification repose sur le standard \textbf{JSON Web Token (JWT)}, implém
 
 \subsection{Hashage des mots de passe avec bcrypt}
 
-Le hashage des mots de passe est réalisé avec \textbf{bcrypt}, via la librairie Python \texttt{passlib}. Bcrypt est considéré comme l'algorithme de référence pour le hashage de mots de passe pour plusieurs raisons :
+Le hashage des mots de passe est réalisé avec \textbf{bcrypt}, via la librairie Python \texttt{pwdlib}. Bcrypt est considéré comme l'algorithme de référence pour le hashage de mots de passe pour plusieurs raisons :
 
 \begin{itemize}
     \item \textbf{Fonction de coût adaptative (\textit{cost factor}) :} Bcrypt intègre un paramètre de coût (appelé \textit{work factor} ou \textit{rounds}) qui permet d'augmenter le temps de calcul du hash au fur et à mesure que la puissance de calcul des machines augmente. Cela rend les attaques par force brute progressivement plus coûteuses.
@@ -873,7 +873,7 @@ Le hashage des mots de passe est réalisé avec \textbf{bcrypt}, via la librairi
     \item \textbf{Standard éprouvé :} Bcrypt existe depuis 1999 et est recommandé par l'OWASP (\textit{Open Web Application Security Project}) comme algorithme de hashage de mots de passe.
 \end{itemize}
 
-\noindent La valeur du \textit{work factor} utilisée dans CARIBOOKS est de \textbf{12 rounds} (valeur par défaut de passlib), offrant un bon équilibre entre sécurité et performance.
+\noindent La valeur du \textit{work factor} utilisée dans CARIBOOKS est de \textbf{12 rounds} (valeur par défaut de pwdlib), offrant un bon équilibre entre sécurité et performance.
 
 \subsection{Protection contre les injections SQL}
 
@@ -1080,7 +1080,7 @@ Aucune campagne formelle de tests de performance ou de charge (\textit{benchmark
 \textbf{Menace / Risque} & \textbf{Mesure mise en place} & \textbf{Technologie utilisée} \\
 \midrule
 Injections SQL & Requêtes paramétrées & SQLAlchemy ORM \\
-Mots de passe compromis & Hashage fort & bcrypt via passlib \\
+Mots de passe compromis & Hashage fort & bcrypt via pwdlib \\
 Accès non autorisé aux routes & Authentification obligatoire & JWT + dépendance FastAPI \texttt{Depends()} \\
 Élévation de privilèges / BOLA & Contrôle des rôles (admin / user) et isolation inter-utilisateurs & \texttt{require\_admin}, tests d'isolation dédiés \\
 Données invalides côté serveur & Validation stricte & Pydantic (schémas FastAPI) \\
@@ -1120,8 +1120,10 @@ En complément des tests automatisés, deux outils d'analyse statique ont été 
 \begin{itemize}
     \item \textbf{Ruff} (backend Python) : configuré dans \texttt{backend/pyproject.toml}
     (règles \texttt{E}/\texttt{F}/\texttt{I}/\texttt{B} — erreurs de style, imports inutilisés,
-    tri des imports, bonnes pratiques \textit{bugbear}), avec une exception documentée pour
-    \texttt{B008} (le motif idiomatique \texttt{Depends(...)} de FastAPI). L'exécution initiale a
+    tri des imports, bonnes pratiques \textit{bugbear}), sans aucune règle désactivée : la
+    dérogation \texttt{B008} qui couvrait le motif \texttt{Depends(...)} en valeur par défaut a
+    pu être retirée après le passage aux dépendances \texttt{Annotated} recommandées par la
+    documentation FastAPI. L'exécution initiale a
     relevé 85 signalements ; après correction (imports mal placés, gestion des exceptions sans
     \texttt{raise ... from}, variable ambiguë \texttt{l} renommée, ligne longue reformatée), le
     dépôt est désormais \textbf{intégralement conforme} (\texttt{ruff check .} : \og All checks
@@ -1282,7 +1284,7 @@ Plusieurs axes d'évolution sont envisagés pour les phases suivantes du projet 
     \item \textbf{Documentation officielle SQLAlchemy} — \url{https://docs.sqlalchemy.org/}
     \item \textbf{Documentation PostFinance (API Paiement)} — \url{https://docs.postfinance.ch/}
     \item \textbf{Open Library API} — \url{https://openlibrary.org/developers/api}
-    \item \textbf{passlib — bcrypt documentation} — \url{https://passlib.readthedocs.io/}
+    \item \textbf{pwdlib — documentation} — \url{https://frankie567.github.io/pwdlib/}
     \item \textbf{OWASP Top 10} — \textit{Les dix vulnérabilités web les plus critiques} — \url{https://owasp.org/www-project-top-ten/}
     \item \textbf{Fireship} (veille technique, tutoriels vidéo) — \url{https://www.youtube.com/@Fireship}
     \item \textbf{Ministère de la Culture / SOFIA} — \textit{Étude sur le marché du livre d'occasion}, 2024 — \url{https://www.la-sofia.org/action-interprofessionnelle/etude-sur-le-livre-doccasion/}
@@ -1499,7 +1501,7 @@ CREATE INDEX idx_livre_isbn ON livre(isbn);
 \begin{lstlisting}[style=pythonstyle, caption={Service JWT (HS256) et endpoint POST /auth/token}, label={lst:auth}]
 # services/jwt_service.py
 from datetime import datetime, timedelta, timezone
-from jose import jwt
+import jwt
 
 def create_access_token(payload: dict, secret_key: str,
                         expires_minutes: int) -> str:
@@ -1509,10 +1511,9 @@ def create_access_token(payload: dict, secret_key: str,
     return jwt.encode(to_encode, secret_key, algorithm="HS256")
 
 # presentation/auth_router.py
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
+from fastapi import APIRouter, HTTPException, status
 from infrastructure import crud_user
-from presentation.deps import get_db, SECRET_KEY
+from presentation.deps import DbSession, SECRET_KEY
 from presentation.auth_schemas import LoginRequest, Token
 from services.jwt_service import create_access_token
 from services.rate_limit import check_rate_limit, reset_rate_limit
@@ -1521,8 +1522,7 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 480
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 @router.post("/token", response_model=Token)
-def login_for_access_token(payload: LoginRequest,
-                           db: Session = Depends(get_db)):
+def login_for_access_token(payload: LoginRequest, db: DbSession):
     # 10 tentatives / 5 min par compte (anti brute-force)
     rate_key = f"token:{str(payload.username).lower()}"
     check_rate_limit(rate_key, max_attempts=10, window_seconds=300)
@@ -1554,7 +1554,7 @@ def login_for_access_token(payload: LoginRequest,
 # presentation/auth_router.py
 @router.post("/google", response_model=Token)
 def google_auth(payload: GoogleAuthRequest, request: Request,
-                db: Session = Depends(get_db)):
+                db: DbSession):
     """Verify a Google ID token and return a JWT."""
     check_rate_limit(f"google:{request.client.host}",
                      max_attempts=20, window_seconds=300)

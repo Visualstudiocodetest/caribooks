@@ -807,7 +807,7 @@ def _lock_stock_rows(db, ids_article):
     \textbf{Menace / Risque} & \textbf{Mesure implémentée} & \textbf{Technologie} \\
     \midrule
     Injection SQL               & Requêtes paramétrées       & SQLAlchemy ORM \\
-    Mots de passe compromis     & Hashage adaptatif (cost=12) & bcrypt / passlib \\
+    Mots de passe compromis     & Hashage adaptatif (cost=12) & bcrypt / pwdlib \\
     Accès non autorisé          & Auth obligatoire routes     & JWT + HTTPBearer \\
     Élévation de privilèges     & Contrôle rôles strict       & \texttt{require\_admin} FastAPI \\
     Données invalides           & Validation schémas          & Pydantic + HTTPException \\

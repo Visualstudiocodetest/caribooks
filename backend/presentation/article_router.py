@@ -1,11 +1,10 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
+from fastapi import APIRouter, HTTPException, status
 
 from infrastructure import models
 from infrastructure.crud_base import CrudBase
-from presentation.deps import get_db, require_admin
+from presentation.deps import AdminUser, DbSession
 from presentation.schemas import ArticleCreate, ArticleRead, ArticleUpdate
 
 router = APIRouter(prefix="/articles", tags=["articles"])
@@ -30,7 +29,7 @@ def _to_article_read(obj: models.Article) -> ArticleRead:
 
 @router.get("/", response_model=list[ArticleRead])
 @router.get("", response_model=list[ArticleRead], include_in_schema=False)
-def list_articles(db: Session = Depends(get_db)):
+def list_articles(db: DbSession):
     # One handler serves both "/articles" and "/articles/" -- see
     # book_router.list_books for why (avoids a FastAPI redirect_slashes
     # redirect leaking the backend's own absolute origin to the browser
@@ -40,7 +39,7 @@ def list_articles(db: Session = Depends(get_db)):
 
 
 @router.get("/{id_article}", response_model=ArticleRead)
-def get_article(id_article: int, db: Session = Depends(get_db)):
+def get_article(id_article: int, db: DbSession):
     obj = db.query(models.Article).filter(models.Article.id_article == id_article).first()
     if obj is None:
         raise HTTPException(status_code=404, detail="Article not found")
@@ -51,8 +50,8 @@ def get_article(id_article: int, db: Session = Depends(get_db)):
 @router.post("", response_model=ArticleRead, status_code=status.HTTP_201_CREATED, include_in_schema=False)
 def create_article(
     payload: ArticleCreate,
-    db: Session = Depends(get_db),
-    _admin=Depends(require_admin),
+    db: DbSession,
+    _admin: AdminUser,
 ):
     obj = models.Article(
         id_type_objet=payload.id_type_objet,
@@ -74,8 +73,8 @@ def create_article(
 def update_article(
     id_article: int,
     payload: ArticleUpdate,
-    db: Session = Depends(get_db),
-    _admin=Depends(require_admin),
+    db: DbSession,
+    _admin: AdminUser,
 ):
     obj = db.query(models.Article).filter(models.Article.id_article == id_article).first()
     if obj is None:
@@ -92,8 +91,8 @@ def update_article(
 @router.delete("/{id_article}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_article(
     id_article: int,
-    db: Session = Depends(get_db),
-    _admin=Depends(require_admin),
+    db: DbSession,
+    _admin: AdminUser,
 ):
     if not article_crud.delete(db, id_article):
         raise HTTPException(status_code=404, detail="Article not found")

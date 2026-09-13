@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import os
 import secrets
-from typing import Generator
+from typing import Annotated, Generator
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -39,9 +39,12 @@ def get_db() -> Generator[Session, None, None]:
         db.close()
 
 
+DbSession = Annotated[Session, Depends(get_db)]
+
+
 def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(security),
-    db: Session = Depends(get_db),
+    credentials: Annotated[HTTPAuthorizationCredentials, Depends(security)],
+    db: DbSession,
 ) -> models.Utilisateur:
     token = credentials.credentials.strip()
     if token.lower().startswith("bearer "):
@@ -59,9 +62,16 @@ def get_current_user(
     return user
 
 
-def require_admin(current_user: models.Utilisateur = Depends(get_current_user)) -> models.Utilisateur:
+CurrentUser = Annotated[models.Utilisateur, Depends(get_current_user)]
+
+
+def require_admin(current_user: CurrentUser) -> models.Utilisateur:
     if str(current_user.role) != "admin":  # type: ignore
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin privileges required")
     return current_user
 
 
+# Shared dependency aliases. FastAPI's docs recommend the `Annotated` form over
+# `param = Depends(...)` defaults (type information survives for editors/mypy),
+# and naming the alias once keeps every router signature to a single token.
+AdminUser = Annotated[models.Utilisateur, Depends(require_admin)]

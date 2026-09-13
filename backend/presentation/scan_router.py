@@ -1,11 +1,10 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
+from fastapi import APIRouter, HTTPException, status
 
 from infrastructure import models
 from infrastructure.crud_base import CrudBase
-from presentation.deps import get_db, require_admin
+from presentation.deps import AdminUser, DbSession
 from presentation.schemas import ScanISBNCreate, ScanISBNRead, ScanISBNUpdate
 
 router = APIRouter(prefix="/scans", tags=["scans"])
@@ -15,7 +14,7 @@ scan_crud = CrudBase[models.ScanISBN](models.ScanISBN, "id_scan_isbn")
 
 @router.get("/", response_model=list[ScanISBNRead])
 @router.get("", response_model=list[ScanISBNRead], include_in_schema=False)
-def list_scans(db: Session = Depends(get_db), current_user=Depends(require_admin)):
+def list_scans(db: DbSession, current_user: AdminUser):
     # One handler serves both "/scans" and "/scans/" -- see book_router.list_books
     # for why: without this, a missing/extra trailing slash gets 307-redirected
     # by FastAPI straight to this backend's own absolute origin, which the
@@ -27,7 +26,7 @@ def list_scans(db: Session = Depends(get_db), current_user=Depends(require_admin
 
 
 @router.get("/{id_scan_isbn}", response_model=ScanISBNRead)
-def get_scan(id_scan_isbn: int, db: Session = Depends(get_db), current_user=Depends(require_admin)):
+def get_scan(id_scan_isbn: int, db: DbSession, current_user: AdminUser):
     obj = (
         db.query(models.ScanISBN)
         .filter(models.ScanISBN.id_scan_isbn == id_scan_isbn, models.ScanISBN.id_utilisateur == current_user.id_utilisateur)
@@ -40,7 +39,7 @@ def get_scan(id_scan_isbn: int, db: Session = Depends(get_db), current_user=Depe
 
 @router.post("/", response_model=ScanISBNRead, status_code=status.HTTP_201_CREATED)
 @router.post("", response_model=ScanISBNRead, status_code=status.HTTP_201_CREATED, include_in_schema=False)
-def create_scan(payload: ScanISBNCreate, db: Session = Depends(get_db), current_user=Depends(require_admin)):
+def create_scan(payload: ScanISBNCreate, db: DbSession, current_user: AdminUser):
     # ensure referenced livre exists
     livre = db.query(models.Livre).filter(models.Livre.id_article == payload.id_article_livre).first()
     if livre is None:
@@ -53,8 +52,8 @@ def create_scan(payload: ScanISBNCreate, db: Session = Depends(get_db), current_
 def update_scan(
     id_scan_isbn: int,
     payload: ScanISBNUpdate,
-    db: Session = Depends(get_db),
-    current_user=Depends(require_admin),
+    db: DbSession,
+    current_user: AdminUser,
 ):
     obj = (
         db.query(models.ScanISBN)
@@ -73,7 +72,7 @@ def update_scan(
 
 
 @router.delete("/{id_scan_isbn}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_scan(id_scan_isbn: int, db: Session = Depends(get_db), current_user=Depends(require_admin)):
+def delete_scan(id_scan_isbn: int, db: DbSession, current_user: AdminUser):
     obj = (
         db.query(models.ScanISBN)
         .filter(models.ScanISBN.id_scan_isbn == id_scan_isbn, models.ScanISBN.id_utilisateur == current_user.id_utilisateur)

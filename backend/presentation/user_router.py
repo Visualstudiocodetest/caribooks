@@ -1,12 +1,11 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
+from fastapi import APIRouter, HTTPException, status
 
 from infrastructure import crud_user, models
 from infrastructure.crud_base import CrudBase
 from presentation.auth_schemas import UserRead, UserUpdate
-from presentation.deps import get_current_user, get_db, require_admin
+from presentation.deps import AdminUser, CurrentUser, DbSession
 
 router = APIRouter(prefix="/users", tags=["users"])
 
@@ -39,7 +38,7 @@ def _serialize_user(u: models.Utilisateur, *, with_billing: bool = True) -> dict
 
 @router.get("/", response_model=list[UserRead])
 @router.get("", response_model=list[UserRead], include_in_schema=False)
-def list_users(db: Session = Depends(get_db), _admin=Depends(require_admin)):
+def list_users(db: DbSession, _admin: AdminUser):
     # One handler serves both "/users" and "/users/" -- see book_router.list_books
     # for why: without this, a missing/extra trailing slash gets 307-redirected
     # by FastAPI straight to this backend's own absolute origin, breaking the
@@ -53,12 +52,12 @@ def list_users(db: Session = Depends(get_db), _admin=Depends(require_admin)):
 
 
 @router.get("/me", response_model=UserRead)
-def get_me(current_user: models.Utilisateur = Depends(get_current_user)):
+def get_me(current_user: CurrentUser):
     return _serialize_user(current_user)
 
 
 @router.put("/me", response_model=UserRead)
-def update_me(payload: UserUpdate, db: Session = Depends(get_db), current_user: models.Utilisateur = Depends(get_current_user)):
+def update_me(payload: UserUpdate, db: DbSession, current_user: CurrentUser):
     data = payload.model_dump(exclude_unset=True)
     updated = crud_user.update_user(db, int(current_user.id_utilisateur), data)
     if updated is None:
@@ -67,7 +66,7 @@ def update_me(payload: UserUpdate, db: Session = Depends(get_db), current_user: 
 
 
 @router.get("/me/export")
-def export_me(db: Session = Depends(get_db), current_user: models.Utilisateur = Depends(get_current_user)):
+def export_me(db: DbSession, current_user: CurrentUser):
     """RGPD (art. 20) / nLPD — droit a la portabilite.
 
     Exporte l'ensemble des donnees personnelles de l'utilisateur connecte
@@ -109,7 +108,7 @@ def export_me(db: Session = Depends(get_db), current_user: models.Utilisateur = 
 
 
 @router.delete("/me", status_code=status.HTTP_204_NO_CONTENT)
-def delete_me(db: Session = Depends(get_db), current_user: models.Utilisateur = Depends(get_current_user)):
+def delete_me(db: DbSession, current_user: CurrentUser):
     """RGPD (art. 17) / nLPD — droit a l'effacement (anonymisation).
 
     Les donnees personnelles du compte sont effacees, mais la ligne et les
@@ -135,7 +134,7 @@ def delete_me(db: Session = Depends(get_db), current_user: models.Utilisateur = 
 
 
 @router.get("/{id_utilisateur}", response_model=UserRead)
-def get_user(id_utilisateur: int, db: Session = Depends(get_db), _admin=Depends(require_admin)):
+def get_user(id_utilisateur: int, db: DbSession, _admin: AdminUser):
     u = user_crud.get(db, id_utilisateur)
     if u is None:
         raise HTTPException(status_code=404, detail="User not found")
@@ -143,7 +142,7 @@ def get_user(id_utilisateur: int, db: Session = Depends(get_db), _admin=Depends(
 
 
 @router.delete("/{id_utilisateur}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_user(id_utilisateur: int, db: Session = Depends(get_db), _admin=Depends(require_admin)):
+def delete_user(id_utilisateur: int, db: DbSession, _admin: AdminUser):
     if int(_admin.id_utilisateur) == id_utilisateur:
         raise HTTPException(status_code=400, detail="Cannot delete your own account from the admin panel")
     if not user_crud.delete(db, id_utilisateur):
@@ -151,7 +150,7 @@ def delete_user(id_utilisateur: int, db: Session = Depends(get_db), _admin=Depen
     return None
 
 @router.put("/{id_utilisateur}", response_model=UserRead)
-def update_user(id_utilisateur: int, payload: UserUpdate, db: Session = Depends(get_db), _admin=Depends(require_admin)):
+def update_user(id_utilisateur: int, payload: UserUpdate, db: DbSession, _admin: AdminUser):
     data = payload.model_dump(exclude_unset=True)
     if int(_admin.id_utilisateur) == id_utilisateur and data.get("role") not in (None, "admin"):
         raise HTTPException(status_code=400, detail="Cannot change your own role away from admin")

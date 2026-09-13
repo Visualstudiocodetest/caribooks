@@ -1,3 +1,5 @@
+import { cache } from 'react'
+import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
@@ -8,14 +10,41 @@ import { isExternalImage } from '@/lib/images'
 
 export const dynamic = 'force-dynamic'
 
-export default async function BookDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params
-  let book
+// generateMetadata and the page both need the book. React's `cache` memoises the
+// call for the duration of a single request, so the backend is still hit once.
+const loadBook = cache(async (id: string) => {
   try {
-    book = await getBook(Number(id))
+    return await getBook(Number(id))
   } catch {
-    notFound()
+    return null
   }
+})
+
+export async function generateMetadata(props: PageProps<'/books/[id]'>): Promise<Metadata> {
+  const { id } = await props.params
+  const book = await loadBook(id)
+  if (!book) return { title: 'Livre introuvable' }
+
+  const description =
+    book.description?.slice(0, 160) ||
+    `${book.titre}${book.auteur ? ` — ${book.auteur}` : ''}, livre de seconde main à ${book.prix_chf} CHF.`
+
+  return {
+    title: book.titre,
+    description,
+    openGraph: {
+      title: book.titre,
+      description,
+      type: 'article',
+      images: book.image_link ? [book.image_link] : undefined,
+    },
+  }
+}
+
+export default async function BookDetailPage(props: PageProps<'/books/[id]'>) {
+  const { id } = await props.params
+  const book = await loadBook(id)
+  if (!book) notFound()
 
   const isExternal = isExternalImage(book.image_link)
 
