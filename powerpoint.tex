@@ -175,7 +175,7 @@
 \author[Alexandre REY]{Alexandre REY}
 \institute[ESTIAM]{Titre Professionnel CDA --- Concepteur Développeur d'Applications\\[4pt]
 ESTIAM --- Promotion E3 DAD --- Encadrant : Mhand Boufala}
-\date{Juin 2026}
+\date{Septembr 2026}
 
 \begin{document}
 
@@ -370,32 +370,30 @@ ESTIAM --- Promotion E3 DAD --- Encadrant : Mhand Boufala}
 
 \section{Gestion de projet}
 
-\begin{frame}{Gestion de projet --- Scrum simplifié \& environnement}
+\begin{frame}{Gestion de projet --- Kanban en continu \& environnement}
   \begin{columns}[T]
     \column{0.42\textwidth}
-    \begin{block}{Méthodologie Agile Scrum}
+    \begin{block}{Méthodologie Agile Kanban}
       \begin{itemize}\small
-        \item \textbf{6 sprints} de 2 semaines, \textbf{17h--20h}
+        \item \textbf{Flux continu}, soirées de dev \textbf{17h--20h}
         \item Suivi : \textbf{Microsoft Planner} (Kanban)
         \item \textbf{Product Owner} : bénévole Caritas
-        \item Démo en fin de chaque sprint
+        \item Démos au fil de l'avancement
       \end{itemize}
     \end{block}
     \vspace{5pt}
     \begin{center}
     \begin{tikzpicture}[every node/.style={font=\tiny}]
       \node[tag,fill=myblue,minimum width=5.4cm,text width=5.0cm,align=left]
-        at (0, 0.00) {\textbf{Sprint 1} \; Env. GitHub/CI -- BDD -- Modélisation};
+        at (0, 0.00) {\textbf{Fondations} \; Env. GitHub/CI -- BDD -- Modélisation};
       \node[tag,fill=myblue,minimum width=5.4cm,text width=5.0cm,align=left]
-        at (0,-0.54) {\textbf{Sprint 2} \; Authentification JWT -- Rôles};
+        at (0,-0.54) {\textbf{Cœur fonctionnel} \; Auth -- Paiement -- Back-office v1};
       \node[tag,fill=myblue,minimum width=5.4cm,text width=5.0cm,align=left]
-        at (0,-1.08) {\textbf{Sprint 3} \; Scan ISBN -- API OpenLibrary};
+        at (0,-1.08) {\textbf{Fiabilisation \& sécurité} \; Durcissement -- Refactor -- CI};
       \node[tag,fill=myblue,minimum width=5.4cm,text width=5.0cm,align=left]
-        at (0,-1.62) {\textbf{Sprint 4} \; Catalogue -- Filtres -- Fiche livre};
-      \node[tag,fill=myblue,minimum width=5.4cm,text width=5.0cm,align=left]
-        at (0,-2.16) {\textbf{Sprint 5} \; PostFinance -- Tunnel paiement};
+        at (0,-1.62) {\textbf{Consolidation admin} \; Statuts commande -- Nettoyage};
       \node[tag,fill=mysuccess,minimum width=5.4cm,text width=5.0cm,align=left]
-        at (0,-2.70) {\textbf{Sprint 6} \; Back-office -- Tests -- Déploiement};
+        at (0,-2.16) {\textbf{Documentation \& certification} \; Dossier CDA -- Diagrammes -- Mémoire};
     \end{tikzpicture}
     \end{center}
     \column{0.55\textwidth}
@@ -411,13 +409,13 @@ ESTIAM --- Promotion E3 DAD --- Encadrant : Mhand Boufala}
     \vspace{5pt}
     \begin{exampleblock}{\small Adapté au projet}
       \begin{itemize}\small
-        \item Configuré dès le sprint 1
+        \item Configuré dès la phase 1
         \item \texttt{startapp.sh} : backend + frontend en une commande
       \end{itemize}
     \end{exampleblock}
     \vspace{5pt}
     \begin{center}
-    \badgegreen{6/6 sprints livrés}\quad\badge{Déployé en ligne}
+    \badgegreen{5/5 phases livrées}\quad\badge{Déployé en ligne}
     \end{center}
   \end{columns}
 \end{frame}
@@ -792,7 +790,7 @@ def _lock_stock_rows(db, ids_article):
   \begin{exampleblock}{\small Gestion du commanditaire}
     \begin{itemize}\small
       \item Commanditaire qui redemande sans cesse de nouvelles fonctionnalités
-      \item Chaque demande $\rightarrow$ backlog, jamais le sprint en cours
+      \item Chaque demande $\rightarrow$ backlog, jamais le travail en cours
       \item Le MVP restait la seule priorité contractuelle
     \end{itemize}
   \end{exampleblock}

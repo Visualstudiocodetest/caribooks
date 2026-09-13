@@ -285,7 +285,7 @@ Ce projet couvre l'intégralité des trois blocs de compétences du référentie
 
 \subsection{Compétences transversales}
 \begin{itemize}
-    \item Gestion de projet en méthodologie \textbf{Agile (Scrum)} : planification en sprints, backlog, suivi via Microsoft Planner.
+    \item Gestion de projet en flux continu \textbf{Agile (Kanban)} : backlog, branches de fonctionnalité et \textit{pull requests}, suivi via Microsoft Planner.
     \item Communication avec une \textbf{Product Owner non technique} : reformulation des besoins, conduite de démos, recueil des retours utilisateurs.
     \item \textbf{Veille technologique} et sécurité (OWASP, bonnes pratiques FastAPI).
     \item Gestion du code source avec \textbf{Git} et \textbf{GitHub} (licence GitHub for Students Pro).
@@ -493,16 +493,16 @@ Demandes fonctionnelles excessives & Élevé & Application stricte du périmètr
 
 \subsection{Méthode Agile adoptée}
 
-La méthode de gestion de projet retenue est une approche \textbf{Scrum simplifiée}, adaptée aux contraintes d'un développeur solo travaillant en parallèle de sa formation en apprentissage. Les sprints ont une durée de \textbf{2 semaines}, avec des plages de développement le soir (17h–20h), trois jours par semaine, soit environ \textbf{18 heures de développement effectif par sprint}.
+La méthode de gestion de projet retenue est un \textbf{flux continu de type Kanban}, plus adapté qu'un Scrum à sprints fixes aux contraintes d'un développeur solo en apprentissage : les soirées de développement (17h–20h, en moyenne trois par semaine) ne tombaient pas à intervalle régulier, et certaines fonctionnalités — le tunnel de paiement en particulier — ont nécessité des itérations de correction bien plus denses que ce qu'un sprint de deux semaines aurait permis d'anticiper.
 
-Le suivi des tâches a été réalisé via \textbf{Microsoft Planner}, permettant de visualiser le backlog, les tâches en cours et les tâches terminées sous forme de tableau Kanban.
+Le suivi des tâches a été réalisé via \textbf{Microsoft Planner}, sous forme de tableau \textbf{Kanban} (backlog, en cours, terminé), et le code a été organisé en branches de fonctionnalité fusionnées via des \textbf{pull requests} sur GitHub, chacune correspondant à une unité de travail cohérente plutôt qu'à un créneau temporel fixe.
 
 \vspace{8pt}
-\noindent\textbf{Rôles Scrum adaptés :}
+\noindent\textbf{Rôles :}
 \begin{itemize}
-    \item \textbf{Product Owner :} La bénévole de la recyclerie Caritas, qui exprimait ses besoins lors de réunions informelles et de démos en fin de sprint.
+    \item \textbf{Product Owner :} La bénévole de la recyclerie Caritas, qui exprimait ses besoins lors de démonstrations informelles au fil de l'avancement.
     \item \textbf{Développeur :} Alexandre REY, seul contributeur technique du projet.
-    \item \textbf{Scrum Master :} Rôle assumé par le développeur lui-même, avec auto-organisation et ajustement régulier des priorités.
+    \item \textbf{Auto-organisation :} priorisation et replanification du backlog assurées par le développeur lui-même.
 \end{itemize}
 
 \subsection{Suivi Microsoft Planner}
@@ -520,36 +520,33 @@ Le suivi des tâches a été réalisé via \textbf{Microsoft Planner}, permettan
 % \end{figure}
 
 
-\subsection{Planning des sprints}
+\subsection{Phases de développement}
 
-Le tableau ci-dessous présente le découpage en sprints du projet, planifié sur 12 semaines (6 sprints de 2 semaines) :
+Le projet n'a pas été découpé en sprints à durée fixe, mais organisé en un flux continu structuré autour de grandes phases, chacune couvrant un ensemble cohérent de \textit{pull requests} plutôt qu'un créneau calendaire figé :
 
-\begin{longtable}{@{}p{1.5cm}p{2.5cm}p{5.5cm}p{4.5cm}@{}}
+\begin{longtable}{@{}p{2.6cm}p{7.2cm}p{5.4cm}@{}}
 \toprule
-\textbf{Sprint} & \textbf{Dates} & \textbf{Objectifs} & \textbf{Livrable} \\
+\textbf{Phase} & \textbf{Objectifs} & \textbf{Livrable} \\
 \midrule
 \endhead
-Sprint 1 & Semaines 1–2 &
+Fondations &
   Mise en place de l'environnement (GitHub, CI/CD), modélisation de la base de données MySQL, création du DDL, configuration FastAPI de base &
   Environnement de dev opérationnel, schéma BDD validé \\[6pt]
-Sprint 2 & Semaines 3–4 &
-  Authentification : inscription, connexion, JWT, rôles (admin / user), hashage bcrypt, protection des routes &
-  Endpoints \texttt{/auth/register} et \texttt{/auth/token} fonctionnels, middleware JWT \\[6pt]
-Sprint 3 & Semaines 5–6 &
-  Module scan ISBN : intégration librairie de scan dans le frontend, appel API OpenLibrary, préremplissage du formulaire, saisie manuelle en secours &
-  Formulaire d'ajout de livre opérationnel, scan ISBN fonctionnel \\[6pt]
-Sprint 4 & Semaines 7–8 &
-  Catalogue et recherche : affichage des livres disponibles, filtres (titre, auteur, état, fourchette de prix), fiche détaillée ; la liste de favoris initialement prévue a été reportée au backlog &
-  Pages catalogue et fiche livre, moteur de recherche avec filtres \\[6pt]
-Sprint 5 & Semaines 9–10 &
-  Intégration PostFinance : tunnel de paiement, gestion des webhooks, mise à jour des statuts de commande, tests sur sandbox PostFinance &
-  Paiement CHF fonctionnel (TWINT + carte) en environnement de test \\[6pt]
-Sprint 6 & Semaines 11–12 &
-  Back-office bénévole, tests unitaires et d'intégration (pytest), corrections de bugs, optimisations de performance, préparation du déploiement &
-  Application complète testée et déployée (Vercel + Oracle Cloud) \\
+Cœur fonctionnel &
+  Authentification (JWT, rôles, hashage bcrypt, Google Sign-In), intégration du tunnel de paiement (Payrexx puis bascule vers PostFinance après plusieurs itérations de débogage), premier back-office bénévole, conformité RGPD/nLPD, gestion du panier et du stock &
+  Authentification complète, paiement CHF fonctionnel en sandbox, back-office v1 \\[6pt]
+Fiabilisation et sécurité &
+  Correctifs récurrents sur le parcours panier/paiement, durcissement sécurité (authentification, commandes, routes d'administration), refactorisation SOLID/KISS menée en plusieurs phases documentées, mise en place de la CI (pytest + Vitest) &
+  Suite de tests automatisés en CI, base de code assainie \\[6pt]
+Consolidation admin &
+  Gestion avancée du statut des commandes côté administrateur, simplification et nettoyage complémentaire du code &
+  Back-office complet, cycle de vie de commande piloté de bout en bout par l'administrateur \\[6pt]
+Documentation et certification &
+  Synchronisation du dossier CDA avec le système réel, diagrammes UML/Merise, rédaction du mémoire et du support de soutenance, revue de sécurité complète et corrections associées (dont la gestion des utilisateurs et du stock en back-office) &
+  Dossier de certification complet, application vérifiée et corrigée \\
 \bottomrule
-\caption{Planning des sprints CARIBOOKS}
-\label{tab:sprints}
+\caption{Phases de développement CARIBOOKS}
+\label{tab:phases}
 \end{longtable}
 
 \section{Modélisation}
@@ -766,8 +763,8 @@ Le backend (API FastAPI) et la base de données sont hébergés sur l'offre \tex
 Une première version des maquettes d'écran a été réalisée avec \textbf{Figma Make}
 (\url{https://www.figma.com/make/zxJBQpMufiATw69c9aVSTk/E-commerce-website-for-books}), afin de
 fixer l'enchaînement des écrans principaux (catalogue, fiche livre, panier, paiement) avant le
-développement. Cette première version a ensuite évolué directement dans le code au fil des
-sprints, au plus près des retours de démonstration de la commanditaire ; la maquette Figma reste
+développement. Cette première version a ensuite évolué directement dans le code au fil du projet,
+au plus près des retours de démonstration de la commanditaire ; la maquette Figma reste
 la référence de la structure initiale de navigation, illustrée ci-dessous par la vue mobile de
 l'écran de scan ISBN telle qu'implémentée.
 
@@ -1216,7 +1213,7 @@ CARIBOOKS traite des données à caractère personnel (nom, prénom, e-mail, adr
 La demandeuse du projet est une bénévole de la recyclerie Caritas, avec peu de connaissances techniques. La communication a donc été adaptée en conséquence :
 
 \begin{itemize}
-    \item \textbf{Réunions informelles régulières :} les échanges se tenaient de manière informelle, en présentiel ou par message, à chaque fin de sprint. La demandeuse formulait ses retours après avoir vu une démonstration de l'avancement.
+    \item \textbf{Réunions informelles régulières :} les échanges se tenaient de manière informelle, en présentiel ou par message, à chaque étape marquante de l'avancement. La demandeuse formulait ses retours après avoir vu une démonstration.
     \item \textbf{Démos visuelles systématiques :} chaque nouvelle fonctionnalité était présentée sous forme de démonstration en direct (ou via capture vidéo) plutôt qu'expliquée techniquement, afin de permettre à la Product Owner de se prononcer sur l'adéquation au besoin.
     \item \textbf{Reformulation des besoins :} les demandes fonctionnelles exprimées en langage courant étaient reformulées en user stories et tickets Planner, puis confirmées auprès de la demandeuse avant d'être planifiées.
     \item \textbf{Gestion des demandes hors périmètre :} plusieurs fonctionnalités ont été demandées en cours de projet (messagerie, avis, estimation de prix). Ces demandes ont été enregistrées dans un backlog de phase 2/3 et expliquées à la demandeuse avec les contraintes de temps associées.
@@ -1231,7 +1228,7 @@ Les échanges avec l'encadrant pédagogique (M. Mhand Boufala, ESTIAM) se sont t
 Le projet CARIBOOKS a été développé en totalité par une seule personne, sans équipe technique. Cette contrainte a imposé une organisation rigoureuse :
 
 \begin{itemize}
-    \item Utilisation de \textbf{Microsoft Planner} pour maintenir un backlog structuré et suivre la progression sprint par sprint.
+    \item Utilisation de \textbf{Microsoft Planner} pour maintenir un backlog structuré et suivre la progression au fil de l'avancement.
     \item Découpage des tâches en unités de travail compatibles avec des séances de développement de 3 heures (17h–20h).
     \item Priorisation systématique des fonctionnalités selon la valeur utilisateur (MVP first).
     \item Recours à la documentation officielle et à la veille technique pour pallier l'absence d'un pair reviewer.
