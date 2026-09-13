@@ -19,3 +19,4 @@ docs/
 
 questions_jury.md
 overleaf-sync-*.sh
+backend/.coverage

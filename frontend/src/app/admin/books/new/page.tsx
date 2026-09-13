@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useState, useRef, useCallback } from 'react'
-import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { ApiError } from '@/services/api'
 import { createBook, getBookByIsbn } from '@/services/books'
@@ -19,7 +18,6 @@ type EtatItem = { id_etat_usure: number; libelle: string }
 type TypeObjetItem = { id_type_objet: number; libelle: string; code?: string }
 
 export default function AdminNewBookPage() {
-  const router = useRouter()
   const [titre, setTitre] = useState('')
   const [isbn, setIsbn] = useState('')
   const [auteur, setAuteur] = useState('')
@@ -40,7 +38,31 @@ export default function AdminNewBookPage() {
   const [existingBook, setExistingBook] = useState<BookRead | null>(null)
   const [scanSaving, setScanSaving] = useState(false)
   const [scanSaved, setScanSaved] = useState<string | null>(null)
+  // Set right after a successful creation. Replaces the form with a
+  // confirmation + "add another book" screen instead of navigating away, so
+  // a volunteer scanning a whole box of books never leaves this page.
+  const [created, setCreated] = useState<BookRead | null>(null)
   const videoRef = useRef<HTMLVideoElement | null>(null)
+
+  function defaultTypeId(): string {
+    const def = typeList.find((t) => t.code === 'BOOK' || (t.libelle || '').toLowerCase() === 'livre')
+    return def ? String(def.id_type_objet) : ''
+  }
+
+  function resetForm() {
+    setTitre('')
+    setIsbn('')
+    setAuteur('')
+    setPrix('')
+    setIdEtat('')
+    setIdType(defaultTypeId())
+    setImageLink('')
+    setDescription('')
+    setError(null)
+    setExistingBook(null)
+    setScanSaved(null)
+    setCreated(null)
+  }
 
   async function autofill(isbnValue: string) {
     setError(null)
@@ -55,15 +77,15 @@ export default function AdminNewBookPage() {
       if (title) setTitre(title)
       const author = data.authors?.map((a) => a.name).filter(Boolean).join(', ')
       if (author) setAuteur(author)
+      // Preview the raw OpenLibrary cover URL immediately — <Image unoptimized>
+      // hotlinks it directly, no backend round trip needed just to show it.
+      // The actual download-and-store-locally step (fetchRemoteImage) only
+      // needs to happen once, at submit time (see onSubmit), which is also
+      // where it already runs. Doing it here too used to make every single
+      // scan wait ~1-2s for a full image transfer before the form even
+      // showed the title/author, on top of the OpenLibrary lookup itself.
       const cover = data.cover?.large || data.cover?.medium || data.cover?.small
-      if (cover) {
-        try {
-          const served = await fetchRemoteImage(cover)
-          setImageLink(served)
-        } catch {
-          setImageLink(cover)
-        }
-      }
+      if (cover) setImageLink(cover)
       const desc = typeof data.notes === 'string' ? data.notes : ''
       if (desc) setDescription(desc)
     } catch {
@@ -209,7 +231,7 @@ export default function AdminNewBookPage() {
           // ignore fetch errors; backend will try to download on create
         }
       }
-      const created = await createBook({
+      const createdBook = await createBook({
         id_type_objet: Number(idType),
         id_etat_usure: Number(idEtat),
         titre,
@@ -223,7 +245,7 @@ export default function AdminNewBookPage() {
         prix_chf: prixNum,
         actif: true,
       })
-      router.push(`/admin/books/${created.id_article}`)
+      setCreated(createdBook)
     } catch (e) {
       const err = e as unknown
       setError(err instanceof ApiError ? err.message : 'Création impossible')
@@ -237,7 +259,36 @@ export default function AdminNewBookPage() {
       <div className="content-center">
         <h1 style={{ margin: 0 }}>Ajouter un livre</h1>
 
-        {existingBook ? (
+        {created ? (
+          <div className="card cardPadding" style={{ display: 'grid', gap: 12 }}>
+            <div className="banner-success">Livre ajouté au catalogue.</div>
+            <div style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
+              {created.image_link ? (
+                <Image
+                  src={created.image_link}
+                  alt={created.titre}
+                  width={64}
+                  height={88}
+                  style={{ objectFit: 'cover', borderRadius: 10, border: '1px solid var(--color-border)' }}
+                  unoptimized={isExternalImage(created.image_link)}
+                />
+              ) : (
+                <div className="card" style={{ width: 64, height: 88 }} />
+              )}
+              <div style={{ flex: 1 }}>
+                <div style={{ fontWeight: 900 }}>{created.titre}</div>
+                <div className="muted">ISBN: {created.isbn}</div>
+                <div className="muted">Prix: CHF {created.prix_chf.toFixed(2)}</div>
+              </div>
+              <Link className="btn" href={`/admin/books/${created.id_article}`}>
+                Voir la fiche
+              </Link>
+            </div>
+            <button className="btn btnPrimary" type="button" onClick={resetForm}>
+              Ajouter un nouveau livre
+            </button>
+          </div>
+        ) : existingBook ? (
           <div className="card cardPadding" style={{ display: 'grid', gap: 12 }}>
             <div className="muted">Ce livre est déjà au catalogue — inutile de le recréer.</div>
             <div style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
