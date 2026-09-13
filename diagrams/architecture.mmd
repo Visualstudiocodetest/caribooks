@@ -1,8 +1,8 @@
 %% Architecture technique — FastAPI / Next.js / MySQL / PostFinance
 flowchart TB
     client["<b>Client</b><br/>Navigateur web / mobile"]
-    front["<b>Frontend — Next.js (React / TypeScript)</b><br/>SSR/SSG · scan ISBN · déployé sur Vercel"]
-    subgraph vms["VM1 (prod) + VM2 (secours à chaud) · systemd · CI/CD GitHub Actions"]
+    front["<b>Frontend — Next.js (React / TypeScript)</b><br/>SSR/SSG · scan ISBN · caribooks.vercel.app"]
+    subgraph vms["VM1 (prod) + VM2 (secours à chaud) · caribooks.duckdns.org · systemd · CI/CD GitHub Actions"]
         direction TB
         api["<b>Backend — API FastAPI (Python)</b><br/>Pydantic · JWT · SQLAlchemy · Swagger"]
         db["<b>Base de données — MySQL</b>"]

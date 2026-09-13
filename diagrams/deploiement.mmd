@@ -17,8 +17,8 @@ flowchart LR
 
     ext["«services externes»<br/>PostFinance<br/>OpenLibrary<br/>Google OAuth"]
 
-    client -->|HTTPS — DuckDNS| fe
-    client -->|"HTTPS / REST (VM1)"| vm1
+    client -->|"HTTPS — caribooks.vercel.app"| fe
+    client -->|"HTTPS / REST — caribooks.duckdns.org (VM1)"| vm1
     vm1 -->|HTTPS| ext
 
     classDef device fill:#ececec,stroke:#555;
