@@ -70,6 +70,37 @@ def get_commande_owned(db: Session, id_commande: int, id_utilisateur: int) -> mo
     )
 
 
+def get_owned_ligne(db: Session, id_ligne_commande: int, id_utilisateur: int) -> models.LigneCommande | None:
+    """A LigneCommande belongs to whoever owns its parent Commande — there's no
+    id_utilisateur column on the line itself, hence the join. Shared by every
+    single-ligne lookup in order_router.py (get/update/delete) instead of each
+    repeating the same join+filter."""
+    return (
+        db.query(models.LigneCommande)
+        .join(models.Commande, models.LigneCommande.id_commande == models.Commande.id_commande)
+        .filter(
+            models.LigneCommande.id_ligne_commande == id_ligne_commande,
+            models.Commande.id_utilisateur == id_utilisateur,
+        )
+        .first()
+    )
+
+
+def get_owned_paiement(db: Session, id_paiement: int, id_utilisateur: int) -> models.Paiement | None:
+    """Same idea as get_owned_ligne, for Paiement: ownership flows through the
+    parent Commande. Shared by every single-paiement lookup in
+    payment_router.py that isn't the admin-only update/delete."""
+    return (
+        db.query(models.Paiement)
+        .join(models.Commande, models.Paiement.id_commande == models.Commande.id_commande)
+        .filter(
+            models.Paiement.id_paiement == id_paiement,
+            models.Commande.id_utilisateur == id_utilisateur,
+        )
+        .first()
+    )
+
+
 def ensure_commande_mutable(commande: models.Commande) -> None:
     """Guard: an order's lines, totals and shipping may only change while it is
     still an open cart (CREATED/PENDING).

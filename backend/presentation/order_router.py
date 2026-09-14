@@ -24,6 +24,7 @@ from services.order_service import (
     ensure_commande_mutable,
     generate_numero_commande,
     get_commande_owned,
+    get_owned_ligne,
     recompute_commande_total,
     release_ligne_reservation,
     release_stock,
@@ -147,15 +148,7 @@ def list_lignes(db: DbSession, current_user: CurrentUser):
 
 @router.get("/lignes/{id_ligne_commande}", response_model=LigneCommandeRead)
 def get_ligne(id_ligne_commande: int, db: DbSession, current_user: CurrentUser):
-    obj = (
-        db.query(models.LigneCommande)
-        .join(models.Commande, models.LigneCommande.id_commande == models.Commande.id_commande)
-        .filter(
-            models.LigneCommande.id_ligne_commande == id_ligne_commande,
-            models.Commande.id_utilisateur == current_user.id_utilisateur,
-        )
-        .first()
-    )
+    obj = get_owned_ligne(db, id_ligne_commande, int(current_user.id_utilisateur))
     if obj is None:
         raise HTTPException(status_code=404, detail="LigneCommande not found")
     return obj
@@ -215,15 +208,7 @@ def update_ligne(
     db: DbSession,
     current_user: CurrentUser,
 ):
-    obj = (
-        db.query(models.LigneCommande)
-        .join(models.Commande, models.LigneCommande.id_commande == models.Commande.id_commande)
-        .filter(
-            models.LigneCommande.id_ligne_commande == id_ligne_commande,
-            models.Commande.id_utilisateur == current_user.id_utilisateur,
-        )
-        .first()
-    )
+    obj = get_owned_ligne(db, id_ligne_commande, int(current_user.id_utilisateur))
     if obj is None:
         raise HTTPException(status_code=404, detail="LigneCommande not found")
     parent = db.query(models.Commande).filter(models.Commande.id_commande == obj.id_commande).first()
@@ -258,15 +243,7 @@ def update_ligne(
 
 @router.delete("/lignes/{id_ligne_commande}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_ligne(id_ligne_commande: int, db: DbSession, current_user: CurrentUser):
-    obj = (
-        db.query(models.LigneCommande)
-        .join(models.Commande, models.LigneCommande.id_commande == models.Commande.id_commande)
-        .filter(
-            models.LigneCommande.id_ligne_commande == id_ligne_commande,
-            models.Commande.id_utilisateur == current_user.id_utilisateur,
-        )
-        .first()
-    )
+    obj = get_owned_ligne(db, id_ligne_commande, int(current_user.id_utilisateur))
     if obj is None:
         raise HTTPException(status_code=404, detail="LigneCommande not found")
     ensure_commande_mutable(obj.commande)  # type: ignore[attr-defined]

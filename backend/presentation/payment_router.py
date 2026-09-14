@@ -15,6 +15,7 @@ from services.order_service import (
     build_pending_paiement,
     finalize_commande,
     get_commande_owned,
+    get_owned_paiement,
     load_commande_context,
 )
 from services.postfinance_service import (
@@ -101,12 +102,7 @@ def list_paiements(db: DbSession, current_user: CurrentUser):
 
 @router.get("/paiements/{id_paiement}", response_model=PaiementRead)
 def get_paiement(id_paiement: int, db: DbSession, current_user: CurrentUser):
-    obj = (
-        db.query(models.Paiement)
-        .join(models.Commande, models.Paiement.id_commande == models.Commande.id_commande)
-        .filter(models.Paiement.id_paiement == id_paiement, models.Commande.id_utilisateur == current_user.id_utilisateur)
-        .first()
-    )
+    obj = get_owned_paiement(db, id_paiement, int(current_user.id_utilisateur))
     if obj is None:
         raise HTTPException(status_code=404, detail="Paiement not found")
     return obj
@@ -183,15 +179,7 @@ def confirm_paiement_postfinance(
     current_user: CurrentUser,
 ):
     """Confirm a PostFinance transaction after iframe validation, before submit()."""
-    obj = (
-        db.query(models.Paiement)
-        .join(models.Commande, models.Paiement.id_commande == models.Commande.id_commande)
-        .filter(
-            models.Paiement.id_paiement == id_paiement,
-            models.Commande.id_utilisateur == current_user.id_utilisateur,
-        )
-        .first()
-    )
+    obj = get_owned_paiement(db, id_paiement, int(current_user.id_utilisateur))
     if obj is None:
         raise HTTPException(status_code=404, detail="Paiement not found")
 
@@ -249,12 +237,7 @@ def poll_paiement_postfinance(id_paiement: int, db: DbSession, current_user: Cur
     or falls back to searching by the local payment id. It updates the local payment
     status and finalizes the order if the payment is captured/paid.
     """
-    obj = (
-        db.query(models.Paiement)
-        .join(models.Commande, models.Paiement.id_commande == models.Commande.id_commande)
-        .filter(models.Paiement.id_paiement == id_paiement, models.Commande.id_utilisateur == current_user.id_utilisateur)
-        .first()
-    )
+    obj = get_owned_paiement(db, id_paiement, int(current_user.id_utilisateur))
     if obj is None:
         raise HTTPException(status_code=404, detail="Paiement not found")
 
