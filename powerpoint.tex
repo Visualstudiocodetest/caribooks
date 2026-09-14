@@ -239,9 +239,9 @@ ESTIAM --- Promotion E3 DAD --- Encadrant : Mhand Boufala}
     \column{0.44\textwidth}
     \begin{exampleblock}{Le lien avec Caribooks}
       \begin{itemize}\small
-        \item En mission, je \textbf{configure} des outils qui existent déjà
-        \item Sur Caribooks, je \textbf{construis} : schéma, API, front, déploiement
-        \item Tout ce que le low-code masque, il a fallu l'écrire et le défendre
+        \item Missions : low-code (Oracle APEX, Power Platform)
+        \item Caribooks : \textbf{full-code} de bout en bout --- FastAPI, Next.js, MySQL
+        \item Le projet où je pousse le \og pur code \fg{} le plus loin
       \end{itemize}
     \end{exampleblock}
   \end{columns}
@@ -277,26 +277,28 @@ ESTIAM --- Promotion E3 DAD --- Encadrant : Mhand Boufala}
 
 \begin{frame}{Contexte du projet --- Diagramme et besoins}
   \begin{columns}[T]
-    \column{0.46\textwidth}
+    \column{0.42\textwidth}
     \begin{center}
     \includegraphics[width=\linewidth,keepaspectratio]{diagrams/contexte.pdf}
     \end{center}
-    \column{0.50\textwidth}
-    \begin{block}{Critères de succès du MVP --- mesurables}
+    \column{0.54\textwidth}
+    \begin{alertblock}{\small Trois profils métier, mais combien de rôles techniques ?}
+      \begin{itemize}\small
+        \item \textbf{Bénévoles Caritas} --- ajout rapide de stock \textit{(rôle \texttt{admin})}
+        \item \textbf{Administrateur} --- modération et suivi \textit{(rôle \texttt{admin})}
+        \item \textbf{Acheteurs} --- trouver un livre pas cher en CHF \textit{(rôle \texttt{user})}
+        \item[$\Rightarrow$] \textbf{2 rôles seulement} : bénévole et administrateur partagent le même compte \texttt{admin}
+      \end{itemize}
+    \end{alertblock}
+    \vspace{6pt}
+    \begin{block}{Critères de succès du MVP}
       \begin{itemize}\small
         \item Mettre un livre en vente en \textbf{$<$ 2 minutes}
         \item Paiement \textbf{CHF natif} (TWINT, Visa/MC)
         \item \textbf{Livraison restreinte à la Suisse}
-        \item Interface utilisable \textbf{sans formation}
+        \item Interface \textbf{épurée} pour bénévoles
       \end{itemize}
     \end{block}
-    \vspace{6pt}
-    \begin{exampleblock}{\small Ce qui est resté hors périmètre --- et assumé}
-      \begin{itemize}\small
-        \item Messagerie, favoris, avis : \textbf{backlog}, pas le MVP
-        \item Un seul dépôt Caritas, pas de multi-boutique
-      \end{itemize}
-    \end{exampleblock}
   \end{columns}
 \end{frame}
 
@@ -326,19 +328,20 @@ ESTIAM --- Promotion E3 DAD --- Encadrant : Mhand Boufala}
   \vspace{4pt}
   \begin{columns}[T]
     \column{0.48\textwidth}
-    \begin{alertblock}{\small Le vrai bloquant : aucune ligne ne coche tout}
+    \begin{alertblock}{Lacunes des solutions existantes}
       \begin{itemize}\small
-        \item Shopify cocherait presque tout\ldots\ à $\approx$ 400 CHF/an d'abonnement
-        \item \ldots\ pour une association qui vend des livres à 9 CHF
-        \item WooCommerce : gratuit, mais back-office hors de portée d'un bénévole
+        \item Aucune ne combine CHF + Scan ISBN + back-office simple
+        \item Devise EUR imposée (Momox, Vinted)
+        \item Back-offices complexes (WooCommerce, Shopify)
       \end{itemize}
     \end{alertblock}
     \column{0.48\textwidth}
-    \begin{exampleblock}{\small Ce que le sur-mesure coûte --- et que j'assume}
+    \begin{exampleblock}{Avantages du développement sur mesure}
       \begin{itemize}\small
-        \item Pas de support éditeur : la maintenance est \textbf{à ma charge}
-        \item Sécurité et conformité à implémenter \textbf{soi-même}
-        \item Contrepartie : \textbf{zéro} abonnement, et le tunnel CHF sous contrôle
+        \item Contrôle total sur le tunnel CHF
+        \item Scan ISBN intégré nativement
+        \item UI épurée taillée pour les bénévoles
+        \item Coût de possession minimal --- pas de SaaS récurrent
       \end{itemize}
     \end{exampleblock}
   \end{columns}
@@ -419,29 +422,10 @@ ESTIAM --- Promotion E3 DAD --- Encadrant : Mhand Boufala}
 
 \section{Analyse et conception}
 
-\begin{frame}{Cas d'utilisation --- trois profils, mais combien de rôles ?}
-  \begin{columns}[T]
-    \column{0.60\textwidth}
-    \begin{center}
-    \includegraphics[width=\linewidth,height=0.78\textheight,keepaspectratio]{diagrams/use_case_global.pdf}
-    \end{center}
-    \column{0.36\textwidth}
-    \begin{alertblock}{\small Le piège du \og\ un profil = un rôle \fg{}}
-      \begin{itemize}\small
-        \item \textbf{Bénévole} --- ajoute du stock
-        \item \textbf{Administrateur} --- modère et suit
-        \item \textbf{Acheteur} --- achète en CHF
-      \end{itemize}
-    \end{alertblock}
-    \vspace{4pt}
-    \begin{exampleblock}{\small Décision}
-      \begin{itemize}\small
-        \item[$\Rightarrow$] \textbf{2 rôles} : \texttt{admin} et \texttt{user}
-        \item Bénévole et admin partagent \texttt{admin} : mêmes droits réels
-        \item Un 3\textsuperscript{e} rôle sans droit distinct = complexité gratuite
-      \end{itemize}
-    \end{exampleblock}
-  \end{columns}
+\begin{frame}{Diagramme de cas d'utilisation --- Vue globale}
+  \begin{center}
+  \includegraphics[width=\linewidth,height=0.82\textheight,keepaspectratio]{diagrams/use_case_global.pdf}
+  \end{center}
 \end{frame}
 
 \begin{frame}{Modèle de données --- Architecture en héritage de table}
@@ -558,12 +542,10 @@ ESTIAM --- Promotion E3 DAD --- Encadrant : Mhand Boufala}
   \end{center}
 \end{frame}
 
-\begin{frame}{Étape 1 --- Maquette mobile et flux d'ajout ($<$ 2 min)}
+\begin{frame}{Étape 1 --- Maquette \og Ajouter un livre \fg{} (mobile)}
   \etapelivre{1}{scan et préremplissage automatique}
-  \begin{columns}[T]
-    \column{0.40\textwidth}
   \begin{center}
-  \resizebox{!}{0.50\textheight}{%
+  \resizebox{!}{0.56\textheight}{%
   \begin{tikzpicture}
     \fill[gray!30] (0.8,0) rectangle (4.4,7.5);
     \fill[gray!30,rounded corners=6pt] (0.8,0) rectangle (4.4,7.5);
@@ -590,12 +572,12 @@ ESTIAM --- Promotion E3 DAD --- Encadrant : Mhand Boufala}
     \fill[gray!50,rounded corners=2pt] (2.1,0.2) rectangle (3.1,0.35);
   \end{tikzpicture}}
   \end{center}
-    \textcolor{mygray}{\scriptsize\textbf{RGAA} : libellés explicites, bouton $\geq$ 44px, saisie manuelle possible}
-    \column{0.58\textwidth}
-    \begin{center}
-    \includegraphics[width=\linewidth,height=0.68\textheight,keepaspectratio]{diagrams/activites_isbn.pdf}
-    \end{center}
-  \end{columns}
+  \textcolor{mygray}{\scriptsize\textbf{RGAA}}
+  \begin{itemize}\scriptsize
+    \item \textcolor{mygray}{Libellés explicites}
+    \item \textcolor{mygray}{Bouton $\geq$ 44px}
+    \item \textcolor{mygray}{Alternative de saisie manuelle}
+  \end{itemize}
 \end{frame}
 
 \begin{frame}[fragile]{Étape 1 --- Le bénévole scanne notre \textit{Divergente}}
@@ -620,6 +602,13 @@ def get_isbn_metadata(isbn: str):
 
     raise HTTPException(404, "ISBN introuvable")
 \end{lstlisting}
+\end{frame}
+
+\begin{frame}{Étape 1 --- Flux d'ajout ($<$ 2 min)}
+  \etapelivre{1}{scan et préremplissage automatique}
+  \begin{center}
+  \includegraphics[width=\linewidth,height=0.76\textheight,keepaspectratio]{diagrams/activites_isbn.pdf}
+  \end{center}
 \end{frame}
 
 \begin{frame}{Étape 2 --- Notre livre apparaît au catalogue}
@@ -666,50 +655,6 @@ def get_isbn_metadata(isbn: str):
   \end{itemize}
 \end{frame}
 
-\begin{frame}[fragile]{Étape 2 --- Le piège du N+1 sur le catalogue}
-  \etapelivre{2}{visible et trouvable}
-  \begin{columns}[T]
-    \column{0.46\textwidth}
-    \begin{alertblock}{\small Le symptôme}
-      \begin{itemize}\small
-        \item Chaque vignette voulait savoir \og\ reste-t-il un exemplaire ? \fg{}
-        \item Le front récupérait \textbf{toute} la table \texttt{stock}\ldots\ une fois \textbf{par livre}
-        \item 60 livres $\Rightarrow$ 60 requêtes qui rapatrient la même chose
-      \end{itemize}
-    \end{alertblock}
-    \vspace{4pt}
-    \begin{exampleblock}{\small La correction}
-      \begin{itemize}\small
-        \item \textbf{Un seul} endpoint, \textbf{une seule} requête \texttt{GROUP BY}
-        \item Calcul déplacé \textbf{côté SQL}, pas côté JavaScript
-        \item Appelé depuis un \textbf{Server Component} : le navigateur ne fait rien
-      \end{itemize}
-    \end{exampleblock}
-    \column{0.52\textwidth}
-\begin{lstlisting}[style=pysmall,caption={}]
-# presentation/stock_router.py
-@router.get("/availability",
-            response_model=dict[int, int])
-def stock_availability(db: DbSession,
-                       article_ids: str | None = None):
-    q = db.query(
-        models.Stock.id_article,
-        func.sum(models.Stock.quantite_disponible
-                 - models.Stock.quantite_reservee),
-    )
-    rows = q.group_by(models.Stock.id_article).all()
-    return {int(a): max(0, int(t or 0))
-            for a, t in rows}
-\end{lstlisting}
-    \begin{block}{\small Ce que ça dit de ma démarche}
-      \begin{itemize}\small
-        \item Le \textbf{disponible réel} = disponible $-$ réservé, jamais stocké en dur
-        \item Une seule source de vérité, donc pas de désynchronisation possible
-      \end{itemize}
-    \end{block}
-  \end{columns}
-\end{frame}
-
 \begin{frame}{Étape 3 --- Un client l'achète : le tunnel CHF PostFinance}
   \etapelivre{3}{achat et paiement en CHF}
   \begin{columns}[T]
@@ -717,6 +662,7 @@ def stock_availability(db: DbSession,
     \begin{block}{Pourquoi PostFinance ?}
       \begin{itemize}\small
         \item \textbf{TWINT} natif (paiement mobile dominant CH)
+        \item \textbf{Sandbox} sans CB réelle en développement
         \item PostCard, Visa, Mastercard en \textbf{CHF}
         \item Acteur 100\% suisse, réglementation conforme
       \end{itemize}
@@ -729,6 +675,8 @@ def stock_availability(db: DbSession,
         \item Finalisation atomique de la commande
       \end{itemize}
     \end{block}
+    \vspace{4pt}
+    \badgeorange{Migration Payrexx $\rightarrow$ PostFinance en cours de projet}
   \end{columns}
 \end{frame}
 
@@ -818,54 +766,12 @@ def _lock_stock_rows(db, ids_article):
     \begin{alertblock}{\small Qu'arrive-t-il si un client consulte la commande d'un autre ?}
       \begin{itemize}\small
         \item\textbf{404}, comme si elle n'existait pas
-        \item Non-admin $\rightarrow$ \texttt{/orders/admin/*} : \textbf{403}
-        \item Vérifié par un test dédié, \texttt{test\_orders\_cross\_user\_isolation}
-      \end{itemize}
+        \item Non-admin $\rightarrow$ \texttt{/orders/admin/*} : \textbf{403}      \end{itemize}
     \end{alertblock}
     \column{0.54\textwidth}
     \begin{center}
     \includegraphics[width=\linewidth,height=0.62\textheight,keepaspectratio]{diagrams/sequence_admin_commande.pdf}
     \end{center}
-  \end{columns}
-\end{frame}
-
-\begin{frame}[fragile]{Le bug le plus coûteux --- CORS, un proxy et une barre oblique}
-  \begin{columns}[T]
-    \column{0.47\textwidth}
-    \begin{block}{\small Le montage : supprimer CORS plutôt que l'autoriser}
-      \begin{itemize}\small
-        \item Front Vercel et API Oracle Cloud = \textbf{deux origines}
-        \item Next réécrit \texttt{/api/proxy/*} vers le backend
-        \item Pour le navigateur, tout reste \textbf{same-origin} : plus de préflight
-      \end{itemize}
-    \end{block}
-    \vspace{4pt}
-    \begin{alertblock}{\small Le symptôme : la page admin \og Utilisateurs \fg{} restait vide}
-      \begin{itemize}\small
-        \item \texttt{Failed to fetch}, listes vides, \textbf{aucune} erreur serveur
-        \item Reproductible en prod uniquement
-      \end{itemize}
-    \end{alertblock}
-    \column{0.49\textwidth}
-    \begin{exampleblock}{\small La chaîne causale --- 4 maillons}
-      \begin{enumerate}\small
-        \item Next normalise \texttt{/users/} $\rightarrow$ \texttt{/users} (\textbf{308}) \textit{avant} la réécriture
-        \item Le proxy appelle donc le backend \textbf{sans} la barre oblique
-        \item FastAPI \texttt{redirect\_slashes} renvoie un \textbf{307} vers une URL \textbf{absolue} du backend
-        \item Redirection \textbf{cross-origin} $\Rightarrow$ le navigateur \textbf{supprime} l'en-tête \texttt{Authorization}
-      \end{enumerate}
-    \end{exampleblock}
-    \vspace{3pt}
-\begin{lstlisting}[style=pysmall,caption={}]
-// next.config.js
-skipTrailingSlashRedirect: true,
-\end{lstlisting}
-    \begin{block}{\small La leçon}
-      \begin{itemize}\small
-        \item Une requête \textbf{non authentifiée} n'est pas forcément une requête \textbf{refusée}
-        \item Le coupable n'était ni le front, ni l'API, mais leur \textbf{contrat implicite}
-      \end{itemize}
-    \end{block}
   \end{columns}
 \end{frame}
 
@@ -876,7 +782,7 @@ skipTrailingSlashRedirect: true,
     \item \textbf{Paiement Payrexx $\rightarrow$ PostFinance} --- sandbox sans CB réelle
     \item \textbf{Gestion du périmètre} --- demandes récurrentes (favoris, chat) reportées au backlog
     \item \textbf{Formation + projet perso} --- développement en soirée, 3 j/semaine
-    \item \textbf{Vercel + \texttt{output: standalone}} --- assets statiques en 404 en prod, option désormais conditionnée à la variable \texttt{VERCEL}
+    \item \textbf{Vercel + \texttt{output: standalone}} --- assets statiques en 404 en prod, corrigé (option conditionnée à la variable \texttt{VERCEL})
   \end{itemize}
   \vspace{6pt}
   \begin{exampleblock}{\small Gestion du commanditaire}
@@ -913,92 +819,27 @@ skipTrailingSlashRedirect: true,
   \end{center}
 \end{frame}
 
-\begin{frame}[fragile]{Cybersécurité --- SSRF : quand l'API télécharge une URL fournie}
+\begin{frame}{Cybersécurité --- Veille et mesures complémentaires}
   \begin{columns}[T]
-    \column{0.46\textwidth}
-    \begin{alertblock}{\small L'admin colle une URL de couverture. Que peut-il viser ?}
-      \begin{itemize}\small
-        \item \texttt{http://169.254.169.254/} : métadonnées cloud $\Rightarrow$ \textbf{fuite de secrets}
-        \item \texttt{http://127.0.0.1:3306} : MySQL en réseau privé
-        \item Le serveur devient un \textbf{proxy} vers son propre VCN
-      \end{itemize}
-    \end{alertblock}
-    \vspace{4pt}
-    \begin{block}{\small Défense en profondeur}
-      \begin{itemize}\small
-        \item Résolution DNS, puis rejet de toute IP \textbf{privée / loopback / link-local}
-        \item \textbf{SVG exclu} des formats acceptés : il embarque du \texttt{<script>}, donc XSS stocké depuis notre propre origine
-        \item Taille et \texttt{Content-Type} vérifiés avant écriture
-      \end{itemize}
-    \end{block}
-    \column{0.52\textwidth}
-\begin{lstlisting}[style=pysmall,caption={}]
-# services/image_service.py
-def _resolve_pinned_ip(hostname: str) -> str:
-    infos = socket.getaddrinfo(hostname, None)
-    ips = {info[4][0] for info in infos}
-    if not ips or not all(_is_public_ip(ip)
-                          for ip in ips):
-        raise ValueError("URL host is not allowed")
-    return next(iter(ips))   # on se connecte a CETTE IP
-\end{lstlisting}
-    \begin{exampleblock}{\small Pourquoi \textbf{épingler} l'IP au lieu de revérifier l'URL ?}
-      \begin{itemize}\small
-        \item Sinon : \textbf{DNS rebinding} (TOCTOU)
-        \item Le contrôle passe sur une IP publique à TTL très court\ldots
-        \item \ldots\ et la connexion, une seconde plus tard, résout vers \texttt{127.0.0.1}
-        \item Valider puis re-résoudre \textbf{ne valide rien}
-      \end{itemize}
-    \end{exampleblock}
-  \end{columns}
-\end{frame}
-
-\begin{frame}{Veille technologique --- de la lecture à la décision}
-  \begin{columns}[T]
-    \column{0.44\textwidth}
-    \begin{block}{Sources suivies}
+    \column{0.47\textwidth}
+    \begin{block}{Veille sécurité menée}
       \begin{itemize}\small
         \item \textbf{OWASP Top 10} : référentiel principal
         \item \textbf{GitHub Dependabot} : alertes CVE automatiques
-        \item \textbf{Documentation officielle} FastAPI / Next.js
+        \item \textbf{Documentation FastAPI sécurité} (OAuth2, JWT)
         \item \textbf{Daily.dev} / bytes : newsletter tech hebdo
       \end{itemize}
     \end{block}
-    \vspace{4pt}
+    \hspace{0.06\textwidth}
+    \column{0.47\textwidth}
     \begin{block}{Mesures complémentaires}
       \begin{itemize}\small
         \item CORS : origines autorisées (Vercel + localhost)
-        \item En-têtes \textbf{CSP}, \texttt{X-Content-Type-Options}, \texttt{Referrer-Policy}
+        \item Endpoint \texttt{/health} pour les sondes
         \item \texttt{/static} monté pour les images (pas d'URL tiers)
+        \item Refus de démarrage si clé secrète par défaut en prod
       \end{itemize}
     \end{block}
-    \column{0.52\textwidth}
-    \begin{alertblock}{\small La veille ne sert à rien si elle ne change pas le code}
-      \begin{itemize}\small
-        \item La doc FastAPI a \textbf{changé de librairies} depuis mes premiers commits
-        \item Relire la doc officielle m'a fait découvrir \textbf{deux dettes} invisibles
-      \end{itemize}
-    \end{alertblock}
-    \vspace{4pt}
-    \begin{center}
-    \scriptsize
-    \renewcommand{\arraystretch}{1.3}
-    \begin{tabular}{@{}p{2.0cm}p{1.5cm}p{3.6cm}@{}}
-      \toprule
-      \textbf{Avant} & \textbf{Après} & \textbf{Pourquoi} \\
-      \midrule
-      \texttt{python-jose} & \texttt{PyJWT} & Non maintenue depuis 2021, retirée de la doc FastAPI \\
-      \texttt{passlib} & \texttt{pwdlib} & Importe \texttt{crypt}, \textbf{supprimé de Python 3.13} \\
-      \bottomrule
-    \end{tabular}
-    \end{center}
-    \vspace{3pt}
-    \begin{exampleblock}{\small Migration sans rupture}
-      \begin{itemize}\small
-        \item \textbf{bcrypt conservé} : les hashs existants restent valides, zéro migration de données
-        \item 70/70 tests verts \textbf{après désinstallation} des deux anciennes librairies
-      \end{itemize}
-    \end{exampleblock}
   \end{columns}
 \end{frame}
 
@@ -1038,16 +879,17 @@ def _resolve_pinned_ip(hostname: str) -> str:
         \item \textbf{Tests d'intégration} : \texttt{TestClient} FastAPI + MySQL, isolation inter-utilisateurs
         \item \textbf{Test fonctionnel E2E} : parcours achat complet
         \item \textbf{Sandbox PostFinance} : scénarios succès / échec
+        \item Tests manuels : \textbf{Swagger UI} + \textbf{Thunder Client}
       \end{itemize}
     \end{block}
     \vspace{5pt}
     \badgegreen{101 / 101 tests passants (70 pytest + 31 Vitest)}
     \vspace{5pt}
-    \begin{alertblock}{\small Ce qu'un test a réellement attrapé}
+    \begin{alertblock}{\small Axes de renforcement (Phase 2)}
       \begin{itemize}\small
-        \item \texttt{test\_orders\_cross\_user\_isolation} : un client lisait la commande d'un autre
-        \item Corrigé en \textbf{404} (et non 403) : ne pas confirmer l'existence de la ressource
-        \item Les lignes surlignées ci-contre restent mes \textbf{angles morts} assumés
+        \item \texttt{image\_service} (41\,\%)
+        \item \texttt{order\_admin\_router} (38\,\%)
+        \item \texttt{user\_router} (47\,\%)
       \end{itemize}
     \end{alertblock}
     \column{0.50\textwidth}
@@ -1119,18 +961,20 @@ def _resolve_pinned_ip(hostname: str) -> str:
 \begin{frame}{Conclusion --- Bilan et perspectives}
   \begin{columns}[T]
     \column{0.48\textwidth}
-    \begin{exampleblock}{Ce que je retiens techniquement}
+    \begin{exampleblock}{Objectifs MVP atteints}
       \begin{itemize}\small
-        \item Les \textbf{4 critères MVP} sont tenus et mesurés
-        \item Ce qui m'a le plus appris : la \textbf{concurrence} (verrou stock) et le \textbf{SSRF}
-        \item Un outil qui échoue bruyamment vaut mieux qu'un outil permissif
+        \item Ajout livre par scan ISBN en \textbf{$<$ 2 min}
+        \item Paiement \textbf{CHF} via PostFinance
+        \item Livraison restreinte à la \textbf{Suisse}
+        \item Back-office bénévole opérationnel
+        \item Suite de tests exhaustive --- \textit{cf. partie Tests}
+        \item Déployé sur \texttt{caribooks.vercel.app}
       \end{itemize}
     \end{exampleblock}
     \vspace{4pt}
-    \begin{alertblock}{Limites identifiées --- sans complaisance}
+    \begin{alertblock}{Limites identifiées}
       \begin{itemize}\small
-        \item Rate limiting \textbf{en mémoire} : ne tient pas sur plusieurs VMs
-        \item Aucun test de charge : les perfs sont \textbf{supposées}, pas prouvées
+        \item Tunnel de paiement à surveiller (74\,\% couv.)
         \item Interface mobile à affiner (responsive)
       \end{itemize}
     \end{alertblock}
