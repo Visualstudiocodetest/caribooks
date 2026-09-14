@@ -19,6 +19,9 @@ export type BookRead = {
 export type BookCreate = Omit<BookRead, 'id_article' | 'date_creation' | 'etat_libelle'> & {
   id_type_objet?: number
   id_etat_usure?: number
+  // Which SourceStock the book's initial +1 unit is credited to. Omitted
+  // falls back to the backend's own default (oldest source).
+  id_source_stock?: number
 }
 
 export type LoginRequest = {

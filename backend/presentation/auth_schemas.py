@@ -1,6 +1,23 @@
 from typing import Optional
 
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, field_validator
+
+# Delivery is Switzerland-only (see CLAUDE.md); the billing address doubles as
+# the shipping address (order_admin_router builds client_adresse straight from
+# it, there is no separate delivery-address field), so this is the one place
+# that must be enforced. Accepts the spelling in any of CH's national
+# languages plus English/the ISO code, case- and accent-insensitively, and
+# normalizes to a single canonical value so downstream code (e.g.
+# postfinance_service's ISO-2 field) always sees the same string.
+_SWISS_COUNTRY_SPELLINGS = {"suisse", "schweiz", "svizzera", "svizra", "switzerland", "ch"}
+
+
+def _validate_swiss_country(v: Optional[str]) -> Optional[str]:
+    if v is None or not v.strip():
+        return v
+    if v.strip().lower() not in _SWISS_COUNTRY_SPELLINGS:
+        raise ValueError("La livraison est réservée à la Suisse (billing_country doit être 'Suisse')")
+    return "Suisse"
 
 
 class UserCreate(BaseModel):
@@ -14,6 +31,11 @@ class UserCreate(BaseModel):
     billing_city: Optional[str] = None
     billing_country: Optional[str] = None
     billing_phone: Optional[str] = None
+
+    @field_validator("billing_country")
+    @classmethod
+    def _country_swiss_only(cls, v: Optional[str]) -> Optional[str]:
+        return _validate_swiss_country(v)
 
 class UserRead(BaseModel):
     id_utilisateur: int
@@ -41,6 +63,11 @@ class UserUpdate(BaseModel):
     billing_city: Optional[str] = None
     billing_country: Optional[str] = None
     billing_phone: Optional[str] = None
+
+    @field_validator("billing_country")
+    @classmethod
+    def _country_swiss_only(cls, v: Optional[str]) -> Optional[str]:
+        return _validate_swiss_country(v)
 
 class LoginRequest(BaseModel):
     username: EmailStr

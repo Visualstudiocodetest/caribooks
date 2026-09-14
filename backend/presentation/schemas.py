@@ -25,7 +25,12 @@ class BookBase(BaseModel):
     actif: bool = True
 
 class BookCreate(BookBase):
-    pass
+    # Which SourceStock the book's initial +1 unit is credited to. Optional and
+    # BookCreate-only (not part of BookBase, so it never leaks into BookRead —
+    # Article/Livre has no such column, it only steers where the Stock row
+    # lands). Omitted falls back to crud_book's existing default (the oldest
+    # SourceStock, auto-creating one if none exist yet).
+    id_source_stock: Optional[int] = None
 
 class BookUpdate(BaseModel):
     id_type_objet: Optional[int] = None

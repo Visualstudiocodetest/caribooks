@@ -39,8 +39,7 @@ class BookService:
             return original
         return image_link
 
-    @staticmethod
-    def _validate_book_input(book_in) -> None:
+    def _validate_book_input(self, book_in) -> None:
         if not (book_in.titre and book_in.titre.strip()):
             raise HTTPException(status_code=400, detail="Titre obligatoire")
         if not (book_in.isbn and book_in.isbn.strip()):
@@ -49,6 +48,15 @@ class BookService:
             raise HTTPException(status_code=400, detail="Auteur obligatoire")
         if book_in.prix_chf is None or book_in.prix_chf < 0:
             raise HTTPException(status_code=400, detail="Prix invalide")
+        id_source_stock = getattr(book_in, "id_source_stock", None)
+        if id_source_stock is not None:
+            exists = (
+                self.db_session.query(models.SourceStock)
+                .filter(models.SourceStock.id_source_stock == id_source_stock)
+                .first()
+            )
+            if exists is None:
+                raise HTTPException(status_code=400, detail="Source de stock invalide")
 
     def list_books(self) -> list[models.Livre]:
         return crud_book.get_books(self.db_session)

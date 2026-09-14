@@ -302,7 +302,7 @@ ESTIAM --- Promotion E3 DAD --- Encadrant : Mhand Boufala}
   \end{columns}
 \end{frame}
 
-\section{État de l\textquotesingle{}art et choix technique}
+\section{Solutions existantes et choix technique}
 
 \begin{frame}{Solutions existantes -- Pourquoi développer sur mesure ?}
   \begin{center}
@@ -775,48 +775,47 @@ def _lock_stock_rows(db, ids_article):
   \end{columns}
 \end{frame}
 
-\begin{frame}{Difficultés rencontrées --- ce que j'ai appris en le faisant seul}
-  \begin{itemize}\small
-    \item \textbf{Backend Express.js $\rightarrow$ FastAPI} --- robustesse et validation automatique
-    \item \textbf{Scan code-barres} --- latence et reconnaissance insuffisantes, algorithme revu
-    \item \textbf{Paiement Payrexx $\rightarrow$ PostFinance} --- sandbox sans CB réelle
-    \item \textbf{Gestion du périmètre} --- demandes récurrentes (favoris, chat) reportées au backlog
-    \item \textbf{Formation + projet perso} --- développement en soirée, 3 j/semaine
-    \item \textbf{Vercel + \texttt{output: standalone}} --- assets statiques en 404 en prod, corrigé (option conditionnée à la variable \texttt{VERCEL})
-  \end{itemize}
-  \vspace{6pt}
-  \begin{exampleblock}{\small Gestion du commanditaire}
-    \begin{itemize}\small
-      \item Commanditaire qui redemande sans cesse de nouvelles fonctionnalités
-      \item Chaque demande $\rightarrow$ backlog, jamais le travail en cours
-      \item Le MVP restait la seule priorité contractuelle
-    \end{itemize}
-  \end{exampleblock}
-\end{frame}
-
 \section{Cybersécurité et qualité}
 
-\begin{frame}{Cybersécurité --- Mesures implémentées (OWASP Top 10)}
-  \begin{center}
-  \small
-  \renewcommand{\arraystretch}{1.35}
-  \begin{tabular}{@{}p{3.8cm}p{3.4cm}p{4.2cm}@{}}
-    \toprule
-    \textbf{Menace / Risque} & \textbf{Mesure implémentée} & \textbf{Technologie} \\
-    \midrule
-    Injection SQL               & Requêtes paramétrées       & SQLAlchemy ORM \\
-    Mots de passe compromis     & Hashage adaptatif (cost=12) & bcrypt / pwdlib \\
-    Accès non autorisé          & Auth obligatoire routes     & JWT + HTTPBearer \\
-    Élévation de privilèges     & Contrôle rôles strict       & \texttt{require\_admin} FastAPI \\
-    Données invalides           & Validation schémas          & Pydantic + HTTPException \\
-    Token intercepté            & Expiration + TLS prod       & JWT \texttt{exp}, HTTPS \\
-    Secrets en clair            & Variables d'environnement   & \texttt{.env} + python-dotenv \\
-    Race condition stock        & Verrou SQL transactionnel   & \texttt{with\_for\_update()} \\
-    Non-conformité RGPD/nLPD    & Export + effacement + consentement & \texttt{/users/me}, bannière cookies \\
-    Montant PostFinance falsifié & Vérification vs total commande avant finalisation & \texttt{amount\_matches\_commande} \\
-    \bottomrule
-  \end{tabular}
-  \end{center}
+\begin{frame}{Difficultés rencontrées \& Cybersécurité --- OWASP Top 10}
+  \begin{columns}[T]
+    \column{0.46\textwidth}
+    \begin{block}{\scriptsize Ce que j'ai appris en le faisant seul}
+      \begin{itemize}\scriptsize
+        \item \textbf{Backend Express.js $\rightarrow$ FastAPI} --- robustesse et validation automatique
+        \item \textbf{Scan code-barres} --- latence/reconnaissance insuffisantes, algorithme revu
+        \item \textbf{Paiement Payrexx $\rightarrow$ PostFinance} --- sandbox sans CB réelle
+        \item \textbf{Gestion du périmètre} --- demandes récurrentes (favoris, chat) au backlog
+        \item \textbf{Formation + projet perso} --- développement en soirée, 3 j/semaine
+        \item \textbf{Vercel + \texttt{output: standalone}} --- assets 404 en prod, corrigé
+      \end{itemize}
+    \end{block}
+    \vspace{4pt}
+    \begin{exampleblock}{\scriptsize Gestion du commanditaire}
+      \scriptsize
+      Chaque nouvelle demande $\rightarrow$ backlog, jamais le travail en cours : le MVP
+      restait la seule priorité contractuelle.
+    \end{exampleblock}
+    \column{0.52\textwidth}
+    \tiny
+    \renewcommand{\arraystretch}{1.2}
+    \begin{tabular}{@{}p{2.5cm}p{3.0cm}@{}}
+      \toprule
+      \textbf{Risque} & \textbf{Mesure / Techno} \\
+      \midrule
+      Injection SQL               & SQLAlchemy ORM (paramétré) \\
+      Mots de passe compromis     & bcrypt / pwdlib (cost=12) \\
+      Accès non autorisé          & JWT + HTTPBearer \\
+      Élévation de privilèges     & \texttt{require\_admin} FastAPI \\
+      Données invalides           & Pydantic + HTTPException \\
+      Token intercepté            & JWT \texttt{exp} + TLS prod \\
+      Secrets en clair            & \texttt{.env} + python-dotenv \\
+      Race condition stock        & \texttt{with\_for\_update()} SQL \\
+      Non-conformité RGPD/nLPD    & \texttt{/users/me}, bannière cookies \\
+      Montant PostFinance falsifié & \texttt{amount\_matches\_commande} \\
+      \bottomrule
+    \end{tabular}
+  \end{columns}
 \end{frame}
 
 \begin{frame}{Cybersécurité --- Veille et mesures complémentaires}

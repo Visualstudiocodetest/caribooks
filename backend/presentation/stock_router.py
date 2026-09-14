@@ -26,7 +26,11 @@ stock_crud = CrudBase[models.Stock](models.Stock, "id_stock")
 
 @router.get("/sources", response_model=list[SourceStockRead])
 def list_sources(db: DbSession):
-    return source_stock_crud.list(db)
+    # Explicit order (oldest first): the admin "add book" form pre-selects the
+    # *last* entry of this list as the most-recently-added source, which only
+    # holds if the ordering is guaranteed rather than left to MySQL's
+    # unspecified default row order for an unfiltered SELECT.
+    return db.query(models.SourceStock).order_by(models.SourceStock.id_source_stock.asc()).all()
 
 
 @router.get("/sources/{id_source_stock}", response_model=SourceStockRead)

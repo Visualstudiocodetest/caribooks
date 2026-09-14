@@ -6,13 +6,14 @@ import { ApiError } from '@/services/api'
 import { createBook, getBookByIsbn } from '@/services/books'
 import { createScan } from '@/services/scans'
 import { listCatalog } from '@/services/catalog'
+import { listSources } from '@/services/stocks'
 import Image from 'next/image'
 import { lookupIsbn } from '@/services/openlibrary'
 import { fetchRemoteImage } from '@/services/images'
 import { cleanIsbn } from '@/lib/isbn'
 import { isExternalImage } from '@/lib/images'
 import { useBarcodeScanner } from '@/hooks/useBarcodeScanner'
-import type { BookRead } from '@/types/api'
+import type { BookRead, SourceStock } from '@/types/api'
 
 type EtatItem = { id_etat_usure: number; libelle: string }
 type TypeObjetItem = { id_type_objet: number; libelle: string; code?: string }
@@ -24,8 +25,10 @@ export default function AdminNewBookPage() {
   const [prix, setPrix] = useState('')
   const [idEtat, setIdEtat] = useState('')
   const [idType, setIdType] = useState('')
+  const [idSource, setIdSource] = useState('')
   const [etatList, setEtatList] = useState<EtatItem[]>([])
   const [typeList, setTypeList] = useState<TypeObjetItem[]>([])
+  const [sourceList, setSourceList] = useState<SourceStock[]>([])
   const [imageLink, setImageLink] = useState('')
   const [description, setDescription] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -49,6 +52,13 @@ export default function AdminNewBookPage() {
     return def ? String(def.id_type_objet) : ''
   }
 
+  // Last-added source (end of the list, ordered by id_source_stock ascending
+  // by the backend) is the one most likely to still be in active use — pre-select it.
+  function defaultSourceId(): string {
+    const last = sourceList[sourceList.length - 1]
+    return last ? String(last.id_source_stock) : ''
+  }
+
   function resetForm() {
     setTitre('')
     setIsbn('')
@@ -56,6 +66,7 @@ export default function AdminNewBookPage() {
     setPrix('')
     setIdEtat('')
     setIdType(defaultTypeId())
+    setIdSource(defaultSourceId())
     setImageLink('')
     setDescription('')
     setError(null)
@@ -191,6 +202,17 @@ export default function AdminNewBookPage() {
       } catch {
         // ignore
       }
+      try {
+        const sourcesArr = await listSources()
+        setSourceList(sourcesArr)
+        // Pre-select the last (most recently added) source, per the volunteer
+        // workflow: new stock keeps arriving from whichever source was set up
+        // most recently, so that's the one most likely to be the right pick.
+        const lastSource = sourcesArr[sourcesArr.length - 1]
+        if (lastSource && !idSource) setIdSource(String(lastSource.id_source_stock))
+      } catch {
+        // ignore
+      }
     }
     void loadLists()
   }, [])
@@ -244,6 +266,7 @@ export default function AdminNewBookPage() {
         image_link: finalImage || null,
         prix_chf: prixNum,
         actif: true,
+        id_source_stock: idSource ? Number(idSource) : undefined,
       })
       setCreated(createdBook)
     } catch (e) {
@@ -363,20 +386,36 @@ export default function AdminNewBookPage() {
           </div>
 
           <div className="two-up">
-            <select className="input" value={idType} onChange={(e) => setIdType(e.target.value)} required>
-              <option value="">Type d&apos;objet...</option>
-              {typeList.map((t) => (
-                <option key={t.id_type_objet} value={String(t.id_type_objet)}>
-                  {t.libelle}
+            <div>
+              {/* This page only ever creates a Livre (see createBook below), so
+                  the type is locked to "Livre" rather than offered as a free
+                  choice — picking e.g. "DVD" here would silently create a book
+                  row typed as something else. `idType` still resolves to the
+                  right id (see loadLists/defaultTypeId), it's just not editable. */}
+              <select className="input" value={idType} disabled required>
+                <option value={idType}>
+                  {typeList.find((t) => String(t.id_type_objet) === idType)?.libelle || 'Livre'}
                 </option>
-              ))}
-            </select>
+              </select>
+            </div>
 
             <select className="input" value={idEtat} onChange={(e) => setIdEtat(e.target.value)} required>
               <option value="">État</option>
               {etatList.map((e) => (
                 <option key={e.id_etat_usure} value={String(e.id_etat_usure)}>
                   {e.libelle}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div style={{ display: 'grid', gap: 6 }}>
+            <label style={{ fontWeight: 700 }}>Source de stock</label>
+            <select className="input" value={idSource} onChange={(e) => setIdSource(e.target.value)}>
+              <option value="">Source par défaut du serveur</option>
+              {sourceList.map((s) => (
+                <option key={s.id_source_stock} value={String(s.id_source_stock)}>
+                  {s.libelle}
                 </option>
               ))}
             </select>
