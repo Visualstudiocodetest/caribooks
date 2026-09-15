@@ -44,7 +44,9 @@ export default function AccountPage() {
         setBilling2(String(u.billing_address_line2 ?? ''))
         setPostal(String(u.billing_postal_code ?? ''))
         setCity(String(u.billing_city ?? ''))
-        setCountry(String(u.billing_country ?? ''))
+        // Delivery is Switzerland-only (backend rejects anything else) — default
+        // to it for accounts created before this field was locked down.
+        setCountry(String(u.billing_country || 'Suisse'))
         setPhone(String(u.billing_phone ?? ''))
       })
       .catch((e) => {
@@ -176,7 +178,14 @@ export default function AccountPage() {
         <div className="two-up">
           <div>
             <label className="sr-only" htmlFor="acc-country">Pays</label>
-            <input id="acc-country" className="input" value={country} onChange={(e) => setCountry(e.target.value)} placeholder="Pays" autoComplete="country-name" />
+            {/* Livraison réservée à la Suisse (voir CLAUDE.md) : le champ est
+                verrouillé plutôt que laissé en texte libre, pour qu'il soit
+                impossible de saisir un autre pays côté client — le backend
+                refuse de toute façon toute autre valeur. */}
+            <input id="acc-country" className="input" value={country} disabled readOnly autoComplete="country-name" />
+            <div className="muted" style={{ fontSize: 12, marginTop: 4 }}>
+              Livraison disponible uniquement en Suisse
+            </div>
           </div>
           <div>
             <label className="sr-only" htmlFor="acc-phone">Téléphone</label>

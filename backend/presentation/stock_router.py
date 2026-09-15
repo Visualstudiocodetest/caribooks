@@ -1,13 +1,13 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, HTTPException, status
 from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from infrastructure import models
 from infrastructure.crud_base import CrudBase
-from presentation.deps import get_db, require_admin
+from presentation.deps import AdminUser, DbSession
 from presentation.schemas import (
     SourceStockCreate,
     SourceStockRead,
@@ -25,12 +25,16 @@ stock_crud = CrudBase[models.Stock](models.Stock, "id_stock")
 
 
 @router.get("/sources", response_model=list[SourceStockRead])
-def list_sources(db: Session = Depends(get_db)):
-    return source_stock_crud.list(db)
+def list_sources(db: DbSession):
+    # Explicit order (oldest first): the admin "add book" form pre-selects the
+    # *last* entry of this list as the most-recently-added source, which only
+    # holds if the ordering is guaranteed rather than left to MySQL's
+    # unspecified default row order for an unfiltered SELECT.
+    return db.query(models.SourceStock).order_by(models.SourceStock.id_source_stock.asc()).all()
 
 
 @router.get("/sources/{id_source_stock}", response_model=SourceStockRead)
-def get_source(id_source_stock: int, db: Session = Depends(get_db)):
+def get_source(id_source_stock: int, db: DbSession):
     obj = source_stock_crud.get(db, id_source_stock)
     if obj is None:
         raise HTTPException(status_code=404, detail="SourceStock not found")
@@ -40,8 +44,8 @@ def get_source(id_source_stock: int, db: Session = Depends(get_db)):
 @router.post("/sources", response_model=SourceStockRead, status_code=status.HTTP_201_CREATED)
 def create_source(
     payload: SourceStockCreate,
-    db: Session = Depends(get_db),
-    _admin=Depends(require_admin),
+    db: DbSession,
+    _admin: AdminUser,
 ):
     obj = models.SourceStock(**payload.model_dump())
     return source_stock_crud.create(db, obj)
@@ -51,8 +55,8 @@ def create_source(
 def update_source(
     id_source_stock: int,
     payload: SourceStockUpdate,
-    db: Session = Depends(get_db),
-    _admin=Depends(require_admin),
+    db: DbSession,
+    _admin: AdminUser,
 ):
     updated = source_stock_crud.update(db, id_source_stock, payload.model_dump(exclude_unset=True))
     if updated is None:
@@ -63,8 +67,8 @@ def update_source(
 @router.delete("/sources/{id_source_stock}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_source(
     id_source_stock: int,
-    db: Session = Depends(get_db),
-    _admin=Depends(require_admin),
+    db: DbSession,
+    _admin: AdminUser,
 ):
     if not source_stock_crud.delete(db, id_source_stock):
         raise HTTPException(status_code=404, detail="SourceStock not found")
@@ -73,7 +77,7 @@ def delete_source(
 
 @router.get("/", response_model=list[StockRead])
 @router.get("", response_model=list[StockRead], include_in_schema=False)
-def list_stock(db: Session = Depends(get_db)):
+def list_stock(db: DbSession):
     # One handler serves both "/stock" and "/stock/" -- see book_router.list_books
     # for why: without this, a missing/extra trailing slash gets 307-redirected
     # by FastAPI straight to this backend's own absolute origin, breaking the
@@ -88,7 +92,7 @@ def list_stock(db: Session = Depends(get_db)):
 
 
 @router.get("/availability", response_model=dict[int, int])
-def stock_availability(article_ids: str | None = None, db: Session = Depends(get_db)):
+def stock_availability(db: DbSession, article_ids: str | None = None):
     """Available quantity per article in a single query — max(0, sum(disponible - reservee)).
 
     Replaces the frontend N+1 where every cart/catalogue item fetched the whole
@@ -112,7 +116,7 @@ def stock_availability(article_ids: str | None = None, db: Session = Depends(get
 
 
 @router.get("/{id_stock}", response_model=StockRead)
-def get_stock(id_stock: int, db: Session = Depends(get_db)):
+def get_stock(id_stock: int, db: DbSession):
     obj = stock_crud.get(db, id_stock)
     if obj is None:
         raise HTTPException(status_code=404, detail="Stock not found")
@@ -123,8 +127,8 @@ def get_stock(id_stock: int, db: Session = Depends(get_db)):
 @router.post("", response_model=StockRead, status_code=status.HTTP_201_CREATED, include_in_schema=False)
 def create_stock(
     payload: StockCreate,
-    db: Session = Depends(get_db),
-    _admin=Depends(require_admin),
+    db: DbSession,
+    _admin: AdminUser,
 ):
     obj = models.Stock(**payload.model_dump())
     try:
@@ -141,8 +145,8 @@ def create_stock(
 def update_stock(
     id_stock: int,
     payload: StockUpdate,
-    db: Session = Depends(get_db),
-    _admin=Depends(require_admin),
+    db: DbSession,
+    _admin: AdminUser,
 ):
     updated = stock_crud.update(db, id_stock, payload.model_dump(exclude_unset=True))
     if updated is None:
@@ -153,8 +157,8 @@ def update_stock(
 @router.delete("/{id_stock}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_stock(
     id_stock: int,
-    db: Session = Depends(get_db),
-    _admin=Depends(require_admin),
+    db: DbSession,
+    _admin: AdminUser,
 ):
     if not stock_crud.delete(db, id_stock):
         raise HTTPException(status_code=404, detail="Stock not found")
@@ -178,12 +182,13 @@ def _get_stock_for_update(db: Session, id_stock: int) -> models.Stock:
 @router.post("/{id_stock}/increment", response_model=StockRead)
 def increment_stock(
     id_stock: int,
-    payload: StockQtyChange = StockQtyChange(),
-    db: Session = Depends(get_db),
-    _admin=Depends(require_admin),
+    db: DbSession,
+    _admin: AdminUser,
+    payload: StockQtyChange | None = None,
 ):
     obj = _get_stock_for_update(db, id_stock)
-    obj.quantite_disponible = (obj.quantite_disponible or 0) + payload.qty
+    qty = payload.qty if payload is not None else 1
+    obj.quantite_disponible = (obj.quantite_disponible or 0) + qty
     db.commit()
     db.refresh(obj)
     return obj
@@ -192,14 +197,15 @@ def increment_stock(
 @router.post("/{id_stock}/decrement", response_model=StockRead)
 def decrement_stock(
     id_stock: int,
-    payload: StockQtyChange = StockQtyChange(),
-    db: Session = Depends(get_db),
-    _admin=Depends(require_admin),
+    db: DbSession,
+    _admin: AdminUser,
+    payload: StockQtyChange | None = None,
 ):
     obj = _get_stock_for_update(db, id_stock)
-    if (obj.quantite_disponible or 0) < payload.qty:
+    qty = payload.qty if payload is not None else 1
+    if (obj.quantite_disponible or 0) < qty:
         raise HTTPException(status_code=400, detail="Not enough stock to decrement")
-    obj.quantite_disponible = (obj.quantite_disponible or 0) - payload.qty
+    obj.quantite_disponible = (obj.quantite_disponible or 0) - qty
     db.commit()
     db.refresh(obj)
     return obj

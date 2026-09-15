@@ -19,7 +19,8 @@ sequenceDiagram
         Fro->>Goog: obtient un jeton d'identité (credential)
         Fro->>API: POST /auth/google {credential}
         API->>Goog: GET /tokeninfo?id_token=...
-        Goog-->>API: email, email_verified, sub (google_id)
+        Goog-->>API: aud, email, email_verified, sub (google_id)
+        API->>API: vérifie aud = GOOGLE_CLIENT_ID<br/>(échec fermé si non configuré)
         API->>API: vérifie email_verified = true
         API->>BD: SELECT par google_id, sinon par email (liaison), sinon création
         API->>API: signe JWT (HS256, exp 480 min)

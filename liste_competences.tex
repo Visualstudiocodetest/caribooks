@@ -61,7 +61,7 @@ Environnement de développement sécurisé & Secrets via \texttt{.env} (jamais v
 Authentification & Inscription, connexion par mot de passe et via Google Sign-In (OAuth), JWT, rôles utilisateur/administrateur \\
 Stockage sécurisé des identifiants & Hashage des mots de passe (bcrypt), champ nullable pour les comptes Google \\
 Validation des données entrantes & Schémas Pydantic sur toutes les routes FastAPI \\
-Contrôle des permissions & Dépendance FastAPI \texttt{Depends(require\_admin)}, isolation inter-utilisateurs testée (\texttt{test\_orders\_cross\_user\_isolation}) \\
+Contrôle des permissions & Dépendance FastAPI \texttt{AdminUser} = \texttt{Annotated[..., Depends(require\_admin)]}, isolation inter-utilisateurs testée (\texttt{test\_orders\_cross\_user\_isolation}) \\
 Prévention des injections SQL & Requêtes paramétrées via SQLAlchemy \\
 Prévention des vulnérabilités OWASP & Limitation du taux de requêtes sur l'authentification (\texttt{rate\_limit.py}), protection SSRF sur la récupération d'images distantes (\texttt{test\_image\_service\_ssrf.py}) \\
 Conformité RGPD / nLPD & Export et effacement (anonymisation) des données personnelles \\

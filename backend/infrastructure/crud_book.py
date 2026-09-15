@@ -63,13 +63,18 @@ def _default_source_stock(db: Session) -> models.SourceStock:
     return ss
 
 
-def _add_one_to_stock(db: Session, id_article: int) -> None:
-    """Increment (or create) the default-source stock row for `id_article` by 1.
+def _add_one_to_stock(db: Session, id_article: int, id_source_stock: Optional[int] = None) -> None:
+    """Increment (or create) the stock row for `id_article` by 1, against the
+    given source (falling back to the default source when omitted/not found).
 
     Extracted from the four near-identical blocks that create_book used to inline
     when a book/article already existed or was freshly created.
     """
-    ss = _default_source_stock(db)
+    ss = None
+    if id_source_stock:
+        ss = db.query(models.SourceStock).filter(models.SourceStock.id_source_stock == id_source_stock).first()
+    if ss is None:
+        ss = _default_source_stock(db)
     stock_row = (
         db.query(models.Stock)
         .filter(models.Stock.id_article == id_article, models.Stock.id_source_stock == ss.id_source_stock)
@@ -107,10 +112,12 @@ def create_book(db: Session, book: Any) -> models.Livre:
     If a book with the same ISBN already exists, increment its stock by 1
     instead of creating duplicate Article/Livre rows.
     """
+    id_source_stock = getattr(book, "id_source_stock", None)
+
     # If identical ISBN exists in Livre, just add one to stock.
     existing = get_book_by_isbn(db, book.isbn)
     if existing:
-        _add_one_to_stock(db, existing.id_article)
+        _add_one_to_stock(db, existing.id_article, id_source_stock)
         db.commit()
         db.refresh(existing)
         return existing
@@ -124,7 +131,7 @@ def create_book(db: Session, book: Any) -> models.Livre:
         # If a Livre already exists for this article, behave like the existing case.
         existing_livre = db.query(models.Livre).filter(models.Livre.id_article == existing_article.id_article).first()
         if existing_livre:
-            _add_one_to_stock(db, existing_livre.id_article)
+            _add_one_to_stock(db, existing_livre.id_article, id_source_stock)
             db.commit()
             db.refresh(existing_livre)
             return existing_livre
@@ -139,7 +146,7 @@ def create_book(db: Session, book: Any) -> models.Livre:
             langue=book.langue,
         )
         db.add(db_livre)
-        _add_one_to_stock(db, existing_article.id_article)
+        _add_one_to_stock(db, existing_article.id_article, id_source_stock)
         db.commit()
         db.refresh(db_livre)
         return db_livre
@@ -165,7 +172,7 @@ def create_book(db: Session, book: Any) -> models.Livre:
         langue=book.langue,
     )
     db.add(db_livre)
-    _add_one_to_stock(db, db_article.id_article)
+    _add_one_to_stock(db, db_article.id_article, id_source_stock)
     db.commit()
     db.refresh(db_livre)
     return db_livre

@@ -1,10 +1,9 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
+from fastapi import APIRouter, HTTPException
 
 from infrastructure import models
-from presentation.deps import get_db, require_admin
+from presentation.deps import AdminUser, DbSession
 from presentation.schemas import (
     AdminCommandeStatusUpdate,
     CommandeAdminRead,
@@ -40,13 +39,13 @@ def _build_commande_admin_read(obj: models.Commande) -> CommandeAdminRead:
 
 
 @router.get("/commandes", response_model=list[CommandeAdminRead])
-def admin_list_commandes(db: Session = Depends(get_db), _admin=Depends(require_admin)):
+def admin_list_commandes(db: DbSession, _admin: AdminUser):
     commandes = db.query(models.Commande).order_by(models.Commande.date_commande.desc()).all()
     return [_build_commande_admin_read(c) for c in commandes]
 
 
 @router.get("/commandes/{id_commande}/lignes", response_model=list[LigneCommandeAdminRead])
-def admin_get_lignes(id_commande: int, db: Session = Depends(get_db), _admin=Depends(require_admin)):
+def admin_get_lignes(id_commande: int, db: DbSession, _admin: AdminUser):
     lignes = db.query(models.LigneCommande).filter(models.LigneCommande.id_commande == id_commande).all()
     return [
         LigneCommandeAdminRead(
@@ -59,7 +58,7 @@ def admin_get_lignes(id_commande: int, db: Session = Depends(get_db), _admin=Dep
 
 
 @router.put("/commandes/{id_commande}/status", response_model=CommandeRead)
-def admin_set_status(id_commande: int, payload: AdminCommandeStatusUpdate, db: Session = Depends(get_db), _admin=Depends(require_admin)):
+def admin_set_status(id_commande: int, payload: AdminCommandeStatusUpdate, db: DbSession, _admin: AdminUser):
     obj = db.query(models.Commande).filter(models.Commande.id_commande == id_commande).first()
     if obj is None:
         raise HTTPException(status_code=404, detail="Commande not found")
@@ -73,7 +72,7 @@ def admin_set_status(id_commande: int, payload: AdminCommandeStatusUpdate, db: S
 
 
 @router.post("/commandes/{id_commande}/advance", response_model=CommandeRead)
-def admin_advance(id_commande: int, db: Session = Depends(get_db), _admin=Depends(require_admin)):
+def admin_advance(id_commande: int, db: DbSession, _admin: AdminUser):
     obj = db.query(models.Commande).filter(models.Commande.id_commande == id_commande).first()
     if obj is None:
         raise HTTPException(status_code=404, detail="Commande not found")
@@ -100,7 +99,7 @@ def admin_advance(id_commande: int, db: Session = Depends(get_db), _admin=Depend
 
 
 @router.post("/commandes/{id_commande}/cancel", response_model=CommandeAdminRead)
-def admin_cancel_commande(id_commande: int, db: Session = Depends(get_db), _admin=Depends(require_admin)):
+def admin_cancel_commande(id_commande: int, db: DbSession, _admin: AdminUser):
     obj = db.query(models.Commande).filter(models.Commande.id_commande == id_commande).first()
     if obj is None:
         raise HTTPException(status_code=404, detail="Commande not found")
@@ -111,7 +110,7 @@ def admin_cancel_commande(id_commande: int, db: Session = Depends(get_db), _admi
 
 
 @router.post("/commandes/{id_commande}/refund", response_model=CommandeAdminRead)
-def admin_refund_commande(id_commande: int, db: Session = Depends(get_db), _admin=Depends(require_admin)):
+def admin_refund_commande(id_commande: int, db: DbSession, _admin: AdminUser):
     """Admin-only refund: restores sold stock and marks the order/payments REFUNDED.
 
     Refunds are an admin/back-office action coordinated with the payment
@@ -133,7 +132,7 @@ def admin_refund_commande(id_commande: int, db: Session = Depends(get_db), _admi
 
 
 @router.post("/commandes/{id_commande}/sent", response_model=CommandeAdminRead)
-def admin_set_sent(id_commande: int, db: Session = Depends(get_db), _admin=Depends(require_admin)):
+def admin_set_sent(id_commande: int, db: DbSession, _admin: AdminUser):
     obj = db.query(models.Commande).filter(models.Commande.id_commande == id_commande).first()
     if obj is None:
         raise HTTPException(status_code=404, detail="Commande not found")
@@ -147,7 +146,7 @@ def admin_set_sent(id_commande: int, db: Session = Depends(get_db), _admin=Depen
 
 
 @router.post("/commandes/{id_commande}/at-reception", response_model=CommandeAdminRead)
-def admin_set_at_reception(id_commande: int, db: Session = Depends(get_db), _admin=Depends(require_admin)):
+def admin_set_at_reception(id_commande: int, db: DbSession, _admin: AdminUser):
     obj = db.query(models.Commande).filter(models.Commande.id_commande == id_commande).first()
     if obj is None:
         raise HTTPException(status_code=404, detail="Commande not found")

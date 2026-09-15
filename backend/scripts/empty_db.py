@@ -40,6 +40,7 @@ def empty_db():
         tables = [
             'scan_isbn',
             'paiement',
+            'stock_mouvement',
             'ligne_commande',
             'commande',
             'stock',

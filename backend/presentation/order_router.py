@@ -2,13 +2,12 @@ from __future__ import annotations
 
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, HTTPException, status
 from sqlalchemy import text
-from sqlalchemy.orm import Session
 
 from infrastructure import models
 from infrastructure.crud_base import CrudBase
-from presentation.deps import get_current_user, get_db
+from presentation.deps import CurrentUser, DbSession
 from presentation.schemas import (
     CommandeCreate,
     CommandeRead,
@@ -25,6 +24,7 @@ from services.order_service import (
     ensure_commande_mutable,
     generate_numero_commande,
     get_commande_owned,
+    get_owned_ligne,
     recompute_commande_total,
     release_ligne_reservation,
     release_stock,
@@ -38,12 +38,12 @@ commande_crud = CrudBase[models.Commande](models.Commande, "id_commande")
 
 
 @router.get("/commandes", response_model=list[CommandeRead])
-def list_commandes(db: Session = Depends(get_db), current_user=Depends(get_current_user)):
+def list_commandes(db: DbSession, current_user: CurrentUser):
     return db.query(models.Commande).filter(models.Commande.id_utilisateur == current_user.id_utilisateur).all()
 
 
 @router.get("/commandes/{id_commande}", response_model=CommandeRead)
-def get_commande(id_commande: int, db: Session = Depends(get_db), current_user=Depends(get_current_user)):
+def get_commande(id_commande: int, db: DbSession, current_user: CurrentUser):
     cleanup_expired_carts(db)
     obj = get_commande_owned(db, id_commande, int(current_user.id_utilisateur))
     if obj is None:
@@ -52,7 +52,7 @@ def get_commande(id_commande: int, db: Session = Depends(get_db), current_user=D
 
 
 @router.post("/commandes", response_model=CommandeRead, status_code=status.HTTP_201_CREATED)
-def create_commande(payload: CommandeCreate, db: Session = Depends(get_db), current_user=Depends(get_current_user)):
+def create_commande(payload: CommandeCreate, db: DbSession, current_user: CurrentUser):
     cleanup_expired_carts(db)
     shipping_method = (payload.shipping_method or "POST").upper()
     if shipping_method not in SHIPPING_FEES_CHF:
@@ -82,8 +82,8 @@ def create_commande(payload: CommandeCreate, db: Session = Depends(get_db), curr
 def update_commande(
     id_commande: int,
     payload: CommandeUpdate,
-    db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
+    db: DbSession,
+    current_user: CurrentUser,
 ):
     obj = get_commande_owned(db, id_commande, int(current_user.id_utilisateur))
     if obj is None:
@@ -107,7 +107,7 @@ def update_commande(
 
 
 @router.post("/commandes/{id_commande}/cancel", response_model=CommandeRead)
-def cancel_own_commande(id_commande: int, db: Session = Depends(get_db), current_user=Depends(get_current_user)):
+def cancel_own_commande(id_commande: int, db: DbSession, current_user: CurrentUser):
     """Customer-facing cancel: releases the cart reservation immediately instead
     of leaving stock reserved for the full 20-minute cart_expires_at window."""
     obj = get_commande_owned(db, id_commande, int(current_user.id_utilisateur))
@@ -120,7 +120,7 @@ def cancel_own_commande(id_commande: int, db: Session = Depends(get_db), current
 
 
 @router.delete("/commandes/{id_commande}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_commande(id_commande: int, db: Session = Depends(get_db), current_user=Depends(get_current_user)):
+def delete_commande(id_commande: int, db: DbSession, current_user: CurrentUser):
     obj = get_commande_owned(db, id_commande, int(current_user.id_utilisateur))
     if obj is None:
         raise HTTPException(status_code=404, detail="Commande not found")
@@ -137,7 +137,7 @@ def delete_commande(id_commande: int, db: Session = Depends(get_db), current_use
 
 
 @router.get("/lignes", response_model=list[LigneCommandeRead])
-def list_lignes(db: Session = Depends(get_db), current_user=Depends(get_current_user)):
+def list_lignes(db: DbSession, current_user: CurrentUser):
     return (
         db.query(models.LigneCommande)
         .join(models.Commande, models.LigneCommande.id_commande == models.Commande.id_commande)
@@ -147,23 +147,15 @@ def list_lignes(db: Session = Depends(get_db), current_user=Depends(get_current_
 
 
 @router.get("/lignes/{id_ligne_commande}", response_model=LigneCommandeRead)
-def get_ligne(id_ligne_commande: int, db: Session = Depends(get_db), current_user=Depends(get_current_user)):
-    obj = (
-        db.query(models.LigneCommande)
-        .join(models.Commande, models.LigneCommande.id_commande == models.Commande.id_commande)
-        .filter(
-            models.LigneCommande.id_ligne_commande == id_ligne_commande,
-            models.Commande.id_utilisateur == current_user.id_utilisateur,
-        )
-        .first()
-    )
+def get_ligne(id_ligne_commande: int, db: DbSession, current_user: CurrentUser):
+    obj = get_owned_ligne(db, id_ligne_commande, int(current_user.id_utilisateur))
     if obj is None:
         raise HTTPException(status_code=404, detail="LigneCommande not found")
     return obj
 
 
 @router.post("/lignes", response_model=LigneCommandeRead, status_code=status.HTTP_201_CREATED)
-def create_ligne(payload: LigneCommandeCreate, db: Session = Depends(get_db), current_user=Depends(get_current_user)):
+def create_ligne(payload: LigneCommandeCreate, db: DbSession, current_user: CurrentUser):
     cleanup_expired_carts(db)
     c = get_commande_owned(db, payload.id_commande, int(current_user.id_utilisateur))
     if c is None:
@@ -213,18 +205,10 @@ def create_ligne(payload: LigneCommandeCreate, db: Session = Depends(get_db), cu
 def update_ligne(
     id_ligne_commande: int,
     payload: LigneCommandeUpdate,
-    db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
+    db: DbSession,
+    current_user: CurrentUser,
 ):
-    obj = (
-        db.query(models.LigneCommande)
-        .join(models.Commande, models.LigneCommande.id_commande == models.Commande.id_commande)
-        .filter(
-            models.LigneCommande.id_ligne_commande == id_ligne_commande,
-            models.Commande.id_utilisateur == current_user.id_utilisateur,
-        )
-        .first()
-    )
+    obj = get_owned_ligne(db, id_ligne_commande, int(current_user.id_utilisateur))
     if obj is None:
         raise HTTPException(status_code=404, detail="LigneCommande not found")
     parent = db.query(models.Commande).filter(models.Commande.id_commande == obj.id_commande).first()
@@ -258,16 +242,8 @@ def update_ligne(
 
 
 @router.delete("/lignes/{id_ligne_commande}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_ligne(id_ligne_commande: int, db: Session = Depends(get_db), current_user=Depends(get_current_user)):
-    obj = (
-        db.query(models.LigneCommande)
-        .join(models.Commande, models.LigneCommande.id_commande == models.Commande.id_commande)
-        .filter(
-            models.LigneCommande.id_ligne_commande == id_ligne_commande,
-            models.Commande.id_utilisateur == current_user.id_utilisateur,
-        )
-        .first()
-    )
+def delete_ligne(id_ligne_commande: int, db: DbSession, current_user: CurrentUser):
+    obj = get_owned_ligne(db, id_ligne_commande, int(current_user.id_utilisateur))
     if obj is None:
         raise HTTPException(status_code=404, detail="LigneCommande not found")
     ensure_commande_mutable(obj.commande)  # type: ignore[attr-defined]

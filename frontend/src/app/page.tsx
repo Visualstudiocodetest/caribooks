@@ -7,18 +7,28 @@ import { CatalogClient, type EtatItem } from '@/components/catalog/CatalogClient
 export const dynamic = 'force-dynamic'
 
 export default async function HomePage() {
-  const books = await listBooks().catch(() => [])
-  // One batched availability request instead of fetching the whole /stock/ list
-  // and reducing it here (the map is now computed server-side in a single query).
-  const availability = await getAvailabilityMap().catch(() => ({}) as Record<number, number>)
-  // Reference lists fetched server-side alongside books/availability, instead of
-  // a client-side waterfall after CatalogClient mounts.
-  const etatList = await listCatalog<EtatItem>('etat-usures').catch(() => [])
+  // These three calls are independent — run them in parallel rather than one
+  // after another. Sequential awaits used to triple the round-trip time to
+  // the backend, which was long enough on a cold/first request (before this
+  // process had a warm connection to the backend) to occasionally let one of
+  // them time out — and when it was `getAvailabilityMap`, every book got
+  // hidden (see below), which read as "no books on first load, fine after a
+  // reload" once the connection was warm.
+  const [booksResult, availabilityResult, etatList] = await Promise.all([
+    listBooks().catch(() => null),
+    getAvailabilityMap().catch(() => null),
+    listCatalog<EtatItem>('etat-usures').catch(() => []),
+  ])
+  const books = booksResult ?? []
+  const availability = availabilityResult ?? {}
 
   // Show only books with remaining stock. availability keys are numbers server-side
   // but arrive as string keys once JSON-serialized — index defensively.
   const availAt = (id: number) => availability[id] ?? (availability as Record<string, number>)[String(id)] ?? 0
-  const available = books.filter((b) => availAt(b.id_article) > 0)
+  // A failed availability fetch means "unknown", not "zero everywhere" — the
+  // old code couldn't tell the two apart, so any hiccup on this one request
+  // emptied the whole catalogue instead of just leaving stock badges off.
+  const available = availabilityResult ? books.filter((b) => availAt(b.id_article) > 0) : books
 
   return (
     <div style={{ display: 'grid', gap: 32 }}>

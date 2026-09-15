@@ -1,33 +1,34 @@
 'use client'
 
 import { useEffect, useState, useRef, useCallback } from 'react'
-import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { ApiError } from '@/services/api'
 import { createBook, getBookByIsbn } from '@/services/books'
 import { createScan } from '@/services/scans'
 import { listCatalog } from '@/services/catalog'
+import { listSources } from '@/services/stocks'
 import Image from 'next/image'
 import { lookupIsbn } from '@/services/openlibrary'
 import { fetchRemoteImage } from '@/services/images'
 import { cleanIsbn } from '@/lib/isbn'
 import { isExternalImage } from '@/lib/images'
 import { useBarcodeScanner } from '@/hooks/useBarcodeScanner'
-import type { BookRead } from '@/types/api'
+import type { BookRead, SourceStock } from '@/types/api'
 
 type EtatItem = { id_etat_usure: number; libelle: string }
 type TypeObjetItem = { id_type_objet: number; libelle: string; code?: string }
 
 export default function AdminNewBookPage() {
-  const router = useRouter()
   const [titre, setTitre] = useState('')
   const [isbn, setIsbn] = useState('')
   const [auteur, setAuteur] = useState('')
   const [prix, setPrix] = useState('')
   const [idEtat, setIdEtat] = useState('')
   const [idType, setIdType] = useState('')
+  const [idSource, setIdSource] = useState('')
   const [etatList, setEtatList] = useState<EtatItem[]>([])
   const [typeList, setTypeList] = useState<TypeObjetItem[]>([])
+  const [sourceList, setSourceList] = useState<SourceStock[]>([])
   const [imageLink, setImageLink] = useState('')
   const [description, setDescription] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -40,7 +41,39 @@ export default function AdminNewBookPage() {
   const [existingBook, setExistingBook] = useState<BookRead | null>(null)
   const [scanSaving, setScanSaving] = useState(false)
   const [scanSaved, setScanSaved] = useState<string | null>(null)
+  // Set right after a successful creation. Replaces the form with a
+  // confirmation + "add another book" screen instead of navigating away, so
+  // a volunteer scanning a whole box of books never leaves this page.
+  const [created, setCreated] = useState<BookRead | null>(null)
   const videoRef = useRef<HTMLVideoElement | null>(null)
+
+  function defaultTypeId(): string {
+    const def = typeList.find((t) => t.code === 'BOOK' || (t.libelle || '').toLowerCase() === 'livre')
+    return def ? String(def.id_type_objet) : ''
+  }
+
+  // Last-added source (end of the list, ordered by id_source_stock ascending
+  // by the backend) is the one most likely to still be in active use — pre-select it.
+  function defaultSourceId(): string {
+    const last = sourceList[sourceList.length - 1]
+    return last ? String(last.id_source_stock) : ''
+  }
+
+  function resetForm() {
+    setTitre('')
+    setIsbn('')
+    setAuteur('')
+    setPrix('')
+    setIdEtat('')
+    setIdType(defaultTypeId())
+    setIdSource(defaultSourceId())
+    setImageLink('')
+    setDescription('')
+    setError(null)
+    setExistingBook(null)
+    setScanSaved(null)
+    setCreated(null)
+  }
 
   async function autofill(isbnValue: string) {
     setError(null)
@@ -55,15 +88,15 @@ export default function AdminNewBookPage() {
       if (title) setTitre(title)
       const author = data.authors?.map((a) => a.name).filter(Boolean).join(', ')
       if (author) setAuteur(author)
+      // Preview the raw OpenLibrary cover URL immediately — <Image unoptimized>
+      // hotlinks it directly, no backend round trip needed just to show it.
+      // The actual download-and-store-locally step (fetchRemoteImage) only
+      // needs to happen once, at submit time (see onSubmit), which is also
+      // where it already runs. Doing it here too used to make every single
+      // scan wait ~1-2s for a full image transfer before the form even
+      // showed the title/author, on top of the OpenLibrary lookup itself.
       const cover = data.cover?.large || data.cover?.medium || data.cover?.small
-      if (cover) {
-        try {
-          const served = await fetchRemoteImage(cover)
-          setImageLink(served)
-        } catch {
-          setImageLink(cover)
-        }
-      }
+      if (cover) setImageLink(cover)
       const desc = typeof data.notes === 'string' ? data.notes : ''
       if (desc) setDescription(desc)
     } catch {
@@ -169,6 +202,17 @@ export default function AdminNewBookPage() {
       } catch {
         // ignore
       }
+      try {
+        const sourcesArr = await listSources()
+        setSourceList(sourcesArr)
+        // Pre-select the last (most recently added) source, per the volunteer
+        // workflow: new stock keeps arriving from whichever source was set up
+        // most recently, so that's the one most likely to be the right pick.
+        const lastSource = sourcesArr[sourcesArr.length - 1]
+        if (lastSource && !idSource) setIdSource(String(lastSource.id_source_stock))
+      } catch {
+        // ignore
+      }
     }
     void loadLists()
   }, [])
@@ -209,7 +253,7 @@ export default function AdminNewBookPage() {
           // ignore fetch errors; backend will try to download on create
         }
       }
-      const created = await createBook({
+      const createdBook = await createBook({
         id_type_objet: Number(idType),
         id_etat_usure: Number(idEtat),
         titre,
@@ -222,8 +266,9 @@ export default function AdminNewBookPage() {
         image_link: finalImage || null,
         prix_chf: prixNum,
         actif: true,
+        id_source_stock: idSource ? Number(idSource) : undefined,
       })
-      router.push(`/admin/books/${created.id_article}`)
+      setCreated(createdBook)
     } catch (e) {
       const err = e as unknown
       setError(err instanceof ApiError ? err.message : 'Création impossible')
@@ -237,7 +282,36 @@ export default function AdminNewBookPage() {
       <div className="content-center">
         <h1 style={{ margin: 0 }}>Ajouter un livre</h1>
 
-        {existingBook ? (
+        {created ? (
+          <div className="card cardPadding" style={{ display: 'grid', gap: 12 }}>
+            <div className="banner-success">Livre ajouté au catalogue.</div>
+            <div style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
+              {created.image_link ? (
+                <Image
+                  src={created.image_link}
+                  alt={created.titre}
+                  width={64}
+                  height={88}
+                  style={{ objectFit: 'cover', borderRadius: 10, border: '1px solid var(--color-border)' }}
+                  unoptimized={isExternalImage(created.image_link)}
+                />
+              ) : (
+                <div className="card" style={{ width: 64, height: 88 }} />
+              )}
+              <div style={{ flex: 1 }}>
+                <div style={{ fontWeight: 900 }}>{created.titre}</div>
+                <div className="muted">ISBN: {created.isbn}</div>
+                <div className="muted">Prix: CHF {created.prix_chf.toFixed(2)}</div>
+              </div>
+              <Link className="btn" href={`/admin/books/${created.id_article}`}>
+                Voir la fiche
+              </Link>
+            </div>
+            <button className="btn btnPrimary" type="button" onClick={resetForm}>
+              Ajouter un nouveau livre
+            </button>
+          </div>
+        ) : existingBook ? (
           <div className="card cardPadding" style={{ display: 'grid', gap: 12 }}>
             <div className="muted">Ce livre est déjà au catalogue — inutile de le recréer.</div>
             <div style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
@@ -312,20 +386,36 @@ export default function AdminNewBookPage() {
           </div>
 
           <div className="two-up">
-            <select className="input" value={idType} onChange={(e) => setIdType(e.target.value)} required>
-              <option value="">Type d&apos;objet...</option>
-              {typeList.map((t) => (
-                <option key={t.id_type_objet} value={String(t.id_type_objet)}>
-                  {t.libelle}
+            <div>
+              {/* This page only ever creates a Livre (see createBook below), so
+                  the type is locked to "Livre" rather than offered as a free
+                  choice — picking e.g. "DVD" here would silently create a book
+                  row typed as something else. `idType` still resolves to the
+                  right id (see loadLists/defaultTypeId), it's just not editable. */}
+              <select className="input" value={idType} disabled required>
+                <option value={idType}>
+                  {typeList.find((t) => String(t.id_type_objet) === idType)?.libelle || 'Livre'}
                 </option>
-              ))}
-            </select>
+              </select>
+            </div>
 
             <select className="input" value={idEtat} onChange={(e) => setIdEtat(e.target.value)} required>
               <option value="">État</option>
               {etatList.map((e) => (
                 <option key={e.id_etat_usure} value={String(e.id_etat_usure)}>
                   {e.libelle}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div style={{ display: 'grid', gap: 6 }}>
+            <label style={{ fontWeight: 700 }}>Source de stock</label>
+            <select className="input" value={idSource} onChange={(e) => setIdSource(e.target.value)}>
+              <option value="">Source par défaut du serveur</option>
+              {sourceList.map((s) => (
+                <option key={s.id_source_stock} value={String(s.id_source_stock)}>
+                  {s.libelle}
                 </option>
               ))}
             </select>

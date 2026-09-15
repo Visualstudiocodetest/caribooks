@@ -175,7 +175,7 @@
 \author[Alexandre REY]{Alexandre REY}
 \institute[ESTIAM]{Titre Professionnel CDA --- Concepteur Développeur d'Applications\\[4pt]
 ESTIAM --- Promotion E3 DAD --- Encadrant : Mhand Boufala}
-\date{Juin 2026}
+\date{Septembre 2026}
 
 \begin{document}
 
@@ -196,7 +196,7 @@ ESTIAM --- Promotion E3 DAD --- Encadrant : Mhand Boufala}
     \end{tikzpicture}\\[12pt]
     {\color{white!85}\normalsize Titre Professionnel \textbf{CDA} --- Concepteur Développeur d'Applications}\\[18pt]
     {\color{white}\large\textbf{Alexandre REY}}\\[3pt]
-    {\color{white!70}\small ESTIAM --- E3 DAD \quad\textbullet\quad Encadrant : Mhand Boufala \quad\textbullet\quad Juin 2026}
+    {\color{white!70}\small ESTIAM --- E3 DAD \quad\textbullet\quad Encadrant : Mhand Boufala \quad\textbullet\quad Septembre 2026}
   \end{center}
 \end{frame}
 
@@ -302,7 +302,7 @@ ESTIAM --- Promotion E3 DAD --- Encadrant : Mhand Boufala}
   \end{columns}
 \end{frame}
 
-\section{État de l\textquotesingle{}art et choix technique}
+\section{Solutions existantes et choix technique}
 
 \begin{frame}{Solutions existantes -- Pourquoi développer sur mesure ?}
   \begin{center}
@@ -370,32 +370,30 @@ ESTIAM --- Promotion E3 DAD --- Encadrant : Mhand Boufala}
 
 \section{Gestion de projet}
 
-\begin{frame}{Gestion de projet --- Scrum simplifié \& environnement}
+\begin{frame}{Gestion de projet --- Kanban en continu \& environnement}
   \begin{columns}[T]
     \column{0.42\textwidth}
-    \begin{block}{Méthodologie Agile Scrum}
+    \begin{block}{Méthodologie Agile Kanban}
       \begin{itemize}\small
-        \item \textbf{6 sprints} de 2 semaines, \textbf{17h--20h}
+        \item \textbf{Flux continu}, soirées de dev \textbf{17h--20h}
         \item Suivi : \textbf{Microsoft Planner} (Kanban)
         \item \textbf{Product Owner} : bénévole Caritas
-        \item Démo en fin de chaque sprint
+        \item Démos au fil de l'avancement
       \end{itemize}
     \end{block}
     \vspace{5pt}
     \begin{center}
     \begin{tikzpicture}[every node/.style={font=\tiny}]
       \node[tag,fill=myblue,minimum width=5.4cm,text width=5.0cm,align=left]
-        at (0, 0.00) {\textbf{Sprint 1} \; Env. GitHub/CI -- BDD -- Modélisation};
+        at (0, 0.00) {\textbf{Fondations} \; Env. GitHub/CI -- BDD -- Modélisation};
       \node[tag,fill=myblue,minimum width=5.4cm,text width=5.0cm,align=left]
-        at (0,-0.54) {\textbf{Sprint 2} \; Authentification JWT -- Rôles};
+        at (0,-0.54) {\textbf{Cœur fonctionnel} \; Auth -- Paiement -- Back-office v1};
       \node[tag,fill=myblue,minimum width=5.4cm,text width=5.0cm,align=left]
-        at (0,-1.08) {\textbf{Sprint 3} \; Scan ISBN -- API OpenLibrary};
+        at (0,-1.08) {\textbf{Fiabilisation \& sécurité} \; Durcissement -- Refactor -- CI};
       \node[tag,fill=myblue,minimum width=5.4cm,text width=5.0cm,align=left]
-        at (0,-1.62) {\textbf{Sprint 4} \; Catalogue -- Filtres -- Fiche livre};
-      \node[tag,fill=myblue,minimum width=5.4cm,text width=5.0cm,align=left]
-        at (0,-2.16) {\textbf{Sprint 5} \; PostFinance -- Tunnel paiement};
+        at (0,-1.62) {\textbf{Consolidation admin} \; Statuts commande -- Nettoyage};
       \node[tag,fill=mysuccess,minimum width=5.4cm,text width=5.0cm,align=left]
-        at (0,-2.70) {\textbf{Sprint 6} \; Back-office -- Tests -- Déploiement};
+        at (0,-2.16) {\textbf{Documentation \& certification} \; Dossier CDA -- Diagrammes -- Mémoire};
     \end{tikzpicture}
     \end{center}
     \column{0.55\textwidth}
@@ -411,13 +409,13 @@ ESTIAM --- Promotion E3 DAD --- Encadrant : Mhand Boufala}
     \vspace{5pt}
     \begin{exampleblock}{\small Adapté au projet}
       \begin{itemize}\small
-        \item Configuré dès le sprint 1
+        \item Configuré dès la phase 1
         \item \texttt{startapp.sh} : backend + frontend en une commande
       \end{itemize}
     \end{exampleblock}
     \vspace{5pt}
     \begin{center}
-    \badgegreen{6/6 sprints livrés}\quad\badge{Déployé en ligne}
+    \badgegreen{5/5 phases livrées}\quad\badge{Déployé en ligne}
     \end{center}
   \end{columns}
 \end{frame}
@@ -767,10 +765,8 @@ def _lock_stock_rows(db, ids_article):
     \vspace{4pt}
     \begin{alertblock}{\small Qu'arrive-t-il si un client consulte la commande d'un autre ?}
       \begin{itemize}\small
-        \item Réponse : \textbf{404}, comme si elle n'existait pas
-        \item Non-admin $\rightarrow$ \texttt{/orders/admin/*} : \textbf{403}
-        \item Vérifié par un test dédié, \texttt{test\_orders\_cross\_user\_isolation}
-      \end{itemize}
+        \item\textbf{404}, comme si elle n'existait pas
+        \item Non-admin $\rightarrow$ \texttt{/orders/admin/*} : \textbf{403}      \end{itemize}
     \end{alertblock}
     \column{0.54\textwidth}
     \begin{center}
@@ -779,46 +775,47 @@ def _lock_stock_rows(db, ids_article):
   \end{columns}
 \end{frame}
 
-\begin{frame}{Difficultés rencontrées --- ce que j'ai appris en le faisant seul}
-  \begin{itemize}\small
-    \item \textbf{Backend Express.js $\rightarrow$ FastAPI} --- robustesse et validation automatique
-    \item \textbf{Scan code-barres} --- latence et reconnaissance insuffisantes, algorithme revu
-    \item \textbf{Paiement Payrexx $\rightarrow$ PostFinance} --- sandbox sans CB réelle
-    \item \textbf{Gestion du périmètre} --- demandes récurrentes (favoris, chat) reportées au backlog
-    \item \textbf{Formation + projet perso} --- développement en soirée, 3 j/semaine
-  \end{itemize}
-  \vspace{6pt}
-  \begin{exampleblock}{\small Gestion du commanditaire}
-    \begin{itemize}\small
-      \item Commanditaire qui redemande sans cesse de nouvelles fonctionnalités
-      \item Chaque demande $\rightarrow$ backlog, jamais le sprint en cours
-      \item Le MVP restait la seule priorité contractuelle
-    \end{itemize}
-  \end{exampleblock}
-\end{frame}
-
 \section{Cybersécurité et qualité}
 
-\begin{frame}{Cybersécurité --- Mesures implémentées (OWASP Top 10)}
-  \begin{center}
-  \small
-  \renewcommand{\arraystretch}{1.35}
-  \begin{tabular}{@{}p{3.8cm}p{3.4cm}p{4.2cm}@{}}
-    \toprule
-    \textbf{Menace / Risque} & \textbf{Mesure implémentée} & \textbf{Technologie} \\
-    \midrule
-    Injection SQL               & Requêtes paramétrées       & SQLAlchemy ORM \\
-    Mots de passe compromis     & Hashage adaptatif (cost=12) & bcrypt / passlib \\
-    Accès non autorisé          & Auth obligatoire routes     & JWT + HTTPBearer \\
-    Élévation de privilèges     & Contrôle rôles strict       & \texttt{require\_admin} FastAPI \\
-    Données invalides           & Validation schémas          & Pydantic + HTTPException \\
-    Token intercepté            & Expiration + TLS prod       & JWT \texttt{exp}, HTTPS \\
-    Secrets en clair            & Variables d'environnement   & \texttt{.env} + python-dotenv \\
-    Race condition stock        & Verrou SQL transactionnel   & \texttt{with\_for\_update()} \\
-    Non-conformité RGPD/nLPD    & Export + effacement + consentement & \texttt{/users/me}, bannière cookies \\
-    \bottomrule
-  \end{tabular}
-  \end{center}
+\begin{frame}{Difficultés rencontrées \& Cybersécurité --- OWASP Top 10}
+  \begin{columns}[T]
+    \column{0.46\textwidth}
+    \begin{block}{\scriptsize Ce que j'ai appris en le faisant seul}
+      \begin{itemize}\scriptsize
+        \item \textbf{Backend Express.js $\rightarrow$ FastAPI} --- robustesse et validation automatique
+        \item \textbf{Scan code-barres} --- latence/reconnaissance insuffisantes, algorithme revu
+        \item \textbf{Paiement Payrexx $\rightarrow$ PostFinance} --- sandbox sans CB réelle
+        \item \textbf{Gestion du périmètre} --- demandes récurrentes (favoris, chat) au backlog
+        \item \textbf{Formation + projet perso} --- développement en soirée, 3 j/semaine
+        \item \textbf{Vercel + \texttt{output: standalone}} --- assets 404 en prod, corrigé
+      \end{itemize}
+    \end{block}
+    \vspace{4pt}
+    \begin{exampleblock}{\scriptsize Gestion du commanditaire}
+      \scriptsize
+      Chaque nouvelle demande $\rightarrow$ backlog, jamais le travail en cours : le MVP
+      restait la seule priorité contractuelle.
+    \end{exampleblock}
+    \column{0.52\textwidth}
+    \tiny
+    \renewcommand{\arraystretch}{1.2}
+    \begin{tabular}{@{}p{2.5cm}p{3.0cm}@{}}
+      \toprule
+      \textbf{Risque} & \textbf{Mesure / Techno} \\
+      \midrule
+      Injection SQL               & SQLAlchemy ORM (paramétré) \\
+      Mots de passe compromis     & bcrypt / pwdlib (cost=12) \\
+      Accès non autorisé          & JWT + HTTPBearer \\
+      Élévation de privilèges     & \texttt{require\_admin} FastAPI \\
+      Données invalides           & Pydantic + HTTPException \\
+      Token intercepté            & JWT \texttt{exp} + TLS prod \\
+      Secrets en clair            & \texttt{.env} + python-dotenv \\
+      Race condition stock        & \texttt{with\_for\_update()} SQL \\
+      Non-conformité RGPD/nLPD    & \texttt{/users/me}, bannière cookies \\
+      Montant PostFinance falsifié & \texttt{amount\_matches\_commande} \\
+      \bottomrule
+    \end{tabular}
+  \end{columns}
 \end{frame}
 
 \begin{frame}{Cybersécurité --- Veille et mesures complémentaires}
@@ -872,7 +869,7 @@ def _lock_stock_rows(db, ids_article):
 
 \section{Tests et déploiement}
 
-\begin{frame}{Tests et couverture --- 99/99, 79\,\%}
+\begin{frame}{Tests et couverture --- 101/101, 78\,\%}
   \begin{columns}[T]
     \column{0.48\textwidth}
     \begin{block}{Stratégie de test à 3 niveaux}
@@ -885,13 +882,13 @@ def _lock_stock_rows(db, ids_article):
       \end{itemize}
     \end{block}
     \vspace{5pt}
-    \badgegreen{99 / 99 tests passants (68 pytest + 31 Vitest)}
+    \badgegreen{101 / 101 tests passants (70 pytest + 31 Vitest)}
     \vspace{5pt}
     \begin{alertblock}{\small Axes de renforcement (Phase 2)}
       \begin{itemize}\small
-        \item \texttt{image\_service} (36\,\%)
-        \item \texttt{order\_admin\_router} (40\,\%)
-        \item \texttt{user\_router} (51\,\%)
+        \item \texttt{image\_service} (41\,\%)
+        \item \texttt{order\_admin\_router} (38\,\%)
+        \item \texttt{user\_router} (47\,\%)
       \end{itemize}
     \end{alertblock}
     \column{0.50\textwidth}
@@ -905,18 +902,18 @@ def _lock_stock_rows(db, ids_article):
       \texttt{infrastructure/models.py}    & 100\,\% \\
       \texttt{presentation/schemas.py}     & 97\,\% \\
       \texttt{presentation/deps.py}        & 93\,\% \\
-      \texttt{catalog\_router.py}          & 89\,\% \\
+      \texttt{catalog\_router.py}          & 90\,\% \\
       \texttt{presentation/auth\_router.py}& 90\,\% \\
-      \texttt{order\_router.py}            & 81\,\% \\
-      \texttt{postfinance\_service.py}     & 79\,\% \\
-      \texttt{presentation/payment\_router.py}& 74\,\% \\
-      \texttt{presentation/user\_router.py}& 51\,\% \\
+      \texttt{order\_router.py}            & 80\,\% \\
+      \texttt{postfinance\_service.py}     & 82\,\% \\
+      \texttt{presentation/payment\_router.py}& 73\,\% \\
+      \texttt{presentation/user\_router.py}& 47\,\% \\
       \rowcolor{myaccent!20}
-      \texttt{presentation/order\_admin\_router.py}&40\,\% \\
+      \texttt{presentation/order\_admin\_router.py}&38\,\% \\
       \rowcolor{myaccent!20}
-      \texttt{services/image\_service.py}  & 36\,\% \\
+      \texttt{services/image\_service.py}  & 41\,\% \\
       \midrule
-      \textbf{TOTAL (2\,099 instructions)} & \textbf{79\,\%} \\
+      \textbf{TOTAL (2\,113 instructions)} & \textbf{78\,\%} \\
       \bottomrule
     \end{tabular}
     \end{center}
@@ -930,7 +927,7 @@ def _lock_stock_rows(db, ids_article):
       \begin{enumerate}\small
         \item Push sur branche \texttt{main}
         \item Lint \textbf{Ruff + ESLint} (0 erreur requis)
-        \item Exécution \textbf{pytest + Vitest} (99/99 requis)
+        \item Exécution \textbf{pytest + Vitest} (101/101 requis)
         \item \textit{Rolling deploy} SSH séquentiel vers \textbf{VM1} puis \textbf{VM2}
         \item Migrations SQL appliquées automatiquement
         \item \textbf{Vercel} auto-deploy frontend

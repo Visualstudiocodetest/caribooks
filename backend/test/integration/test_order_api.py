@@ -722,3 +722,96 @@ def test_orders_cross_user_isolation(client: TestClient, register_and_login, uni
     )
     assert r.status_code == 200, r.text
     assert r.json()["statut"] == "PAID"
+
+
+
+
+def test_refund_credits_stock_back_to_the_rows_it_was_actually_taken_from(
+    client: TestClient, register_and_login, uniq: str
+):
+    """A sale spanning two stock rows must be refunded back onto those exact
+    rows in their original amounts -- not dumped entirely onto whichever row
+    happens to be first for the article.
+
+    Regression test for a real bug found in review: refund_commande used to
+    credit the *whole* refunded quantity to a single stock row. The total
+    available-for-sale count was still correct (it's a plain sum across
+    rows), but the per-source breakdown drifted with every refund. Fixed via
+    StockMouvement, which finalize_commande now writes (only for the
+    quantity it actually deducts from quantite_disponible -- see below) and
+    refund_commande consumes to reverse the sale precisely.
+
+    Exercised at the service level, bypassing reserve_stock/create_ligne:
+    finalize_commande only ever deducts quantite_disponible for whatever a
+    ligne's prior reservation didn't already cover (quantite_reservee simply
+    releases back to 0 for the covered part -- see
+    test_postfinance_webhook_finalizes_and_is_idempotent, which asserts
+    quantite_disponible is untouched in that case). Building the ligne
+    directly, with quantite_reservee left at 0 on both stock rows, forces
+    that fallback path so this test observes a real quantite_disponible
+    split across two rows.
+    """
+    from infrastructure import models
+    from infrastructure.db import SessionLocal
+    from services import order_service
+
+    article_id = _make_article(client, register_and_login(f"refund_admin_{uniq}@example.com", role="admin"), uniq, prix_chf=15.0)
+
+    db = SessionLocal()
+    try:
+        source_a = models.SourceStock(libelle=f"RefundSrcA_{uniq}", type_source="WAREHOUSE")
+        source_b = models.SourceStock(libelle=f"RefundSrcB_{uniq}", type_source="WAREHOUSE")
+        db.add_all([source_a, source_b])
+        db.flush()
+        stock_a = models.Stock(id_article=article_id, id_source_stock=source_a.id_source_stock, quantite_disponible=1, quantite_reservee=0)
+        stock_b = models.Stock(id_article=article_id, id_source_stock=source_b.id_source_stock, quantite_disponible=5, quantite_reservee=0)
+        db.add_all([stock_a, stock_b])
+
+        user = db.query(models.Utilisateur).filter(models.Utilisateur.email == f"refund_admin_{uniq}@example.com").first()
+        commande = models.Commande(
+            id_utilisateur=user.id_utilisateur,
+            numero_commande=f"CMD_REFUND_{uniq}",
+            statut="CREATED",
+            montant_total_chf=45.0,
+            shipping_method="POST",
+            frais_port_chf=9.0,
+        )
+        db.add(commande)
+        db.flush()
+        # quantite=3 against two rows holding 1 and 5, both fully unreserved:
+        # finalize's fallback loop must take 1 from A (depleting it) and 2 from B.
+        ligne = models.LigneCommande(id_commande=commande.id_commande, id_article=article_id, quantite=3, prix_unitaire_chf=15.0)
+        db.add(ligne)
+        db.commit()
+
+        id_stock_a, id_stock_b = stock_a.id_stock, stock_b.id_stock
+        id_commande = commande.id_commande
+
+        order_service.finalize_commande(db, id_commande)
+        db.commit()
+
+        def disponible(id_stock: int) -> int:
+            return db.query(models.Stock).filter(models.Stock.id_stock == id_stock).first().quantite_disponible
+
+        assert disponible(id_stock_a) == 0
+        assert disponible(id_stock_b) == 3
+
+        mouvements = db.query(models.StockMouvement).filter(
+            models.StockMouvement.id_ligne_commande == ligne.id_ligne_commande
+        ).all()
+        assert {(m.id_stock, m.quantite) for m in mouvements} == {(id_stock_a, 1), (id_stock_b, 2)}
+
+        order_service.refund_commande(db, id_commande)
+        db.commit()
+
+        # Exact reversal: each row is back to its original quantity, not the
+        # whole qty=3 dumped onto row A (the old bug).
+        assert disponible(id_stock_a) == 1
+        assert disponible(id_stock_b) == 5
+
+        # Consumed: no leftover mouvement rows once reversed.
+        assert db.query(models.StockMouvement).filter(
+            models.StockMouvement.id_ligne_commande == ligne.id_ligne_commande
+        ).count() == 0
+    finally:
+        db.close()

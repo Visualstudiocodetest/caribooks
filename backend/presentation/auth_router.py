@@ -1,12 +1,11 @@
 import os
 
 import httpx
-from fastapi import APIRouter, Depends, HTTPException, Request, status
-from sqlalchemy.orm import Session
+from fastapi import APIRouter, HTTPException, Request, status
 
 from infrastructure import crud_user
 from presentation.auth_schemas import GoogleAuthRequest, LoginRequest, Token, UserCreate, UserRead
-from presentation.deps import ENVIRONMENT, SECRET_KEY, get_db
+from presentation.deps import ENVIRONMENT, SECRET_KEY, DbSession
 from services.jwt_service import create_access_token
 from services.rate_limit import check_rate_limit, reset_rate_limit
 
@@ -16,7 +15,7 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 
 
 @router.post("/register", response_model=UserRead, status_code=status.HTTP_201_CREATED)
-def register(user_in: UserCreate, request: Request, db: Session = Depends(get_db)):
+def register(user_in: UserCreate, request: Request, db: DbSession):
     client_host = request.client.host if request.client else "unknown"
     # 5 registrations / 10 minutes per client — bounds automated account creation
     # and email-enumeration probing (the 400 below reveals whether an email exists).
@@ -41,7 +40,7 @@ def register(user_in: UserCreate, request: Request, db: Session = Depends(get_db
 
 
 @router.post("/token", response_model=Token)
-def login_for_access_token(payload: LoginRequest, db: Session = Depends(get_db)):
+def login_for_access_token(payload: LoginRequest, db: DbSession):
     rate_limit_key = f"token:{str(payload.username).strip().lower()}"
     # 10 attempts / 5 minutes per account — blocks password-guessing/credential
     # stuffing against a known email without depending on client IP (which is
@@ -70,7 +69,7 @@ else:
 
 
 @router.post("/google", response_model=Token)
-def google_auth(payload: GoogleAuthRequest, request: Request, db: Session = Depends(get_db)):
+def google_auth(payload: GoogleAuthRequest, request: Request, db: DbSession):
     """Verify a Google ID token (credential from Sign In With Google) and return a JWT."""
     client_host = request.client.host if request.client else "unknown"
     # 20 attempts / 5 minutes per client — bounds hammering of the outbound

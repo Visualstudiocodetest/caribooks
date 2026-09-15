@@ -177,6 +177,35 @@ class LigneCommande(Base):
 
     commande = relationship("Commande", back_populates="lignes")
     article = relationship("Article", back_populates="lignes_commande")
+    mouvements = relationship("StockMouvement", back_populates="ligne_commande", cascade="all, delete-orphan")
+
+
+class StockMouvement(Base):
+    """Records exactly which Stock row(s), and how much of each, a paid ligne's
+    quantity was taken from — created by order_service.finalize_commande.
+
+    Without this, a refund has no way to know where the sold stock actually came
+    from and can only guess (the previous behaviour: credit the whole refund to
+    one arbitrary row). refund_commande consumes (and deletes) these rows to
+    credit quantite_disponible back on the exact rows it was deducted from.
+    """
+    __tablename__ = "stock_mouvement"
+    id_mouvement = Column(BigInteger, primary_key=True, autoincrement=True)
+    id_ligne_commande = Column(
+        BigInteger,
+        ForeignKey("ligne_commande.id_ligne_commande", ondelete="CASCADE", onupdate="CASCADE"),
+        nullable=False,
+    )
+    id_stock = Column(
+        BigInteger, ForeignKey("stock.id_stock", ondelete="RESTRICT", onupdate="CASCADE"), nullable=False
+    )
+    quantite = Column(Integer, nullable=False)
+    date_mouvement = Column(TIMESTAMP, nullable=False, server_default=func.now())
+
+    __table_args__ = (CheckConstraint("quantite > 0", name="ck_stock_mouvement_qte_pos"),)
+
+    ligne_commande = relationship("LigneCommande", back_populates="mouvements")
+    stock = relationship("Stock")
 
 
 class Paiement(Base):

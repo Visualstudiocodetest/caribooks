@@ -3,8 +3,8 @@ mysql-connector-python
 fastapi[standard]==0.136.1
 pytest
 python-dotenv
-python-jose[cryptography]>=3.3.0
-passlib[bcrypt]
+pyjwt>=2.10.0
+pwdlib[bcrypt]>=0.3.0
 httpx
 email-validator
 Pillow
