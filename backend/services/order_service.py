@@ -7,6 +7,7 @@ stock reservation, cart expiry, order totals, and finalization/refund/cancel.
 
 from __future__ import annotations
 
+import logging
 from decimal import ROUND_HALF_UP, Decimal
 from typing import Any
 
@@ -16,6 +17,8 @@ from sqlalchemy.orm import Session
 from sqlalchemy.sql import func
 
 from infrastructure import models
+
+logger = logging.getLogger("caribooks.orders")
 
 
 def _chf(value) -> float:
@@ -313,7 +316,13 @@ def finalize_commande(db: Session, id_commande: int) -> None:
             # nothing to do if no stock rows exist
             continue
         remaining = ligne.quantite
-        # first reduce reserved counts where possible
+        # first reduce reserved counts where possible -- this only releases the
+        # cart-time hold (quantite_reservee), it does NOT touch
+        # quantite_disponible (see the "quantite_disponible is untouched"
+        # tests below): the unit was never subtracted from the physical count
+        # in the first place, so there is nothing here for a refund to give
+        # back. Only the fallback loop below actually removes physical stock,
+        # which is why only *that* gets recorded as a StockMouvement.
         for s in stocks:
             if remaining <= 0:  # type: ignore
                 break
@@ -322,7 +331,10 @@ def finalize_commande(db: Session, id_commande: int) -> None:
             if take_from_reserve > 0:  # type: ignore
                 s.quantite_reservee = reserve - take_from_reserve  # type: ignore
                 remaining -= take_from_reserve
-        # if still remaining, deduct from available quantities
+        # if still remaining (not fully covered by an existing reservation),
+        # deduct from available quantities -- this is a real, permanent
+        # reduction of physical stock, so record exactly which row(s) and how
+        # much, so a refund can reverse precisely this.
         for s in stocks:
             if remaining <= 0:  # type: ignore
                 break
@@ -332,6 +344,7 @@ def finalize_commande(db: Session, id_commande: int) -> None:
                 continue
             s.quantite_disponible = avail - take  # type: ignore
             remaining -= take
+            db.add(models.StockMouvement(id_ligne_commande=ligne.id_ligne_commande, id_stock=s.id_stock, quantite=take))
     # mark articles inactive if no stock left (only those in this order)
     art_ids = [ligne.id_article for ligne in lignes]
     for aid in art_ids:
@@ -353,19 +366,58 @@ def finalize_commande(db: Session, id_commande: int) -> None:
 
 
 def refund_commande(db: Session, id_commande: int) -> None:
-    # When refunding, return sold quantities back to stock
+    """Return sold stock back to availability.
+
+    Prefers an exact reversal via the StockMouvement rows finalize_commande
+    wrote: each one says precisely which Stock row (and how much) a ligne's
+    sale came from, so quantite_disponible is credited back there — not to
+    whichever row happens to be first for the article. The previous behaviour
+    credited the *entire* refund to a single arbitrary row: the total
+    available-for-sale count stayed correct either way (it's a plain sum),
+    but which source_stock the stock was attributed to drifted with every
+    refund.
+
+    Falls back to that old "credit the first row" behaviour only for a ligne
+    with no recorded mouvements (an order paid before this tracking existed) —
+    logged, since it's the imprecise path.
+    """
     lignes = db.query(models.LigneCommande).filter(models.LigneCommande.id_commande == id_commande).all()
     for ligne in lignes:
-        stocks = _lock_stock_rows(db, int(ligne.id_article))  # type: ignore[arg-type]
-        if not stocks:  # type: ignore
+        mouvements = (
+            db.query(models.StockMouvement)
+            .filter(models.StockMouvement.id_ligne_commande == ligne.id_ligne_commande)
+            .all()
+        )
+        if mouvements:
+            stock_ids = [int(m.id_stock) for m in mouvements]  # type: ignore[arg-type]
+            stocks_by_id = {
+                int(s.id_stock): s  # type: ignore[arg-type]
+                for s in db.query(models.Stock)
+                .filter(models.Stock.id_stock.in_(stock_ids))
+                .order_by(models.Stock.id_stock.asc())
+                .with_for_update()
+                .all()
+            }
+            for m in mouvements:
+                s = stocks_by_id.get(int(m.id_stock))  # type: ignore[arg-type]
+                if s is not None:
+                    s.quantite_disponible = (s.quantite_disponible or 0) + m.quantite  # type: ignore[operator]
+                db.delete(m)
             continue
-        remaining = ligne.quantite
-        # add back to first stock rows
-        for s in stocks:
-            if remaining <= 0:  # type: ignore
-                break
-            s.quantite_disponible = (s.quantite_disponible or 0) + remaining  # type: ignore
-            remaining = 0
+
+        # No tracked mouvement for this ligne (paid before StockMouvement
+        # existed) -- best-effort fallback, same behaviour as before.
+        stocks = _lock_stock_rows(db, int(ligne.id_article))  # type: ignore[arg-type]
+        if not stocks:
+            continue
+        logger.warning(
+            "refund_commande: no StockMouvement for ligne=%s (article=%s) -- crediting "
+            "qty=%s to a single row (pre-tracking order, best-effort fallback)",
+            ligne.id_ligne_commande,
+            ligne.id_article,
+            ligne.quantite,
+        )
+        stocks[0].quantite_disponible = (stocks[0].quantite_disponible or 0) + ligne.quantite  # type: ignore[operator]
     for aid in {ligne.id_article for ligne in lignes}:
         _reactivate_article_if_available(db, int(aid))  # type: ignore[arg-type]
 
