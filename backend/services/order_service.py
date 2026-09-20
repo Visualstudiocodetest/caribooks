@@ -40,6 +40,11 @@ ALL_STATUSES = OPEN_STATUSES | PAID_STATUSES | TERMINAL_STATUSES
 
 PAID_NOT_ADVANCED_STATUSES = {"PAID", "CAPTURED", "COMPLETED"}
 
+# Orders that still require follow-up (payment, shipping, delivery) — an account
+# cannot be anonymized while one of its orders is in one of these states, since
+# doing so would sever the paper trail before the transaction is actually closed.
+STATUSES_BLOCKING_ACCOUNT_DELETION = ALL_STATUSES - TERMINAL_STATUSES - {"FINISHED"}
+
 
 def generate_numero_commande(db: Session) -> str:
     """Server-side, collision-resistant order number: CMD-YYYYMMDD-XXXXXXXX.
@@ -70,6 +75,21 @@ def get_commande_owned(db: Session, id_commande: int, id_utilisateur: int) -> mo
         db.query(models.Commande)
         .filter(models.Commande.id_commande == id_commande, models.Commande.id_utilisateur == id_utilisateur)
         .first()
+    )
+
+
+def has_orders_blocking_deletion(db: Session, id_utilisateur: int) -> bool:
+    """True if the user has an order still in progress (unpaid, paid-not-yet-
+    finished, or shipping) — account anonymization must be refused until those
+    reach a terminal state (FINISHED/CANCELLED/REFUNDED)."""
+    return (
+        db.query(models.Commande.id_commande)
+        .filter(
+            models.Commande.id_utilisateur == id_utilisateur,
+            models.Commande.statut.in_(list(STATUSES_BLOCKING_ACCOUNT_DELETION)),
+        )
+        .first()
+        is not None
     )
 
 

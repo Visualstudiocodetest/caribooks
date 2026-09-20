@@ -140,7 +140,7 @@ SF-05 & Panier avec réservation temporaire du stock & Livre jamais vendu deux f
 SF-06 & Paiement CHF via PostFinance & Paiement réussi en sandbox déclenche le statut \og payée \fg{}. \\
 SF-07 & Livraison restreinte à la Suisse & Seuls deux modes de livraison sont proposés (envoi postal, retrait en magasin), tous deux réservés au territoire suisse ; l'adresse de facturation n'est pas validée côté serveur (limite connue, voir recette). \\
 SF-08 & Back-office bénévole & Gestion d'une annonce sans assistance technique. \\
-SF-09 & Conformité RGPD / nLPD & Demande d'effacement supprime effectivement les données. \\
+SF-09 & Conformité RGPD / nLPD & Demande d'effacement anonymise effectivement les données personnelles ; refusée (409) tant qu'une commande de l'utilisateur n'a pas atteint un statut terminal (payée/expédiée en cours exclue), pour préserver l'obligation de conservation comptable. \\
 SF-10 & Accessibilité de base & Parcours critiques utilisables au clavier. \\
 \bottomrule
 \caption{Spécifications fonctionnelles et critères d'acceptation}

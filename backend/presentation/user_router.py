@@ -6,6 +6,7 @@ from infrastructure import crud_user, models
 from infrastructure.crud_base import CrudBase
 from presentation.auth_schemas import UserRead, UserUpdate
 from presentation.deps import AdminUser, CurrentUser, DbSession
+from services import order_service
 
 router = APIRouter(prefix="/users", tags=["users"])
 
@@ -116,20 +117,16 @@ def delete_me(db: DbSession, current_user: CurrentUser):
     conservation des justificatifs comptables (cf. politique de confidentialite).
     """
     u = current_user
-    uid = int(u.id_utilisateur)
-    u.nom = "Compte supprime"
-    u.prenom = ""
-    u.email = f"deleted-{uid}@anonymized.invalid"
-    u.mot_de_passe_hash = None
-    u.google_id = None
-    u.billing_address_line1 = None
-    u.billing_address_line2 = None
-    u.billing_postal_code = None
-    u.billing_city = None
-    u.billing_country = None
-    u.billing_phone = None
-    db.add(u)
-    db.commit()
+    if order_service.has_orders_blocking_deletion(db, int(u.id_utilisateur)):
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                "Impossible de supprimer le compte : une ou plusieurs commandes sont "
+                "encore en cours (non payees, en preparation ou en livraison). "
+                "Attendez qu'elles soient finalisees, annulees ou remboursees."
+            ),
+        )
+    crud_user.anonymize_user(db, u)
     return None
 
 
@@ -143,10 +140,24 @@ def get_user(id_utilisateur: int, db: DbSession, _admin: AdminUser):
 
 @router.delete("/{id_utilisateur}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_user(id_utilisateur: int, db: DbSession, _admin: AdminUser):
+    """Anonymizes the target user (same rule and same effect as DELETE /users/me)
+    rather than hard-deleting the row: commande.id_utilisateur is ON DELETE
+    RESTRICT, so a real delete would fail with an unhandled DB error as soon as
+    the user has any order on record."""
     if int(_admin.id_utilisateur) == id_utilisateur:
         raise HTTPException(status_code=400, detail="Cannot delete your own account from the admin panel")
-    if not user_crud.delete(db, id_utilisateur):
+    u = user_crud.get(db, id_utilisateur)
+    if u is None:
         raise HTTPException(status_code=404, detail="User not found")
+    if order_service.has_orders_blocking_deletion(db, id_utilisateur):
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                "Impossible de supprimer cet utilisateur : une ou plusieurs commandes "
+                "sont encore en cours (non payees, en preparation ou en livraison)."
+            ),
+        )
+    crud_user.anonymize_user(db, u)
     return None
 
 @router.put("/{id_utilisateur}", response_model=UserRead)

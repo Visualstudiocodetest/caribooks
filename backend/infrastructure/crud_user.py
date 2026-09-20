@@ -103,6 +103,30 @@ def create_user(db: Session, user_data: dict) -> models.Utilisateur:
     return db_user
 
 
+def anonymize_user(db: Session, user: models.Utilisateur) -> models.Utilisateur:
+    """RGPD (art. 17) / nLPD — droit a l'effacement.
+
+    Scrubs personal data on the row but keeps it (and any commandes pointing
+    to it) so accounting justificatifs stay intact. Shared by self-deletion
+    and admin deletion so the two paths can't drift apart.
+    """
+    uid = int(user.id_utilisateur)
+    user.nom = "Compte supprime"
+    user.prenom = ""
+    user.email = f"deleted-{uid}@anonymized.invalid"
+    user.mot_de_passe_hash = None
+    user.google_id = None
+    user.billing_address_line1 = None
+    user.billing_address_line2 = None
+    user.billing_postal_code = None
+    user.billing_city = None
+    user.billing_country = None
+    user.billing_phone = None
+    db.add(user)
+    db.commit()
+    return user
+
+
 def update_user(db: Session, id_utilisateur: int, data: dict) -> Optional[models.Utilisateur]:
     user = db.query(models.Utilisateur).filter(models.Utilisateur.id_utilisateur == id_utilisateur).first()
     if user is None:

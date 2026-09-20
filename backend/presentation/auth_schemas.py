@@ -41,7 +41,12 @@ class UserRead(BaseModel):
     id_utilisateur: int
     nom: str
     prenom: str
-    email: EmailStr
+    # Plain str, not EmailStr: this is an output schema serializing values already
+    # persisted in the DB, and an anonymized account's placeholder address
+    # (deleted-<id>@anonymized.invalid) fails EmailStr's reserved-TLD check --
+    # re-validating a format on the way out (rather than only on write) would
+    # 500 the admin user list the moment any account gets deleted.
+    email: str
     role: str
     billing_address_line1: Optional[str] = None
     billing_address_line2: Optional[str] = None
