@@ -12,7 +12,11 @@ export function BookGrid({
   availability?: Record<number, number>
 }) {
   if (!books.length) {
-    return <div className="muted">Aucun livre pour le moment.</div>
+    return (
+      <div className="muted" role="status">
+        Aucun livre pour le moment.
+      </div>
+    )
   }
 
   return (

@@ -27,7 +27,7 @@ export function Header() {
             <Image src="/logo-caritas.jpg" alt="Caritas" width={40} height={40} style={{ borderRadius: 6 }} priority />
             <span>Caribooks</span>
           </Link>
-          <nav className="main-nav">
+          <nav className="main-nav" aria-label="Navigation principale">
             <Link className="muted" href="/">Catalogue</Link>
             {isAdmin ? <Link className="muted" href="/admin/books/new">Ajouter un livre</Link> : null}
             {isLoggedIn ? (
@@ -83,17 +83,18 @@ export function Header() {
 
           <button
             className="nav-toggle"
-            aria-label="Menu"
+            aria-label={open ? 'Fermer le menu de navigation' : 'Ouvrir le menu de navigation'}
             aria-expanded={open}
+            aria-controls="mobile-nav-menu"
             onClick={() => setOpen((s) => !s)}
             type="button"
           >
-            <span className="hamburger" />
+            <span className="hamburger" aria-hidden="true" />
           </button>
         </div>
       </div>
 
-      <div className={`mobile-nav ${open ? 'open' : ''}`}>
+      <nav id="mobile-nav-menu" className={`mobile-nav ${open ? 'open' : ''}`} aria-label="Navigation mobile">
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           <Link href="/" onClick={closeMenu}>Catalogue</Link>
           {isAdmin ? <Link href="/admin/books/new" onClick={closeMenu}>➕ Ajouter un livre</Link> : null}
@@ -140,7 +141,7 @@ export function Header() {
             <Link href="/login" onClick={closeMenu}>Se connecter</Link>
           )}
         </div>
-      </div>
+      </nav>
     </header>
   )
 }

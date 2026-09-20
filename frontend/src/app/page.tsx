@@ -43,7 +43,7 @@ export default async function HomePage() {
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <span style={{ fontSize: 36 }}>📚</span>
+          <span aria-hidden="true" style={{ fontSize: 36 }}>📚</span>
           <h1 style={{ margin: 0, color: '#1a3a2a', fontSize: 'clamp(1.5rem, 4vw, 2.2rem)' }}>
             Caribooks
           </h1>
@@ -83,7 +83,7 @@ export default async function HomePage() {
               className="card"
               style={{ padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12 }}
             >
-              <span style={{ fontSize: 22 }}>{icon}</span>
+              <span aria-hidden="true" style={{ fontSize: 22 }}>{icon}</span>
               <span style={{ fontSize: 14, fontWeight: 600 }}>{label}</span>
             </div>
           ))}

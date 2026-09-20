@@ -17,7 +17,7 @@ export default function ErrorPage({
 
   return (
     <div className="content-center">
-      <div className="card cardPadding" style={{ display: 'grid', gap: 12, justifyItems: 'start' }}>
+      <div className="card cardPadding" style={{ display: 'grid', gap: 12, justifyItems: 'start' }} role="alert">
         <h1 style={{ margin: 0 }}>Une erreur est survenue</h1>
         <p className="muted" style={{ margin: 0 }}>
           La page n&apos;a pas pu être affichée. Vous pouvez réessayer.

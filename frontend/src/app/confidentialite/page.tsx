@@ -47,8 +47,8 @@ export default function ConfidentialitePage() {
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
         <thead>
           <tr style={{ borderBottom: '1px solid var(--color-border)' }}>
-            <th style={{ textAlign: 'left', padding: '8px 4px' }}>Finalité</th>
-            <th style={{ textAlign: 'left', padding: '8px 4px' }}>Base légale (RGPD)</th>
+            <th scope="col" style={{ textAlign: 'left', padding: '8px 4px' }}>Finalité</th>
+            <th scope="col" style={{ textAlign: 'left', padding: '8px 4px' }}>Base légale (RGPD)</th>
           </tr>
         </thead>
         <tbody>

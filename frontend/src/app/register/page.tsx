@@ -68,6 +68,8 @@ function RegisterForm() {
               placeholder="Prénom"
               autoComplete="given-name"
               required
+              aria-describedby={error ? 'reg-error' : undefined}
+              aria-invalid={error ? true : undefined}
             />
           </div>
           <div>
@@ -80,6 +82,8 @@ function RegisterForm() {
               placeholder="Nom"
               autoComplete="family-name"
               required
+              aria-describedby={error ? 'reg-error' : undefined}
+              aria-invalid={error ? true : undefined}
             />
           </div>
         </div>
@@ -94,6 +98,7 @@ function RegisterForm() {
           autoComplete="email"
           required
           aria-describedby={error ? 'reg-error' : undefined}
+          aria-invalid={error ? true : undefined}
         />
         <label className="sr-only" htmlFor="reg-password">Mot de passe</label>
         <input
@@ -107,6 +112,7 @@ function RegisterForm() {
           minLength={6}
           required
           aria-describedby={error ? 'reg-error' : undefined}
+          aria-invalid={error ? true : undefined}
         />
         {error ? <div id="reg-error" className="banner-error" role="alert">{error}</div> : null}
         <button className="btn btnPrimary" type="submit" disabled={loading} style={{ width: '100%' }}>

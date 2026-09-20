@@ -49,32 +49,42 @@ export default function CartPage() {
             </div>
 
             <div className="card cardPadding">
-              <div style={{ fontWeight: 700, marginBottom: 8 }}>Livraison</div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
-                  <input
-                    type="radio"
-                    name="shipping"
-                    value="POST"
-                    checked={shippingMethod === 'POST'}
-                    onChange={() => setShippingMethod('POST')}
-                  />
-                  <span>Livraison par la Poste Suisse — <strong>{SHIPPING_FEES_CHF.POST.toFixed(2)} CHF</strong></span>
-                </label>
-                <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
-                  <input
-                    type="radio"
-                    name="shipping"
-                    value="CLICK_COLLECT"
-                    checked={shippingMethod === 'CLICK_COLLECT'}
-                    onChange={() => setShippingMethod('CLICK_COLLECT')}
-                  />
-                  <span>Retrait en magasin Caritas — <strong>{SHIPPING_FEES_CHF.CLICK_COLLECT.toFixed(2)} CHF</strong></span>
-                </label>
-              </div>
+              <fieldset style={{ border: 'none', margin: 0, padding: 0 }}>
+                <legend style={{ fontWeight: 700, marginBottom: 8, padding: 0, width: '100%' }}>Livraison</legend>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  <label htmlFor="shipping-post" style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
+                    <input
+                      id="shipping-post"
+                      type="radio"
+                      name="shipping"
+                      value="POST"
+                      checked={shippingMethod === 'POST'}
+                      onChange={() => setShippingMethod('POST')}
+                    />
+                    <span>Livraison par la Poste Suisse — <strong>{SHIPPING_FEES_CHF.POST.toFixed(2)} CHF</strong></span>
+                  </label>
+                  <label htmlFor="shipping-click-collect" style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
+                    <input
+                      id="shipping-click-collect"
+                      type="radio"
+                      name="shipping"
+                      value="CLICK_COLLECT"
+                      checked={shippingMethod === 'CLICK_COLLECT'}
+                      onChange={() => setShippingMethod('CLICK_COLLECT')}
+                    />
+                    <span>Retrait en magasin Caritas — <strong>{SHIPPING_FEES_CHF.CLICK_COLLECT.toFixed(2)} CHF</strong></span>
+                  </label>
+                </div>
+              </fieldset>
             </div>
 
-            <div className="card" style={{ padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div
+              className="card"
+              style={{ padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+              role="status"
+              aria-live="polite"
+              aria-label="Total du panier"
+            >
               <div>
                 <div style={{ fontWeight: 900 }}>Total à payer</div>
                 <div className="muted" style={{ fontSize: 13 }}>CHF · Livraison Suisse</div>

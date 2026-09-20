@@ -15,7 +15,7 @@ function BookCover({ src, titre }: { src: string | null | undefined; titre: stri
   if (!src || failed) {
     return (
       <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 4 }}>
-        <span style={{ fontSize: 32 }}>📖</span>
+        <span aria-hidden="true" style={{ fontSize: 32 }}>📖</span>
         <span style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.8)' }}>Pas d&apos;image</span>
       </div>
     )
@@ -23,7 +23,7 @@ function BookCover({ src, titre }: { src: string | null | undefined; titre: stri
 
   return (
     <div className="book-image-inner">
-      <Image src={src} alt={titre} fill style={{ objectFit: 'cover' }} sizes="(max-width: 640px) 45vw, 220px" unoptimized={isExternal} onError={() => setFailed(true)} />
+      <Image src={src} alt={`Couverture de ${titre}`} fill style={{ objectFit: 'cover' }} sizes="(max-width: 640px) 45vw, 220px" unoptimized={isExternal} onError={() => setFailed(true)} />
     </div>
   )
 }
@@ -52,20 +52,36 @@ export function BookCard({ book, available = null }: { book: BookRead; available
     setTimeout(() => setAdded(false), 1500)
   }
 
+  const href = `/books/${book.id_article}`
+
+  // The whole card used to be a single <Link> wrapping an interactive
+  // "add to cart" <button>, nesting an interactive element inside another —
+  // invalid markup that also confuses screen readers (which button/link is
+  // this?) and made the button's own click handler need
+  // preventDefault/stopPropagation to keep the outer link from firing.
+  // Splitting it into an image link + a title link (both keyboard-reachable,
+  // both going to the book page) with the button as a plain sibling fixes
+  // that while keeping the visual layout identical.
   return (
-    <Link href={`/books/${book.id_article}`} className="card book-card">
-      <div className="book-image-wrap">
+    <div className="card book-card">
+      <Link
+        href={href}
+        className="book-image-wrap"
+        aria-label={`Couverture du livre ${book.titre}${book.etat_libelle ? `, état : ${book.etat_libelle}` : ''}`}
+      >
         <BookCover src={book.image_link} titre={book.titre} />
         {book.etat_libelle ? (
           <div style={{ position: 'absolute', top: 8, left: 8, background: 'rgba(0,0,0,0.55)', color: 'white', fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 999 }}>
             {book.etat_libelle}
           </div>
         ) : null}
-      </div>
+      </Link>
 
       <div className="cardPadding" style={{ display: 'grid', gap: 6 }}>
         <div>
-          <div className="book-title" style={{ fontSize: 14 }}>{book.titre}</div>
+          <Link href={href} className="book-title" style={{ fontSize: 14, display: 'block', color: 'inherit' }}>
+            {book.titre}
+          </Link>
           <div className="muted book-author">{book.auteur || '—'}</div>
         </div>
         <div className="book-meta" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 6 }}>
@@ -74,6 +90,15 @@ export function BookCard({ book, available = null }: { book: BookRead; available
         <button
           onClick={handleAddToCart}
           disabled={isDisabled}
+          aria-label={
+            isSoldOut
+              ? `${book.titre} indisponible`
+              : atMax
+              ? `Quantité maximale atteinte pour ${book.titre}`
+              : inCart
+              ? `${book.titre} déjà dans le panier`
+              : `Ajouter ${book.titre} au panier`
+          }
           style={{
             marginTop: 2,
             width: '100%',
@@ -100,6 +125,6 @@ export function BookCard({ book, available = null }: { book: BookRead; available
             : '+ Ajouter au panier'}
         </button>
       </div>
-    </Link>
+    </div>
   )
 }

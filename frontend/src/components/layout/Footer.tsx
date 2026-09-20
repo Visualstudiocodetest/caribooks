@@ -10,7 +10,7 @@ export function Footer() {
         <div className="muted" suppressHydrationWarning>
           © {new Date().getFullYear()} Caribooks — Devise: CHF · Livraison: Suisse
         </div>
-        <div style={{ display: 'flex', gap: 16 }}>
+        <nav aria-label="Liens légaux" style={{ display: 'flex', gap: 16 }}>
           <Link href="/mentions-legales" className="muted" style={{ fontSize: '0.85rem' }}>
             Mentions légales
           </Link>
@@ -20,7 +20,7 @@ export function Footer() {
           <Link href="/confidentialite" className="muted" style={{ fontSize: '0.85rem' }}>
             Confidentialité
           </Link>
-        </div>
+        </nav>
       </div>
     </footer>
   )

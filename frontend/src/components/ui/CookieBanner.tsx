@@ -31,7 +31,7 @@ export function CookieBanner() {
 
   return (
     <div
-      role="dialog"
+      role="region"
       aria-label="Consentement aux cookies"
       style={{
         position: 'fixed',

@@ -41,8 +41,16 @@ export default function LocalRedirectPage() {
             {loading ? 'Envoi…' : 'Simuler paiement réussi'}
           </button>
           <div style={{ marginTop: 8 }}>
-            {ok === true ? <div className="banner-success">Webhook envoyé — paiement mis à jour.</div> : null}
-            {ok === false ? <div className="banner-error">Erreur : {err}</div> : null}
+            {ok === true ? (
+              <div className="banner-success" role="status">
+                Webhook envoyé — paiement mis à jour.
+              </div>
+            ) : null}
+            {ok === false ? (
+              <div className="banner-error" role="alert">
+                Erreur : {err}
+              </div>
+            ) : null}
           </div>
         </div>
       </div>

@@ -18,6 +18,15 @@ export function AddToCartButton(props: {
     (available !== null && available < 1) ||
     Boolean(existing && available !== null && existing.quantity >= available)
 
+  const label =
+    available !== null && available < 1
+      ? 'Indisponible'
+      : existing && available !== null && existing.quantity >= available
+      ? 'Quantité max'
+      : loading
+      ? 'Achat…'
+      : 'Acheter'
+
   return (
     <button
       type="button"
@@ -40,14 +49,9 @@ export function AddToCartButton(props: {
         }
       }}
       disabled={isDisabled}
+      aria-label={`${label} — ${props.titre}`}
     >
-      {available !== null && available < 1
-        ? 'Indisponible'
-        : existing && available !== null && existing.quantity >= available
-        ? 'Quantité max'
-        : loading
-        ? 'Achat…'
-        : 'Acheter'}
+      {label}
     </button>
   )
 }

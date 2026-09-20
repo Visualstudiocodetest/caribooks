@@ -12,6 +12,7 @@ export default function AdminUsersPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [busyId, setBusyId] = useState<number | null>(null)
+  const [announcement, setAnnouncement] = useState<string | null>(null)
 
   useEffect(() => {
     let mounted = true
@@ -35,6 +36,7 @@ export default function AdminUsersPage() {
     try {
       const updated = await setUserRole(u.id_utilisateur, nextRole)
       setUsers((list) => list.map((x) => (x.id_utilisateur === u.id_utilisateur ? updated : x)))
+      setAnnouncement(`Rôle mis à jour : ${u.prenom} ${u.nom} est maintenant ${nextRole === 'admin' ? 'administrateur' : 'utilisateur simple'}.`)
     } catch (e) {
       setError((e as Error).message || 'Action impossible')
     } finally {
@@ -49,6 +51,7 @@ export default function AdminUsersPage() {
     try {
       await deleteUser(u.id_utilisateur)
       setUsers((list) => list.filter((x) => x.id_utilisateur !== u.id_utilisateur))
+      setAnnouncement(`Compte de ${u.prenom} ${u.nom} supprimé.`)
     } catch (e) {
       setError((e as Error).message || 'Suppression impossible')
     } finally {
@@ -75,80 +78,92 @@ export default function AdminUsersPage() {
         ) : null}
       </h1>
 
-      {error ? <div className="banner-error">{error}</div> : null}
+      {error ? <div className="banner-error" role="alert">{error}</div> : null}
+      <div className="sr-only" role="status" aria-live="polite">{announcement}</div>
 
-      <input
-        className="input"
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        placeholder="Rechercher par nom ou email…"
-        style={{ maxWidth: 360 }}
-      />
+      <div>
+        <label htmlFor="admin-users-search" className="sr-only">Rechercher un utilisateur par nom ou email</label>
+        <input
+          id="admin-users-search"
+          className="input"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Rechercher par nom ou email…"
+          style={{ maxWidth: 360 }}
+        />
+      </div>
 
+      <h2 className="sr-only">Liste des utilisateurs</h2>
       <div className="card" style={{ padding: '0 4px' }}>
         {loading ? (
-          <div className="muted" style={{ padding: 16 }}>Chargement…</div>
+          <div className="muted" style={{ padding: 16 }} role="status" aria-live="polite">Chargement…</div>
         ) : filtered.length === 0 ? (
           <div className="muted" style={{ padding: 16 }}>Aucun utilisateur</div>
         ) : (
-          filtered.map((u, i) => {
-            const isSelf = u.id_utilisateur === selfId
-            const isAdmin = u.role === 'admin'
-            const busy = busyId === u.id_utilisateur
-            return (
-              <div
-                key={u.id_utilisateur}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 12,
-                  padding: '10px 8px',
-                  borderBottom: i < filtered.length - 1 ? '1px solid var(--color-border)' : 'none',
-                  flexWrap: 'wrap',
-                }}
-              >
-                <div style={{ display: 'grid', gap: 1, minWidth: 0, flex: 1 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span style={{ fontWeight: 700 }}>{u.prenom} {u.nom}</span>
-                    {isSelf ? <span className="muted" style={{ fontSize: 11 }}>(vous)</span> : null}
-                    <span
-                      style={{
-                        fontSize: 11,
-                        fontWeight: 700,
-                        padding: '1px 8px',
-                        borderRadius: 999,
-                        background: isAdmin ? '#7c3aed18' : '#37415118',
-                        color: isAdmin ? '#7c3aed' : '#374151',
-                      }}
-                    >
-                      {isAdmin ? 'admin' : 'utilisateur'}
-                    </span>
-                  </div>
-                  <span className="muted" style={{ fontSize: 12 }}>{u.email}</span>
-                </div>
-                <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
-                  <button
-                    className="btn"
-                    style={{ fontSize: 12, padding: '4px 10px' }}
-                    disabled={busy || isSelf}
-                    title={isSelf ? 'Impossible de modifier votre propre rôle' : undefined}
-                    onClick={() => toggleAdmin(u)}
-                  >
-                    {busy ? '…' : isAdmin ? 'Rétrograder' : 'Promouvoir admin'}
-                  </button>
-                  <button
-                    className="btn"
-                    style={{ fontSize: 12, padding: '4px 10px', color: '#dc2626', borderColor: '#dc262640' }}
-                    disabled={busy || isSelf}
-                    title={isSelf ? 'Impossible de supprimer votre propre compte' : undefined}
-                    onClick={() => onDelete(u)}
-                  >
-                    Supprimer
-                  </button>
-                </div>
-              </div>
-            )
-          })
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead>
+              <tr>
+                <th scope="col" style={{ textAlign: 'left', padding: '8px', fontSize: 12 }}>Nom</th>
+                <th scope="col" style={{ textAlign: 'left', padding: '8px', fontSize: 12 }}>Email</th>
+                <th scope="col" style={{ textAlign: 'left', padding: '8px', fontSize: 12 }}>Rôle</th>
+                <th scope="col" style={{ textAlign: 'left', padding: '8px', fontSize: 12 }}>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map((u) => {
+                const isSelf = u.id_utilisateur === selfId
+                const isAdmin = u.role === 'admin'
+                const busy = busyId === u.id_utilisateur
+                return (
+                  <tr key={u.id_utilisateur} style={{ borderBottom: '1px solid var(--color-border)' }}>
+                    <td style={{ padding: '10px 8px', verticalAlign: 'middle' }}>
+                      <span style={{ fontWeight: 700 }}>{u.prenom} {u.nom}</span>
+                      {isSelf ? <span className="muted" style={{ fontSize: 11, marginLeft: 6 }}>(vous)</span> : null}
+                    </td>
+                    <td className="muted" style={{ padding: '10px 8px', fontSize: 12, verticalAlign: 'middle' }}>{u.email}</td>
+                    <td style={{ padding: '10px 8px', verticalAlign: 'middle' }}>
+                      <span
+                        style={{
+                          fontSize: 11,
+                          fontWeight: 700,
+                          padding: '1px 8px',
+                          borderRadius: 999,
+                          background: isAdmin ? '#7c3aed18' : '#37415118',
+                          color: isAdmin ? '#7c3aed' : '#374151',
+                        }}
+                      >
+                        {isAdmin ? 'admin' : 'utilisateur'}
+                      </span>
+                    </td>
+                    <td style={{ padding: '10px 8px', verticalAlign: 'middle' }}>
+                      <div style={{ display: 'flex', gap: 8, flexShrink: 0, flexWrap: 'wrap' }}>
+                        <button
+                          className="btn"
+                          style={{ fontSize: 12, padding: '4px 10px' }}
+                          disabled={busy || isSelf}
+                          title={isSelf ? 'Impossible de modifier votre propre rôle' : undefined}
+                          onClick={() => toggleAdmin(u)}
+                          aria-label={isAdmin ? `Rétrograder ${u.prenom} ${u.nom} en utilisateur simple` : `Promouvoir ${u.prenom} ${u.nom} administrateur`}
+                        >
+                          {busy ? '…' : isAdmin ? 'Rétrograder' : 'Promouvoir admin'}
+                        </button>
+                        <button
+                          className="btn"
+                          style={{ fontSize: 12, padding: '4px 10px', color: '#dc2626', borderColor: '#dc262640' }}
+                          disabled={busy || isSelf}
+                          title={isSelf ? 'Impossible de supprimer votre propre compte' : undefined}
+                          onClick={() => onDelete(u)}
+                          aria-label={`Supprimer le compte de ${u.prenom} ${u.nom}`}
+                        >
+                          Supprimer
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
         )}
       </div>
     </div>

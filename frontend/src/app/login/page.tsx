@@ -68,6 +68,7 @@ function LoginForm() {
           autoComplete="email"
           required
           aria-describedby={error ? 'login-error' : undefined}
+          aria-invalid={error ? true : undefined}
         />
         <label className="sr-only" htmlFor="login-password">Mot de passe</label>
         <input
@@ -80,6 +81,7 @@ function LoginForm() {
           autoComplete="current-password"
           required
           aria-describedby={error ? 'login-error' : undefined}
+          aria-invalid={error ? true : undefined}
         />
         {error ? <div id="login-error" className="banner-error" role="alert">{error}</div> : null}
         <button className="btn btnPrimary" type="submit" disabled={loading} style={{ width: '100%' }}>

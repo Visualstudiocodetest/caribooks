@@ -13,7 +13,7 @@ import { ADMIN_NAV_GROUPS } from '@/lib/adminNav'
 // keep in sync, not two.
 export function AdminMenu() {
   const [open, setOpen] = useState(false)
-  const ref = useRef<HTMLDivElement>(null)
+  const ref = useRef<HTMLElement>(null)
   const pathname = usePathname()
 
   useEffect(() => {
@@ -35,13 +35,14 @@ export function AdminMenu() {
   useEffect(() => { setOpen(false) }, [pathname])
 
   return (
-    <div ref={ref} style={{ position: 'relative' }}>
+    <nav ref={ref} aria-label="Navigation administration" style={{ position: 'relative' }}>
       <button
         type="button"
         className="muted"
         onClick={() => setOpen((s) => !s)}
         aria-haspopup="true"
         aria-expanded={open}
+        aria-controls="admin-menu-dropdown"
         style={{ background: 'none', border: 'none', font: 'inherit', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, padding: 0 }}
       >
         Back-office
@@ -50,6 +51,7 @@ export function AdminMenu() {
 
       {open ? (
         <div
+          id="admin-menu-dropdown"
           role="menu"
           className="card"
           style={{
@@ -91,6 +93,6 @@ export function AdminMenu() {
           ))}
         </div>
       ) : null}
-    </div>
+    </nav>
   )
 }

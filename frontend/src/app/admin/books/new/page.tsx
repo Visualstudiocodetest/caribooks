@@ -32,6 +32,7 @@ export default function AdminNewBookPage() {
   const [imageLink, setImageLink] = useState('')
   const [description, setDescription] = useState('')
   const [error, setError] = useState<string | null>(null)
+  const [invalidFields, setInvalidFields] = useState<Set<string>>(new Set())
   const [loading, setLoading] = useState(false)
   const [autofillLoading, setAutofillLoading] = useState(false)
   // Set when the scanned/typed ISBN already matches a book in the Caribooks
@@ -70,6 +71,7 @@ export default function AdminNewBookPage() {
     setImageLink('')
     setDescription('')
     setError(null)
+    setInvalidFields(new Set())
     setExistingBook(null)
     setScanSaved(null)
     setCreated(null)
@@ -230,16 +232,26 @@ export default function AdminNewBookPage() {
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError(null)
+    setInvalidFields(new Set())
     setLoading(true)
     try {
       // simple client-side validation: all fields required (description optional)
       if (!titre.trim() || !isbn.trim() || !auteur.trim() || !prix.trim() || !idEtat || !idType) {
+        const missing = new Set<string>()
+        if (!titre.trim()) missing.add('titre')
+        if (!isbn.trim()) missing.add('isbn')
+        if (!auteur.trim()) missing.add('auteur')
+        if (!prix.trim()) missing.add('prix')
+        if (!idEtat) missing.add('etat')
+        if (!idType) missing.add('type')
+        setInvalidFields(missing)
         setError('Veuillez remplir tous les champs obligatoires.')
         setLoading(false)
         return
       }
       const prixNum = Number(prix)
       if (!Number.isFinite(prixNum) || prixNum < 0) {
+        setInvalidFields(new Set(['prix']))
         setError("Le prix n'est pas valide")
         setLoading(false)
         return
@@ -284,7 +296,7 @@ export default function AdminNewBookPage() {
 
         {created ? (
           <div className="card cardPadding" style={{ display: 'grid', gap: 12 }}>
-            <div className="banner-success">Livre ajouté au catalogue.</div>
+            <div className="banner-success" role="status" aria-live="polite">Livre ajouté au catalogue.</div>
             <div style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
               {created.image_link ? (
                 <Image
@@ -303,7 +315,7 @@ export default function AdminNewBookPage() {
                 <div className="muted">ISBN: {created.isbn}</div>
                 <div className="muted">Prix: CHF {created.prix_chf.toFixed(2)}</div>
               </div>
-              <Link className="btn" href={`/admin/books/${created.id_article}`}>
+              <Link className="btn" href={`/admin/books/${created.id_article}`} aria-label={`Voir la fiche du livre ${created.titre}`}>
                 Voir la fiche
               </Link>
             </div>
@@ -332,7 +344,7 @@ export default function AdminNewBookPage() {
                 <div className="muted">ISBN: {existingBook.isbn}</div>
                 <div className="muted">Prix: CHF {existingBook.prix_chf.toFixed(2)}</div>
               </div>
-              <Link className="btn" href={`/admin/books/${existingBook.id_article}`}>
+              <Link className="btn" href={`/admin/books/${existingBook.id_article}`} aria-label={`Voir les détails du livre ${existingBook.titre}`}>
                 Détails
               </Link>
             </div>
@@ -352,8 +364,8 @@ export default function AdminNewBookPage() {
                 Ajouter un autre livre
               </button>
             </div>
-            {scanSaved ? <div className="banner-success">{scanSaved}</div> : null}
-            {error ? <div className="banner-error">{error}</div> : null}
+            {scanSaved ? <div className="banner-success" role="status" aria-live="polite">{scanSaved}</div> : null}
+            {error ? <div className="banner-error" role="alert">{error}</div> : null}
           </div>
         ) : (
         <form className="card cardPadding" onSubmit={onSubmit}>
@@ -367,18 +379,36 @@ export default function AdminNewBookPage() {
                 <input type="file" accept="image/*" onChange={onFileUpload} style={{ display: 'none' }} />
               </label>
             </div>
-            {scanError ? <div className="banner-error">{scanError}</div> : null}
+            {scanError ? <div className="banner-error" role="alert">{scanError}</div> : null}
           </div>
 
           <div style={{ display: 'grid', gap: 6 }}>
-            <label style={{ fontWeight: 700 }}>Nom</label>
-            <input className="input" value={titre} onChange={(e) => setTitre(e.target.value)} placeholder="Titre" required />
+            <label htmlFor="new-book-titre" style={{ fontWeight: 700 }}>Nom</label>
+            <input
+              id="new-book-titre"
+              className="input"
+              value={titre}
+              onChange={(e) => { setTitre(e.target.value); if (invalidFields.has('titre')) setInvalidFields((s) => { const n = new Set(s); n.delete('titre'); return n }) }}
+              placeholder="Titre"
+              required
+              aria-invalid={invalidFields.has('titre')}
+              aria-describedby={invalidFields.has('titre') ? 'new-book-form-error' : undefined}
+            />
           </div>
 
           <div className="form-row">
             <div style={{ display: 'grid', gap: 6 }}>
-              <label style={{ fontWeight: 700 }}>ISBN</label>
-              <input className="input" value={isbn} onChange={(e) => setIsbn(e.target.value)} placeholder="ISBN" required />
+              <label htmlFor="new-book-isbn" style={{ fontWeight: 700 }}>ISBN</label>
+              <input
+                id="new-book-isbn"
+                className="input"
+                value={isbn}
+                onChange={(e) => { setIsbn(e.target.value); if (invalidFields.has('isbn')) setInvalidFields((s) => { const n = new Set(s); n.delete('isbn'); return n }) }}
+                placeholder="ISBN"
+                required
+                aria-invalid={invalidFields.has('isbn')}
+                aria-describedby={invalidFields.has('isbn') ? 'new-book-form-error' : undefined}
+              />
             </div>
             <button className="btn" type="button" onClick={onAutofill} disabled={autofillLoading}>
               {autofillLoading ? 'Recherche…' : 'OpenLibrary'}
@@ -392,26 +422,38 @@ export default function AdminNewBookPage() {
                   choice — picking e.g. "DVD" here would silently create a book
                   row typed as something else. `idType` still resolves to the
                   right id (see loadLists/defaultTypeId), it's just not editable. */}
-              <select className="input" value={idType} disabled required>
+              <label htmlFor="new-book-type" className="sr-only">Type d&apos;objet</label>
+              <select id="new-book-type" className="input" value={idType} disabled required>
                 <option value={idType}>
                   {typeList.find((t) => String(t.id_type_objet) === idType)?.libelle || 'Livre'}
                 </option>
               </select>
             </div>
 
-            <select className="input" value={idEtat} onChange={(e) => setIdEtat(e.target.value)} required>
-              <option value="">État</option>
-              {etatList.map((e) => (
-                <option key={e.id_etat_usure} value={String(e.id_etat_usure)}>
-                  {e.libelle}
-                </option>
-              ))}
-            </select>
+            <div>
+              <label htmlFor="new-book-etat" className="sr-only">État du livre</label>
+              <select
+                id="new-book-etat"
+                className="input"
+                value={idEtat}
+                onChange={(e) => { setIdEtat(e.target.value); if (invalidFields.has('etat')) setInvalidFields((s) => { const n = new Set(s); n.delete('etat'); return n }) }}
+                required
+                aria-invalid={invalidFields.has('etat')}
+                aria-describedby={invalidFields.has('etat') ? 'new-book-form-error' : undefined}
+              >
+                <option value="">État</option>
+                {etatList.map((e) => (
+                  <option key={e.id_etat_usure} value={String(e.id_etat_usure)}>
+                    {e.libelle}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
 
           <div style={{ display: 'grid', gap: 6 }}>
-            <label style={{ fontWeight: 700 }}>Source de stock</label>
-            <select className="input" value={idSource} onChange={(e) => setIdSource(e.target.value)}>
+            <label htmlFor="new-book-source" style={{ fontWeight: 700 }}>Source de stock</label>
+            <select id="new-book-source" className="input" value={idSource} onChange={(e) => setIdSource(e.target.value)}>
               <option value="">Source par défaut du serveur</option>
               {sourceList.map((s) => (
                 <option key={s.id_source_stock} value={String(s.id_source_stock)}>
@@ -422,18 +464,37 @@ export default function AdminNewBookPage() {
           </div>
 
           <div style={{ display: 'grid', gap: 6 }}>
-            <label style={{ fontWeight: 700 }}>Auteur</label>
-            <input className="input" value={auteur} onChange={(e) => setAuteur(e.target.value)} placeholder="Auteur" required />
-          </div>
-
-          <div style={{ display: 'grid', gap: 6 }}>
-            <label style={{ fontWeight: 700 }}>Prix (CHF)</label>
-            <input className="input" value={prix} onChange={(e) => setPrix(e.target.value)} placeholder="Prix CHF" required />
-          </div>
-
-          <div style={{ display: 'grid', gap: 6 }}>
-            <label style={{ fontWeight: 700 }}>Image URL</label>
+            <label htmlFor="new-book-auteur" style={{ fontWeight: 700 }}>Auteur</label>
             <input
+              id="new-book-auteur"
+              className="input"
+              value={auteur}
+              onChange={(e) => { setAuteur(e.target.value); if (invalidFields.has('auteur')) setInvalidFields((s) => { const n = new Set(s); n.delete('auteur'); return n }) }}
+              placeholder="Auteur"
+              required
+              aria-invalid={invalidFields.has('auteur')}
+              aria-describedby={invalidFields.has('auteur') ? 'new-book-form-error' : undefined}
+            />
+          </div>
+
+          <div style={{ display: 'grid', gap: 6 }}>
+            <label htmlFor="new-book-prix" style={{ fontWeight: 700 }}>Prix (CHF)</label>
+            <input
+              id="new-book-prix"
+              className="input"
+              value={prix}
+              onChange={(e) => { setPrix(e.target.value); if (invalidFields.has('prix')) setInvalidFields((s) => { const n = new Set(s); n.delete('prix'); return n }) }}
+              placeholder="Prix CHF"
+              required
+              aria-invalid={invalidFields.has('prix')}
+              aria-describedby={invalidFields.has('prix') ? 'new-book-form-error' : undefined}
+            />
+          </div>
+
+          <div style={{ display: 'grid', gap: 6 }}>
+            <label htmlFor="new-book-image" style={{ fontWeight: 700 }}>Image URL</label>
+            <input
+              id="new-book-image"
               className="input"
               value={imageLink}
               onChange={(e) => setImageLink(e.target.value)}
@@ -462,8 +523,9 @@ export default function AdminNewBookPage() {
           </div>
 
           <div style={{ display: 'grid', gap: 6 }}>
-            <label style={{ fontWeight: 700 }}>Description</label>
+            <label htmlFor="new-book-description" style={{ fontWeight: 700 }}>Description</label>
             <textarea
+              id="new-book-description"
               className="card"
               style={{ borderRadius: 14, padding: 12, borderColor: 'var(--color-border)', minHeight: 120 }}
               value={description}
@@ -471,7 +533,7 @@ export default function AdminNewBookPage() {
               placeholder="Description (optionnel)"
             />
           </div>
-          {error ? <div className="banner-error">{error}</div> : null}
+          {error ? <div id="new-book-form-error" className="banner-error" role="alert">{error}</div> : null}
           <button className="btn btnPrimary" type="submit" disabled={loading}>
             {loading ? 'Création…' : 'Créer'}
           </button>
@@ -479,11 +541,11 @@ export default function AdminNewBookPage() {
         )}
 
         {scanning ? (
-          <div className="modal">
+          <div className="modal" role="dialog" aria-modal="true" aria-labelledby="scanner-dialog-title">
             <div className="modal-dialog">
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <strong>Scanner ISBN</strong>
-                <button className="btn" onClick={stopScanner}>
+                <strong id="scanner-dialog-title">Scanner ISBN</strong>
+                <button className="btn" onClick={stopScanner} aria-label="Fermer le scanner de code-barres">
                   Fermer
                 </button>
               </div>
