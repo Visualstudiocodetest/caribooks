@@ -11,7 +11,7 @@ export default function GlobalError({
 }) {
   return (
     <html lang="fr">
-      <body style={{ fontFamily: 'system-ui, sans-serif', padding: 32 }}>
+      <body style={{ fontFamily: 'system-ui, sans-serif', padding: 32 }} role="alert">
         <h1>Une erreur est survenue</h1>
         <p>L&apos;application n&apos;a pas pu démarrer.</p>
         {error.digest ? <p style={{ fontSize: 12 }}>Référence : {error.digest}</p> : null}

@@ -850,7 +850,7 @@ def _lock_stock_rows(db, ids_article):
         \item Politique de confidentialité + CGU + bannière cookies
         \item Bases légales, durées de conservation, sous-traitants documentés
         \item \textbf{Portabilité} : \texttt{GET /users/me/export} (JSON)
-        \item \textbf{Effacement} : \texttt{DELETE /users/me} --- anonymisation, commandes conservées
+        \item \textbf{Effacement} : \texttt{DELETE /users/me} --- anonymisation, commandes conservées, refusé (409) si commande en cours
       \end{itemize}
     \end{block}
     \column{0.5\textwidth}

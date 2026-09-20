@@ -135,7 +135,7 @@ function PaymentConfirmingScreen({ error }: { error: string | null }) {
       <h1 style={{ margin: 0 }}>Paiement</h1>
       {error ? (
         <>
-          <div className="banner-error">{error}</div>
+          <div className="banner-error" role="alert">{error}</div>
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
             <Link className="btn btnPrimary" href="/cart">Retour au panier</Link>
             <Link className="btn" href="/account/orders">Mes commandes</Link>
@@ -195,16 +195,25 @@ function PaymentFormCard({
       <h1 style={{ margin: 0 }}>Paiement</h1>
 
       {loading ? <div className="muted">Chargement du formulaire de paiement…</div> : null}
-      {error ? <div className="banner-error">{error}</div> : null}
+      {error ? <div className="banner-error" role="alert">{error}</div> : null}
       {cartSecondsLeft !== null ? (
-        <div
-          className={cartSecondsLeft === 0 ? 'banner-error' : cartSecondsLeft <= 300 ? 'banner-warning' : 'card cardPadding'}
-          style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 700 }}
-        >
-          {cartSecondsLeft === 0
-            ? 'Votre réservation a expiré. Les articles ont été remis en vente.'
-            : `⏱ Réservation valable encore ${Math.floor(cartSecondsLeft / 60)}:${String(cartSecondsLeft % 60).padStart(2, '0')}`}
-        </div>
+        <>
+          {/* The visible countdown is not itself a live region: announcing every
+              one-second tick would spam screen reader users. The one moment that
+              actually needs announcing -- expiry -- gets its own live region below,
+              populated only at that instant. */}
+          <div
+            className={cartSecondsLeft === 0 ? 'banner-error' : cartSecondsLeft <= 300 ? 'banner-warning' : 'card cardPadding'}
+            style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 700 }}
+          >
+            {cartSecondsLeft === 0
+              ? 'Votre réservation a expiré. Les articles ont été remis en vente.'
+              : `⏱ Réservation valable encore ${Math.floor(cartSecondsLeft / 60)}:${String(cartSecondsLeft % 60).padStart(2, '0')}`}
+          </div>
+          <div className="visually-hidden" role="alert">
+            {cartSecondsLeft === 0 ? 'Votre réservation a expiré. Les articles ont été remis en vente.' : ''}
+          </div>
+        </>
       ) : null}
 
       <div className="card" style={{ padding: 16, display: 'grid', gap: 12 }}>
@@ -231,6 +240,7 @@ function PaymentFormCard({
                   className={selectedMethodId === method.id ? 'btn btnPrimary' : 'btn'}
                   onClick={() => onSelectMethod(method.id)}
                   disabled={paying}
+                  aria-pressed={selectedMethodId === method.id}
                 >
                   {paymentMethodLabel(method)}
                 </button>
@@ -254,7 +264,7 @@ function PaymentFormCard({
         )}
 
         {validationErrors.length > 0 ? (
-          <div className="banner-error">
+          <div className="banner-error" role="alert">
             {validationErrors.map((msg) => (
               <div key={msg}>{msg}</div>
             ))}

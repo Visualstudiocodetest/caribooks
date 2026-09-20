@@ -238,10 +238,39 @@ a {
   white-space: nowrap;
 }
 
-/* Accessibility focus */
-.btn:focus {
-  outline: 3px solid rgba(229,22,54,0.12);
+/* Accessibility focus. A visible keyboard-focus indicator is a WCAG 2.4.7
+   requirement -- :focus-visible (not plain :focus) so a mouse click doesn't
+   also show it, only keyboard/programmatic focus. Solid, opaque color: the
+   previous 12%-opacity outline on .btn alone was effectively invisible and
+   covered only one class of element. */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[tabindex]:focus-visible,
+summary:focus-visible {
+  outline: 3px solid var(--color-primary);
   outline-offset: 2px;
+}
+
+/* Skip link: first focusable element on every page, off-screen until it
+   receives keyboard focus (Tab from a fresh page load), so keyboard/screen
+   reader users can bypass the repeated header/nav and land on <main>. */
+.skip-link {
+  position: absolute;
+  top: -40px;
+  left: 8px;
+  z-index: 1000;
+  padding: 10px 16px;
+  background: var(--color-text);
+  color: #fff;
+  border-radius: 6px;
+  text-decoration: none;
+}
+
+.skip-link:focus {
+  top: 8px;
 }
 
 @media (prefers-reduced-motion: reduce) {

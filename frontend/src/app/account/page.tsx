@@ -159,7 +159,17 @@ export default function AccountPage() {
           </div>
         </div>
         <label className="sr-only" htmlFor="acc-email">Email</label>
-        <input id="acc-email" className="input" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" type="email" autoComplete="email" />
+        <input
+          id="acc-email"
+          className="input"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="Email"
+          type="email"
+          autoComplete="email"
+          aria-describedby={error ? 'account-error' : undefined}
+          aria-invalid={error ? true : undefined}
+        />
 
         <label className="sr-only" htmlFor="acc-billing1">Adresse (ligne 1)</label>
         <input id="acc-billing1" className="input" value={billing1} onChange={(e) => setBilling1(e.target.value)} placeholder="Adresse (ligne 1)" autoComplete="address-line1" />
@@ -204,7 +214,7 @@ export default function AccountPage() {
           autoComplete="new-password"
         />
 
-        {message ? <div className="banner-success">{message}</div> : null}
+        {message ? <div className="banner-success" role="status">{message}</div> : null}
 
         <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
           <button className="btn btnPrimary" type="submit" disabled={saving}>

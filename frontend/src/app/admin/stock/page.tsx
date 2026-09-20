@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { Fragment, useEffect, useState } from 'react'
 import Link from 'next/link'
 import {
   listStocks,
@@ -124,97 +124,181 @@ export default function AdminStockPage() {
     return `${b.titre} ${b.auteur ?? ''} ${b.isbn}`.toLowerCase().includes(q)
   })
 
-  if (loading) return <div className="muted">Chargement…</div>
+  if (loading) return <div className="muted" role="status" aria-live="polite">Chargement…</div>
 
   return (
     <div style={{ display: 'grid', gap: 24 }}>
       <h1 style={{ margin: 0 }}>Stock</h1>
-      {error ? <div className="banner-error">{error}</div> : null}
+      {error ? <div className="banner-error" role="alert">{error}</div> : null}
 
       <section style={{ display: 'grid', gap: 10 }}>
         <h2 style={{ margin: 0, fontSize: '1.1rem' }}>Sources d&apos;approvisionnement</h2>
         <form onSubmit={onCreateSource} style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          <input className="input" style={{ flex: '1 1 200px' }} placeholder="Libellé (ex: Magasin, Don, Entrepôt…)" value={newSourceLibelle} onChange={(e) => setNewSourceLibelle(e.target.value)} required />
-          <input className="input" style={{ flex: '1 1 140px' }} placeholder="Type (ex: ADMIN, DON)" value={newSourceType} onChange={(e) => setNewSourceType(e.target.value)} />
+          <label htmlFor="new-source-libelle" className="sr-only">Libellé de la nouvelle source</label>
+          <input id="new-source-libelle" className="input" style={{ flex: '1 1 200px' }} placeholder="Libellé (ex: Magasin, Don, Entrepôt…)" value={newSourceLibelle} onChange={(e) => setNewSourceLibelle(e.target.value)} required />
+          <label htmlFor="new-source-type" className="sr-only">Type de la nouvelle source</label>
+          <input id="new-source-type" className="input" style={{ flex: '1 1 140px' }} placeholder="Type (ex: ADMIN, DON)" value={newSourceType} onChange={(e) => setNewSourceType(e.target.value)} />
           <button className="btn btnPrimary" type="submit">Ajouter</button>
         </form>
         <div className="card" style={{ padding: 8 }}>
           {sources.length === 0 ? (
             <div className="muted" style={{ padding: 8 }}>Aucune source</div>
-          ) : sources.map((s, i) => (
-            <div key={s.id_source_stock} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 8px', borderBottom: i < sources.length - 1 ? '1px solid var(--color-border)' : 'none' }}>
-              <span style={{ fontWeight: 700, flex: 1 }}>{s.libelle}</span>
-              <span className="muted" style={{ fontSize: 12 }}>{s.type_source}</span>
-              <button className="btn" style={{ fontSize: 12, padding: '3px 10px', color: '#dc2626' }} onClick={() => onDeleteSource(s.id_source_stock)}>Supprimer</button>
-            </div>
-          ))}
+          ) : (
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr>
+                  <th scope="col" className="sr-only">Libellé</th>
+                  <th scope="col" className="sr-only">Type</th>
+                  <th scope="col" className="sr-only">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {sources.map((s) => (
+                  <tr key={s.id_source_stock} style={{ borderBottom: '1px solid var(--color-border)' }}>
+                    <td style={{ padding: '8px 8px', fontWeight: 700 }}>{s.libelle}</td>
+                    <td className="muted" style={{ padding: '8px 8px', fontSize: 12 }}>{s.type_source}</td>
+                    <td style={{ padding: '8px 8px', textAlign: 'right' }}>
+                      <button
+                        className="btn"
+                        style={{ fontSize: 12, padding: '3px 10px', color: '#dc2626' }}
+                        onClick={() => onDeleteSource(s.id_source_stock)}
+                        aria-label={`Supprimer la source ${s.libelle}`}
+                      >
+                        Supprimer
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
       </section>
 
       <section style={{ display: 'grid', gap: 10 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
           <h2 style={{ margin: 0, fontSize: '1.1rem' }}>Quantités par livre</h2>
-          <input className="input" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Rechercher un livre…" style={{ maxWidth: 280 }} />
+          <div>
+            <label htmlFor="admin-stock-search" className="sr-only">Rechercher un livre</label>
+            <input id="admin-stock-search" className="input" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Rechercher un livre…" style={{ maxWidth: 280 }} />
+          </div>
         </div>
         <div className="card" style={{ padding: '0 4px' }}>
           {filteredBooks.length === 0 ? (
             <div className="muted" style={{ padding: 16 }}>Aucun livre</div>
-          ) : filteredBooks.map((b, i) => {
-            const rows = stocks.filter((s) => s.id_article === b.id_article)
-            return (
-              <div key={b.id_article} style={{ padding: '10px 8px', borderBottom: i < filteredBooks.length - 1 ? '1px solid var(--color-border)' : 'none', display: 'grid', gap: 6 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' }}>
-                  <Link href={`/admin/books/${b.id_article}`} style={{ fontWeight: 700, textDecoration: 'none', color: 'var(--color-text)' }}>{b.titre}</Link>
-                  <span className="muted" style={{ fontSize: 11 }}>ISBN {b.isbn}</span>
-                </div>
-                {rows.length === 0 ? (
-                  <div className="muted" style={{ fontSize: 12 }}>Aucun stock enregistré</div>
-                ) : rows.map((s) => (
-                  <div key={s.id_stock} style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 13 }}>
-                    <span style={{ minWidth: 100 }}>{sourceLabel(s.id_source_stock)}</span>
-                    <span className="muted">disponible : <strong style={{ color: 'var(--color-text)' }}>{s.quantite_disponible}</strong></span>
-                    <span className="muted">réservé : {s.quantite_reservee ?? 0}</span>
-                    <button className="btn" style={{ fontSize: 12, padding: '2px 8px' }} disabled={busyKey === `dec-${s.id_stock}` || s.quantite_disponible <= 0} onClick={() => onDecrement(s)}>−1</button>
-                    <button className="btn" style={{ fontSize: 12, padding: '2px 8px' }} disabled={busyKey === `inc-${s.id_stock}`} onClick={() => onIncrement(s)}>+1</button>
-                  </div>
-                ))}
-                {sources.length > 0 ? (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 2 }}>
-                    <select
-                      className="input"
-                      style={{ fontSize: 12, padding: '3px 6px' }}
-                      value={addStockBookId[b.id_article] || ''}
-                      onChange={(e) => setAddStockBookId((m) => ({ ...m, [b.id_article]: e.target.value }))}
-                    >
-                      <option value="">+ nouvelle source de stock…</option>
-                      {sources
-                        .filter((s) => !rows.some((r) => r.id_source_stock === s.id_source_stock))
-                        .map((s) => (
-                          <option key={s.id_source_stock} value={s.id_source_stock}>{s.libelle}</option>
-                        ))}
-                    </select>
-                    <input
-                      className="input"
-                      type="number"
-                      min={0}
-                      style={{ width: 70, fontSize: 12, padding: '3px 6px' }}
-                      placeholder="qté"
-                      value={addStockQty[b.id_article] || ''}
-                      onChange={(e) => setAddStockQty((m) => ({ ...m, [b.id_article]: e.target.value }))}
-                    />
-                    <button
-                      className="btn"
-                      style={{ fontSize: 12, padding: '3px 10px' }}
-                      disabled={!addStockBookId[b.id_article] || busyKey === `add-${b.id_article}`}
-                      onClick={() => onAddStock(b)}
-                    >
-                      Ajouter
-                    </button>
-                  </div>
-                ) : null}
-              </div>
-            )
-          })}
+          ) : (
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr>
+                  <th scope="col" style={{ textAlign: 'left', padding: '8px', fontSize: 12 }}>Livre</th>
+                  <th scope="col" style={{ textAlign: 'left', padding: '8px', fontSize: 12 }}>Source</th>
+                  <th scope="col" style={{ textAlign: 'left', padding: '8px', fontSize: 12 }}>Disponible</th>
+                  <th scope="col" style={{ textAlign: 'left', padding: '8px', fontSize: 12 }}>Réservé</th>
+                  <th scope="col" style={{ textAlign: 'left', padding: '8px', fontSize: 12 }}>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredBooks.map((b) => {
+                  const rows = stocks.filter((s) => s.id_article === b.id_article)
+                  const bookCell = (
+                    <div>
+                      <Link href={`/admin/books/${b.id_article}`} style={{ fontWeight: 700, textDecoration: 'none', color: 'var(--color-text)' }}>{b.titre}</Link>
+                      <div className="muted" style={{ fontSize: 11 }}>ISBN {b.isbn}</div>
+                    </div>
+                  )
+                  return (
+                    <Fragment key={b.id_article}>
+                      {rows.length === 0 ? (
+                        <tr key={`${b.id_article}-empty`} style={{ borderBottom: '1px solid var(--color-border)' }}>
+                          <td style={{ padding: '10px 8px', verticalAlign: 'top' }}>{bookCell}</td>
+                          <td colSpan={3} className="muted" style={{ padding: '10px 8px', fontSize: 12 }}>Aucun stock enregistré</td>
+                          <td />
+                        </tr>
+                      ) : rows.map((s) => (
+                        <tr key={s.id_stock} style={{ borderBottom: '1px solid var(--color-border)' }}>
+                          <td style={{ padding: '10px 8px', verticalAlign: 'top' }}>{bookCell}</td>
+                          <td style={{ padding: '10px 8px', fontSize: 13, verticalAlign: 'top' }}>{sourceLabel(s.id_source_stock)}</td>
+                          <td style={{ padding: '10px 8px', fontSize: 13, verticalAlign: 'top' }}>
+                            <strong style={{ color: 'var(--color-text)' }}>{s.quantite_disponible}</strong>
+                          </td>
+                          <td style={{ padding: '10px 8px', fontSize: 13, verticalAlign: 'top' }} className="muted">{s.quantite_reservee ?? 0}</td>
+                          <td style={{ padding: '10px 8px', verticalAlign: 'top' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                              <button
+                                className="btn"
+                                style={{ fontSize: 12, padding: '2px 8px' }}
+                                disabled={busyKey === `dec-${s.id_stock}` || s.quantite_disponible <= 0}
+                                onClick={() => onDecrement(s)}
+                                aria-label={`Retirer un exemplaire de ${b.titre} — source ${sourceLabel(s.id_source_stock)}`}
+                              >
+                                −1
+                              </button>
+                              <button
+                                className="btn"
+                                style={{ fontSize: 12, padding: '2px 8px' }}
+                                disabled={busyKey === `inc-${s.id_stock}`}
+                                onClick={() => onIncrement(s)}
+                                aria-label={`Ajouter un exemplaire de ${b.titre} — source ${sourceLabel(s.id_source_stock)}`}
+                              >
+                                +1
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                      {sources.length > 0 ? (
+                        <tr key={`${b.id_article}-add`} style={{ borderBottom: '1px solid var(--color-border)' }}>
+                          <td style={{ padding: '6px 8px' }} className="muted" aria-hidden="true">+ nouvelle source pour {b.titre}</td>
+                          <td style={{ padding: '6px 8px' }}>
+                            <label htmlFor={`add-stock-source-${b.id_article}`} className="sr-only">Nouvelle source de stock pour {b.titre}</label>
+                            <select
+                              id={`add-stock-source-${b.id_article}`}
+                              className="input"
+                              style={{ fontSize: 12, padding: '3px 6px' }}
+                              value={addStockBookId[b.id_article] || ''}
+                              onChange={(e) => setAddStockBookId((m) => ({ ...m, [b.id_article]: e.target.value }))}
+                            >
+                              <option value="">+ nouvelle source de stock…</option>
+                              {sources
+                                .filter((s) => !rows.some((r) => r.id_source_stock === s.id_source_stock))
+                                .map((s) => (
+                                  <option key={s.id_source_stock} value={s.id_source_stock}>{s.libelle}</option>
+                                ))}
+                            </select>
+                          </td>
+                          <td style={{ padding: '6px 8px' }}>
+                            <label htmlFor={`add-stock-qty-${b.id_article}`} className="sr-only">Quantité initiale pour {b.titre}</label>
+                            <input
+                              id={`add-stock-qty-${b.id_article}`}
+                              className="input"
+                              type="number"
+                              min={0}
+                              style={{ width: 70, fontSize: 12, padding: '3px 6px' }}
+                              placeholder="qté"
+                              value={addStockQty[b.id_article] || ''}
+                              onChange={(e) => setAddStockQty((m) => ({ ...m, [b.id_article]: e.target.value }))}
+                            />
+                          </td>
+                          <td />
+                          <td style={{ padding: '6px 8px' }}>
+                            <button
+                              className="btn"
+                              style={{ fontSize: 12, padding: '3px 10px' }}
+                              disabled={!addStockBookId[b.id_article] || busyKey === `add-${b.id_article}`}
+                              onClick={() => onAddStock(b)}
+                              aria-label={`Ajouter une nouvelle source de stock pour ${b.titre}`}
+                            >
+                              Ajouter
+                            </button>
+                          </td>
+                        </tr>
+                      ) : null}
+                    </Fragment>
+                  )
+                })}
+              </tbody>
+            </table>
+          )}
         </div>
       </section>
     </div>

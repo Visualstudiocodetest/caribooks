@@ -52,7 +52,7 @@ export default async function BookDetailPage(props: PageProps<'/books/[id]'>) {
     <div className="content-center">
       <div style={{ marginBottom: 4 }}>
         <Link className="btn btnGhost" href="/" style={{ fontSize: 13, padding: '4px 10px' }}>
-          ← Retour au catalogue
+          <span aria-hidden="true">←</span> Retour au catalogue
         </Link>
       </div>
 
@@ -63,7 +63,7 @@ export default async function BookDetailPage(props: PageProps<'/books/[id]'>) {
               <div className="book-image-inner">
                 <Image
                   src={book.image_link}
-                  alt={book.titre}
+                  alt={`Couverture de ${book.titre}`}
                   fill
                   style={{ objectFit: 'cover' }}
                   sizes="(max-width: 640px) 100vw, 320px"
@@ -83,7 +83,7 @@ export default async function BookDetailPage(props: PageProps<'/books/[id]'>) {
                   background: 'var(--color-surface)',
                 }}
               >
-                <span style={{ fontSize: 48, opacity: 0.4 }}>📖</span>
+                <span aria-hidden="true" style={{ fontSize: 48, opacity: 0.4 }}>📖</span>
                 <span className="muted" style={{ fontSize: 12 }}>Pas d&apos;image</span>
               </div>
             )}

@@ -51,7 +51,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   if (check === 'anon' || check === 'checking') {
     return (
-      <div className="card" style={{ padding: 16 }}>
+      <div className="card" style={{ padding: 16 }} role="status" aria-live="polite">
         <div className="muted">Vérification des droits…</div>
       </div>
     )
@@ -59,8 +59,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   if (check === 'not-admin') {
     return (
-      <div className="card" style={{ padding: 16, display: 'grid', gap: 10 }}>
-        <div style={{ fontWeight: 900 }}>Accès refusé</div>
+      <div className="card" style={{ padding: 16, display: 'grid', gap: 10 }} role="alert">
+        <h1 style={{ margin: 0, fontSize: 'inherit', fontWeight: 900 }}>Accès refusé</h1>
         <div className="muted">Ce back-office est réservé aux administrateurs.</div>
         <Link className="btn" href="/">
           Retour à l’accueil

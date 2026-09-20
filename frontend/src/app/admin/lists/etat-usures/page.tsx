@@ -57,32 +57,61 @@ export default function EtatUsuresAdmin() {
 
   return (
     <div style={{ display: 'grid', gap: 14, maxWidth: 560 }}>
-      <h2 style={{ margin: 0 }}>États d&apos;usure</h2>
-      {error ? <div className="banner-error">{error}</div> : null}
+      <h1 style={{ margin: 0, fontSize: '1.5rem' }}>États d&apos;usure</h1>
+      {error ? <div className="banner-error" role="alert">{error}</div> : null}
       <form onSubmit={createOne} style={{ display: 'flex', gap: 8 }}>
-        <input className="input" style={{ flex: 1 }} placeholder="ex: Neuf, Bon état, Acceptable…" value={libelle} onChange={(e) => setLibelle(e.target.value)} required />
+        <label htmlFor="new-etat-libelle" className="sr-only">Libellé du nouvel état d&apos;usure</label>
+        <input id="new-etat-libelle" className="input" style={{ flex: 1 }} placeholder="ex: Neuf, Bon état, Acceptable…" value={libelle} onChange={(e) => setLibelle(e.target.value)} required />
         <button className="btn btnPrimary" type="submit">Ajouter</button>
       </form>
+      <h2 className="sr-only">Liste des états d&apos;usure</h2>
       <div className="card" style={{ padding: 8 }}>
         {list.length === 0 ? (
           <div className="muted" style={{ padding: '8px 8px' }}>Aucun état</div>
-        ) : list.map((c, i) => (
-          <div key={c.id_etat_usure} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 8px', borderBottom: i < list.length - 1 ? '1px solid var(--color-border)' : 'none' }}>
-            {editingId === c.id_etat_usure ? (
-              <>
-                <input className="input" style={{ flex: 1 }} value={editValue} onChange={(e) => setEditValue(e.target.value)} autoFocus onKeyDown={(e) => { if (e.key === 'Enter') saveEdit(c.id_etat_usure); if (e.key === 'Escape') setEditingId(null) }} />
-                <button className="btn btnPrimary" style={{ fontSize: 12, padding: '4px 10px' }} onClick={() => saveEdit(c.id_etat_usure)}>✓</button>
-                <button className="btn" style={{ fontSize: 12, padding: '4px 10px' }} onClick={() => setEditingId(null)}>✕</button>
-              </>
-            ) : (
-              <>
-                <span style={{ flex: 1, fontWeight: 600 }}>{c.libelle}</span>
-                <button className="btn" style={{ fontSize: 12, padding: '3px 10px' }} onClick={() => { setEditingId(c.id_etat_usure); setEditValue(c.libelle) }}>Renommer</button>
-                <button className="btn" style={{ fontSize: 12, padding: '3px 10px', color: '#dc2626' }} onClick={() => remove(c.id_etat_usure)}>Supprimer</button>
-              </>
-            )}
-          </div>
-        ))}
+        ) : (
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead>
+              <tr>
+                <th scope="col" className="sr-only">Libellé</th>
+                <th scope="col" className="sr-only">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {list.map((c) => (
+                <tr key={c.id_etat_usure} style={{ borderBottom: '1px solid var(--color-border)' }}>
+                  {editingId === c.id_etat_usure ? (
+                    <td colSpan={2} style={{ padding: '8px 8px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <label htmlFor={`edit-etat-${c.id_etat_usure}`} className="sr-only">Modifier le libellé de {c.libelle}</label>
+                        <input
+                          id={`edit-etat-${c.id_etat_usure}`}
+                          className="input"
+                          style={{ flex: 1 }}
+                          value={editValue}
+                          onChange={(e) => setEditValue(e.target.value)}
+                          autoFocus
+                          onKeyDown={(e) => { if (e.key === 'Enter') saveEdit(c.id_etat_usure); if (e.key === 'Escape') setEditingId(null) }}
+                        />
+                        <button className="btn btnPrimary" style={{ fontSize: 12, padding: '4px 10px' }} onClick={() => saveEdit(c.id_etat_usure)} aria-label={`Valider la modification de ${c.libelle}`}>✓</button>
+                        <button className="btn" style={{ fontSize: 12, padding: '4px 10px' }} onClick={() => setEditingId(null)} aria-label={`Annuler la modification de ${c.libelle}`}>✕</button>
+                      </div>
+                    </td>
+                  ) : (
+                    <>
+                      <td style={{ padding: '8px 8px', fontWeight: 600 }}>{c.libelle}</td>
+                      <td style={{ padding: '8px 8px' }}>
+                        <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                          <button className="btn" style={{ fontSize: 12, padding: '3px 10px' }} onClick={() => { setEditingId(c.id_etat_usure); setEditValue(c.libelle) }} aria-label={`Renommer l'état ${c.libelle}`}>Renommer</button>
+                          <button className="btn" style={{ fontSize: 12, padding: '3px 10px', color: '#dc2626' }} onClick={() => remove(c.id_etat_usure)} aria-label={`Supprimer l'état ${c.libelle}`}>Supprimer</button>
+                        </div>
+                      </td>
+                    </>
+                  )}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
     </div>
   )

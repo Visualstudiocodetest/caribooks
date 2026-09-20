@@ -78,54 +78,54 @@ export default function AdminEditBookPage({ params }: { params: Promise<{ id: st
     }
   }
 
-  if (!book && !error) return <div className="muted">Chargement…</div>
-  if (error && !book) return <div className="banner-error">{error}</div>
+  if (!book && !error) return <div className="muted" role="status" aria-live="polite">Chargement…</div>
+  if (error && !book) return <div className="banner-error" role="alert">{error}</div>
   if (!book) return null
 
   return (
     <div style={{ maxWidth: 680, margin: '0 auto', display: 'grid', gap: 16 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-        <button className="btn" onClick={() => router.push('/admin/books')} style={{ fontSize: 13 }}>← Retour</button>
+        <button className="btn" onClick={() => router.push('/admin/books')} style={{ fontSize: 13 }} aria-label="Retour à la liste des livres">← Retour</button>
         <h1 style={{ margin: 0, fontSize: '1.3rem' }}>Modifier le livre</h1>
       </div>
 
-      {error ? <div className="banner-error">{error}</div> : null}
-      {saved ? <div style={{ background: '#d1fae5', color: '#065f46', padding: '10px 14px', borderRadius: 10, fontWeight: 600, fontSize: 14 }}>✓ Sauvegardé</div> : null}
+      {error ? <div className="banner-error" role="alert">{error}</div> : null}
+      {saved ? <div role="status" aria-live="polite" style={{ background: '#d1fae5', color: '#065f46', padding: '10px 14px', borderRadius: 10, fontWeight: 600, fontSize: 14 }}>✓ Sauvegardé</div> : null}
 
       <div className="card" style={{ padding: 20, display: 'grid', gap: 14 }}>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
           <div style={{ gridColumn: '1 / -1' }}>
-            <label style={{ fontSize: 12, fontWeight: 600, display: 'block', marginBottom: 4 }}>Titre *</label>
-            <input className="input" value={book.titre} onChange={(e) => setBook({ ...book, titre: e.target.value })} placeholder="Titre" />
+            <label htmlFor="edit-book-titre" style={{ fontSize: 12, fontWeight: 600, display: 'block', marginBottom: 4 }}>Titre *</label>
+            <input id="edit-book-titre" className="input" value={book.titre} onChange={(e) => setBook({ ...book, titre: e.target.value })} placeholder="Titre" required />
           </div>
           <div>
-            <label style={{ fontSize: 12, fontWeight: 600, display: 'block', marginBottom: 4 }}>ISBN *</label>
-            <input className="input" value={book.isbn} onChange={(e) => setBook({ ...book, isbn: e.target.value })} placeholder="ISBN" />
+            <label htmlFor="edit-book-isbn" style={{ fontSize: 12, fontWeight: 600, display: 'block', marginBottom: 4 }}>ISBN *</label>
+            <input id="edit-book-isbn" className="input" value={book.isbn} onChange={(e) => setBook({ ...book, isbn: e.target.value })} placeholder="ISBN" required />
           </div>
           <div>
-            <label style={{ fontSize: 12, fontWeight: 600, display: 'block', marginBottom: 4 }}>Prix (CHF) *</label>
-            <input className="input" type="number" step="0.01" min="0" value={book.prix_chf} onChange={(e) => setBook({ ...book, prix_chf: Number(e.target.value) })} placeholder="Prix" />
+            <label htmlFor="edit-book-prix" style={{ fontSize: 12, fontWeight: 600, display: 'block', marginBottom: 4 }}>Prix (CHF) *</label>
+            <input id="edit-book-prix" className="input" type="number" step="0.01" min="0" value={book.prix_chf} onChange={(e) => setBook({ ...book, prix_chf: Number(e.target.value) })} placeholder="Prix" />
           </div>
           <div>
-            <label style={{ fontSize: 12, fontWeight: 600, display: 'block', marginBottom: 4 }}>Auteur</label>
-            <input className="input" value={book.auteur ?? ''} onChange={(e) => setBook({ ...book, auteur: e.target.value || null })} placeholder="Auteur" />
+            <label htmlFor="edit-book-auteur" style={{ fontSize: 12, fontWeight: 600, display: 'block', marginBottom: 4 }}>Auteur</label>
+            <input id="edit-book-auteur" className="input" value={book.auteur ?? ''} onChange={(e) => setBook({ ...book, auteur: e.target.value || null })} placeholder="Auteur" />
           </div>
           <div>
-            <label style={{ fontSize: 12, fontWeight: 600, display: 'block', marginBottom: 4 }}>Éditeur</label>
-            <input className="input" value={book.editeur ?? ''} onChange={(e) => setBook({ ...book, editeur: e.target.value || null })} placeholder="Éditeur" />
+            <label htmlFor="edit-book-editeur" style={{ fontSize: 12, fontWeight: 600, display: 'block', marginBottom: 4 }}>Éditeur</label>
+            <input id="edit-book-editeur" className="input" value={book.editeur ?? ''} onChange={(e) => setBook({ ...book, editeur: e.target.value || null })} placeholder="Éditeur" />
           </div>
           <div>
-            <label style={{ fontSize: 12, fontWeight: 600, display: 'block', marginBottom: 4 }}>Date de publication</label>
-            <input className="input" value={book.date_publication ?? ''} onChange={(e) => setBook({ ...book, date_publication: e.target.value || null })} placeholder="ex: 2021" />
+            <label htmlFor="edit-book-date" style={{ fontSize: 12, fontWeight: 600, display: 'block', marginBottom: 4 }}>Date de publication</label>
+            <input id="edit-book-date" className="input" value={book.date_publication ?? ''} onChange={(e) => setBook({ ...book, date_publication: e.target.value || null })} placeholder="ex: 2021" />
           </div>
           <div>
-            <label style={{ fontSize: 12, fontWeight: 600, display: 'block', marginBottom: 4 }}>Langue</label>
-            <input className="input" value={book.langue ?? ''} onChange={(e) => setBook({ ...book, langue: e.target.value || null })} placeholder="ex: fr, en" />
+            <label htmlFor="edit-book-langue" style={{ fontSize: 12, fontWeight: 600, display: 'block', marginBottom: 4 }}>Langue</label>
+            <input id="edit-book-langue" className="input" value={book.langue ?? ''} onChange={(e) => setBook({ ...book, langue: e.target.value || null })} placeholder="ex: fr, en" />
           </div>
           {etats.length > 0 ? (
             <div>
-              <label style={{ fontSize: 12, fontWeight: 600, display: 'block', marginBottom: 4 }}>État</label>
-              <select className="input" value={book.id_etat_usure ?? ''} onChange={(e) => setBook({ ...book, id_etat_usure: Number(e.target.value) })}>
+              <label htmlFor="edit-book-etat" style={{ fontSize: 12, fontWeight: 600, display: 'block', marginBottom: 4 }}>État</label>
+              <select id="edit-book-etat" className="input" value={book.id_etat_usure ?? ''} onChange={(e) => setBook({ ...book, id_etat_usure: Number(e.target.value) })}>
                 <option value="">— Choisir —</option>
                 {etats.map((et) => (
                   <option key={et.id_etat_usure} value={et.id_etat_usure}>{et.libelle}</option>
@@ -134,12 +134,13 @@ export default function AdminEditBookPage({ params }: { params: Promise<{ id: st
             </div>
           ) : null}
           <div style={{ gridColumn: '1 / -1' }}>
-            <label style={{ fontSize: 12, fontWeight: 600, display: 'block', marginBottom: 4 }}>URL image</label>
-            <input className="input" value={book.image_link ?? ''} onChange={(e) => setBook({ ...book, image_link: e.target.value || null })} placeholder="https://…" />
+            <label htmlFor="edit-book-image" style={{ fontSize: 12, fontWeight: 600, display: 'block', marginBottom: 4 }}>URL image</label>
+            <input id="edit-book-image" className="input" value={book.image_link ?? ''} onChange={(e) => setBook({ ...book, image_link: e.target.value || null })} placeholder="https://…" />
           </div>
           <div style={{ gridColumn: '1 / -1' }}>
-            <label style={{ fontSize: 12, fontWeight: 600, display: 'block', marginBottom: 4 }}>Description</label>
+            <label htmlFor="edit-book-description" style={{ fontSize: 12, fontWeight: 600, display: 'block', marginBottom: 4 }}>Description</label>
             <textarea
+              id="edit-book-description"
               style={{ width: '100%', borderRadius: 10, padding: 10, border: '1px solid var(--color-border)', minHeight: 100, fontFamily: 'inherit', fontSize: 14, resize: 'vertical' }}
               value={book.description ?? ''}
               onChange={(e) => setBook({ ...book, description: e.target.value || null })}
@@ -155,10 +156,10 @@ export default function AdminEditBookPage({ params }: { params: Promise<{ id: st
         </div>
 
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', justifyContent: 'space-between', paddingTop: 8, borderTop: '1px solid var(--color-border)' }}>
-          <button className="btn btnPrimary" type="button" onClick={onSave} disabled={saving}>
+          <button className="btn btnPrimary" type="button" onClick={onSave} disabled={saving} aria-label={`Sauvegarder les modifications du livre ${book.titre}`}>
             {saving ? 'Sauvegarde…' : 'Sauvegarder'}
           </button>
-          <button className="btn" type="button" onClick={onDelete} disabled={deleting} style={{ color: '#dc2626' }}>
+          <button className="btn" type="button" onClick={onDelete} disabled={deleting} style={{ color: '#dc2626' }} aria-label={`Supprimer le livre ${book.titre}`}>
             {deleting ? 'Suppression…' : 'Supprimer'}
           </button>
         </div>

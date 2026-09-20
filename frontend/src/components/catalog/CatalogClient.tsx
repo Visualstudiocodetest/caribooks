@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useId, useMemo, useState } from 'react'
 import type { BookRead } from '@/types/api'
 import { BookGrid } from '@/components/books/BookGrid'
 
@@ -21,6 +21,14 @@ export function CatalogClient({
   const [minPrix, setMinPrix] = useState('')
   const [maxPrix, setMaxPrix] = useState('')
   const [showFilters, setShowFilters] = useState(false)
+
+  const uid = useId()
+  const searchId = `${uid}-search`
+  const etatId = `${uid}-etat`
+  const sortId = `${uid}-sort`
+  const minPrixId = `${uid}-min-prix`
+  const maxPrixId = `${uid}-max-prix`
+  const filterPanelId = `${uid}-filter-panel`
 
   const activeFilterCount = [selectedEtat, sortBy, minPrix, maxPrix].filter(Boolean).length
   const hasActiveFilters = activeFilterCount > 0
@@ -70,18 +78,24 @@ export function CatalogClient({
     <div style={{ display: 'grid', gap: 16 }}>
       {/* Search bar */}
       <div style={{ display: 'flex', gap: 8 }}>
-        <input
-          className="input"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Rechercher par titre, auteur ou ISBN…"
-          style={{ flex: 1 }}
-        />
+        <div style={{ flex: 1 }}>
+          <label htmlFor={searchId} className="visually-hidden">
+            Rechercher un livre par titre, auteur ou ISBN
+          </label>
+          <input
+            id={searchId}
+            className="input"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Rechercher par titre, auteur ou ISBN…"
+          />
+        </div>
         <button
           className={`btn ${hasActiveFilters ? 'btnPrimary' : 'btnGhost'}`}
           type="button"
           onClick={() => setShowFilters((s) => !s)}
           aria-expanded={showFilters}
+          aria-controls={filterPanelId}
         >
           Filtres{hasActiveFilters ? ` (${activeFilterCount})` : ''}
         </button>
@@ -89,60 +103,78 @@ export function CatalogClient({
 
       {/* Filter panel */}
       {showFilters ? (
-        <div className="card" style={{ padding: '12px 16px', display: 'grid', gap: 10 }}>
+        <div id={filterPanelId} className="card" style={{ padding: '12px 16px', display: 'grid', gap: 10 }}>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-            <select
-              className="input"
-              value={selectedEtat}
-              onChange={(e) => setSelectedEtat(e.target.value)}
-              style={{ flex: '1 1 160px' }}
-            >
-              <option value="">Tous les états</option>
-              {etatList.map((et) => (
-                <option key={et.id_etat_usure} value={String(et.id_etat_usure)}>
-                  {et.libelle}
-                </option>
-              ))}
-            </select>
+            <div style={{ flex: '1 1 160px' }}>
+              <label htmlFor={etatId} className="visually-hidden">
+                Filtrer par état du livre
+              </label>
+              <select
+                id={etatId}
+                className="input"
+                value={selectedEtat}
+                onChange={(e) => setSelectedEtat(e.target.value)}
+              >
+                <option value="">Tous les états</option>
+                {etatList.map((et) => (
+                  <option key={et.id_etat_usure} value={String(et.id_etat_usure)}>
+                    {et.libelle}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-            <select
-              className="input"
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value)}
-              style={{ flex: '1 1 160px' }}
-            >
-              <option value="">Trier par…</option>
-              <option value="date">Plus récents</option>
-              <option value="prix_asc">Prix croissant</option>
-              <option value="prix_desc">Prix décroissant</option>
-              <option value="titre">Titre A→Z</option>
-              <option value="auteur">Auteur A→Z</option>
-            </select>
+            <div style={{ flex: '1 1 160px' }}>
+              <label htmlFor={sortId} className="visually-hidden">
+                Trier les résultats
+              </label>
+              <select
+                id={sortId}
+                className="input"
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+              >
+                <option value="">Trier par…</option>
+                <option value="date">Plus récents</option>
+                <option value="prix_asc">Prix croissant</option>
+                <option value="prix_desc">Prix décroissant</option>
+                <option value="titre">Titre A→Z</option>
+                <option value="auteur">Auteur A→Z</option>
+              </select>
+            </div>
           </div>
 
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
-            <input
-              className="input"
-              type="number"
-              min={0}
-              inputMode="decimal"
-              value={minPrix}
-              onChange={(e) => setMinPrix(e.target.value)}
-              placeholder="Prix min (CHF)"
-              aria-label="Prix minimum en CHF"
-              style={{ flex: '1 1 140px' }}
-            />
-            <input
-              className="input"
-              type="number"
-              min={0}
-              inputMode="decimal"
-              value={maxPrix}
-              onChange={(e) => setMaxPrix(e.target.value)}
-              placeholder="Prix max (CHF)"
-              aria-label="Prix maximum en CHF"
-              style={{ flex: '1 1 140px' }}
-            />
+            <div style={{ flex: '1 1 140px' }}>
+              <label htmlFor={minPrixId} className="visually-hidden">
+                Prix minimum en CHF
+              </label>
+              <input
+                id={minPrixId}
+                className="input"
+                type="number"
+                min={0}
+                inputMode="decimal"
+                value={minPrix}
+                onChange={(e) => setMinPrix(e.target.value)}
+                placeholder="Prix min (CHF)"
+              />
+            </div>
+            <div style={{ flex: '1 1 140px' }}>
+              <label htmlFor={maxPrixId} className="visually-hidden">
+                Prix maximum en CHF
+              </label>
+              <input
+                id={maxPrixId}
+                className="input"
+                type="number"
+                min={0}
+                inputMode="decimal"
+                value={maxPrix}
+                onChange={(e) => setMaxPrix(e.target.value)}
+                placeholder="Prix max (CHF)"
+              />
+            </div>
           </div>
 
           {hasActiveFilters ? (
@@ -153,11 +185,13 @@ export function CatalogClient({
         </div>
       ) : null}
 
-      {/* Results header */}
+      {/* Results header. The count is a live region so screen reader users are
+          told the list changed as soon as a search/filter is applied, without
+          having to re-scan the (client-side, no-navigation) results themselves. */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <h2 style={{ margin: 0, fontSize: '1.4rem' }}>Catalogue</h2>
-        <span className="muted" style={{ fontSize: 14 }}>
-          {filtered.length} livre{filtered.length !== 1 ? 's' : ''}
+        <span className="muted" style={{ fontSize: 14 }} role="status" aria-live="polite">
+          {filtered.length} livre{filtered.length !== 1 ? 's' : ''} trouvé{filtered.length !== 1 ? 's' : ''}
         </span>
       </div>
 

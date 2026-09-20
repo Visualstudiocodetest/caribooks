@@ -49,41 +49,52 @@ export default function AccountOrdersPage() {
       </div>
 
       {loading ? <div className="muted">Chargement…</div> : null}
-      {error ? <div className="banner-error">{error}</div> : null}
+      {error ? <div className="banner-error" role="alert">{error}</div> : null}
 
       {!loading && !error && (
-        <div style={{ display: 'grid', gap: 10 }}>
-          {commandes.length === 0 ? (
-            <div className="card cardPadding" style={{ textAlign: 'center' }}>
-              <div className="muted">Vous n&apos;avez pas encore de commande.</div>
-              <Link className="btn btnPrimary" href="/" style={{ marginTop: 10 }}>
-                Voir le catalogue
-              </Link>
-            </div>
-          ) : (
-            commandes.map((c) => (
-              <div className="card cardPadding" key={c.id_commande}>
+        commandes.length === 0 ? (
+          <div className="card cardPadding" style={{ textAlign: 'center' }}>
+            <div className="muted">Vous n&apos;avez pas encore de commande.</div>
+            <Link className="btn btnPrimary" href="/" style={{ marginTop: 10 }}>
+              Voir le catalogue
+            </Link>
+          </div>
+        ) : (
+          <ul style={{ display: 'grid', gap: 10, listStyle: 'none', margin: 0, padding: 0 }}>
+            {commandes.map((c) => (
+              <li className="card cardPadding" key={c.id_commande}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, flexWrap: 'wrap' }}>
                   <div style={{ display: 'grid', gap: 4 }}>
-                    <div style={{ fontWeight: 800 }}>{c.numero_commande}</div>
+                    <div style={{ fontWeight: 800 }}>
+                      <span className="sr-only">Commande n° </span>
+                      {c.numero_commande}
+                    </div>
                     <div className="muted" style={{ fontSize: 13 }}>
+                      <span className="sr-only">Date de commande : </span>
                       {new Date(c.date_commande).toLocaleDateString('fr-CH', {
                         day: '2-digit', month: 'long', year: 'numeric',
                       })}
                     </div>
                     <div className="muted" style={{ fontSize: 13 }}>
+                      <span className="sr-only">Mode de livraison : </span>
                       {c.shipping_method === 'CLICK_COLLECT' ? 'Retrait en magasin' : 'Livraison postale'}
                     </div>
                   </div>
                   <div style={{ textAlign: 'right', display: 'grid', gap: 6 }}>
-                    <Money amount={c.montant_total_chf} />
-                    <StatusBadge statut={c.statut || ''} />
+                    <div>
+                      <span className="sr-only">Total : </span>
+                      <Money amount={c.montant_total_chf} />
+                    </div>
+                    <div>
+                      <span className="sr-only">Statut : </span>
+                      <StatusBadge statut={c.statut || ''} />
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))
-          )}
-        </div>
+              </li>
+            ))}
+          </ul>
+        )
       )}
     </div>
   )

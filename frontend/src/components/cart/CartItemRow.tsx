@@ -51,23 +51,33 @@ export default function CartItemRow({
         ) : null}
       </div>
 
-      <div className="qty-controls">
-        <button className="btn" type="button" onClick={decrease} aria-label="decrease">
+      <div className="qty-controls" role="group" aria-labelledby={`qty-label-${item.id_article}`}>
+        <span id={`qty-label-${item.id_article}`} className="visually-hidden">
+          {`Quantité pour ${item.titre}`}
+        </span>
+        <button className="btn" type="button" onClick={decrease} aria-label={`Diminuer la quantité de ${item.titre}`}>
           −
         </button>
-        <div className="cart-qty-count">{item.quantity}</div>
+        <div className="cart-qty-count" aria-live="polite">
+          {item.quantity}
+        </div>
         <button
           className="btn"
           type="button"
           onClick={increase}
-          aria-label="increase"
+          aria-label={`Augmenter la quantité de ${item.titre}`}
           disabled={available !== null && item.quantity >= available}
         >
           +
         </button>
       </div>
       <div className="remove-wrap">
-        <button className="btn" type="button" onClick={() => onRemove(item.id_article)}>
+        <button
+          className="btn"
+          type="button"
+          onClick={() => onRemove(item.id_article)}
+          aria-label={`Retirer ${item.titre} du panier`}
+        >
           Retirer
         </button>
       </div>
