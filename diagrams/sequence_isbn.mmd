@@ -27,8 +27,13 @@ sequenceDiagram
         note over API,OL: 404 si absent → saisie manuelle côté frontend
         API-->>Nav: JSON métadonnées
         Nav-->>Ben: préremplit titre/auteur/description<br/>+ aperçu direct de la couverture OpenLibrary<br/>(hotlink, sans passer par l'API)
+        opt OpenLibrary sans couverture (ou échec de la recherche)
+            Ben->>Nav: photographie le livre (caméra arrière du terminal)
+            Nav->>API: POST /images/upload (photo, multipart)
+            API-->>Nav: /static/images/books/{hash}.jpg
+        end
         Ben->>Nav: complète état + prix, valide
-        Nav->>API: POST /images/fetch (si couverture externe)
+        Nav->>API: POST /images/fetch (si couverture externe encore non stockée)
         API->>OL: télécharge l'image (SSRF-protégé,<br/>IP figée, redirection suivie manuellement)
         API-->>Nav: /static/images/books/{hash}.jpg
         Nav->>API: POST /books

@@ -2,7 +2,13 @@ from __future__ import annotations
 
 import pytest
 
-from services.image_service import _ALLOWED_EXTENSIONS, _is_public_ip, _resolve_pinned_ip, download_image
+from services.image_service import (
+    _ALLOWED_EXTENSIONS,
+    _is_public_ip,
+    _resolve_pinned_ip,
+    download_image,
+    save_uploaded_image,
+)
 
 
 def test_is_public_ip_rejects_private_and_reserved_ranges():
@@ -48,3 +54,25 @@ def test_allowed_extensions_exclude_svg_to_prevent_stored_xss():
     assert "svg" not in _ALLOWED_EXTENSIONS
     assert "svg+xml" not in _ALLOWED_EXTENSIONS
     assert {"jpg", "png", "webp"} <= _ALLOWED_EXTENSIONS
+
+
+def test_save_uploaded_image_writes_file_and_returns_static_path(tmp_path):
+    rel = save_uploaded_image(b"fake-jpeg-bytes", "image/jpeg", save_dir=str(tmp_path))
+    assert rel.startswith("/static/images/books/")
+    assert rel.endswith(".jpg")
+    assert (tmp_path / rel.split("/")[-1]).read_bytes() == b"fake-jpeg-bytes"
+
+
+def test_save_uploaded_image_rejects_oversized_upload(tmp_path):
+    with pytest.raises(ValueError):
+        save_uploaded_image(b"x" * 10, "image/jpeg", save_dir=str(tmp_path), max_bytes=5)
+
+
+def test_save_uploaded_image_rejects_disallowed_content_type(tmp_path):
+    # Mirrors the SVG/XSS concern above: a browser-supplied Content-Type of
+    # e.g. "image/svg+xml" (or a non-image type entirely) must never be
+    # accepted, since these bytes are served back from our own /static origin.
+    with pytest.raises(ValueError):
+        save_uploaded_image(b"<svg onload=alert(1)>", "image/svg+xml", save_dir=str(tmp_path))
+    with pytest.raises(ValueError):
+        save_uploaded_image(b"not an image", "text/plain", save_dir=str(tmp_path))

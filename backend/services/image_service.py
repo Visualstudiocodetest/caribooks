@@ -94,6 +94,41 @@ def _pin(url: str) -> tuple[str, dict, dict]:
     return pinned_url, headers, extensions
 
 
+def save_uploaded_image(
+    data: bytes,
+    content_type: str,
+    save_dir: str = _DEFAULT_SAVE_DIR,
+    max_bytes: int = 5 * 1024 * 1024,
+) -> str:
+    """
+    Save an already-downloaded image (eg. a photo captured in the browser and
+    posted as multipart form data) under `save_dir` and return the relative
+    path (eg. '/static/images/books/<hash>.jpg'). Raises ValueError on failure.
+
+    Unlike download_image, there's no URL/SSRF surface here -- the bytes come
+    straight from the uploading admin's own request body -- so this only
+    needs to validate size and content type before writing to disk.
+    """
+    if len(data) > max_bytes:
+        raise ValueError('Image too large')
+    ext = _ext_from_content_type(content_type)
+    if not ext or ext not in _ALLOWED_EXTENSIONS:
+        raise ValueError(f"Unsupported image type: {content_type}")
+
+    _ensure_dir(save_dir)
+    h = hashlib.sha256(data).hexdigest()
+    filename = f"{h}.{ext}"
+    final_path = os.path.join(save_dir, filename)
+    if os.path.exists(final_path):
+        return f"/static/images/books/{filename}"
+
+    tmp_path = os.path.join(save_dir, f"{h}.tmp")
+    with open(tmp_path, 'wb') as f:
+        f.write(data)
+    os.replace(tmp_path, final_path)
+    return f"/static/images/books/{filename}"
+
+
 def download_image(
     url: str,
     save_dir: str = _DEFAULT_SAVE_DIR,
