@@ -25,11 +25,11 @@ def test_scan_isbn_crud(client: TestClient, register_and_login, uniq: str):
         headers=admin_headers,
     )
     assert r.status_code == 201, r.text
-    book_id = r.json()["id_article"]
+    book_id = r.json()["id_livre"]
 
     r = client.post(
         "/scans/",
-        json={"id_article_livre": book_id, "isbn_lu": f"ISBN_{uniq}", "valide": False},
+        json={"id_livre": book_id, "isbn_lu": f"ISBN_{uniq}", "valide": False},
         headers=admin_headers,
     )
     assert r.status_code == 201, r.text

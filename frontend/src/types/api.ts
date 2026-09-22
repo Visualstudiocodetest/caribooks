@@ -1,6 +1,5 @@
 export type BookRead = {
-  id_article: number
-  id_type_objet: number
+  id_livre: number
   id_etat_usure: number
   titre: string
   isbn: string
@@ -16,8 +15,7 @@ export type BookRead = {
   etat_libelle?: string | null
 }
 
-export type BookCreate = Omit<BookRead, 'id_article' | 'date_creation' | 'etat_libelle'> & {
-  id_type_objet?: number
+export type BookCreate = Omit<BookRead, 'id_livre' | 'date_creation' | 'etat_libelle'> & {
   id_etat_usure?: number
   // Which SourceStock the book's initial +1 unit is credited to. Omitted
   // falls back to the backend's own default (oldest source).
@@ -89,7 +87,7 @@ export type CommandeRead = CommandeCreate & {
 // catalog price — never accepted from the client.
 export type LigneCommandeCreate = {
   id_commande: number
-  id_article: number
+  id_livre: number
   quantite: number
 }
 
@@ -99,8 +97,8 @@ export type LigneCommandeRead = LigneCommandeCreate & {
 }
 
 export type LigneCommandeAdminRead = LigneCommandeRead & {
-  titre_article?: string | null
-  sku_article?: string | null
+  titre_livre?: string | null
+  sku_livre?: string | null
 }
 
 export type CommandeAdminRead = CommandeRead & {
@@ -128,7 +126,7 @@ export type PaiementRead = PaiementCreate & {
 }
 
 export type ScanISBNCreate = {
-  id_article_livre: number
+  id_livre: number
   isbn_lu: string
   valide?: boolean
 }
@@ -136,7 +134,7 @@ export type ScanISBNCreate = {
 export type ScanISBNRead = {
   id_scan_isbn: number
   id_utilisateur: number
-  id_article_livre: number
+  id_livre: number
   isbn_lu: string
   valide: boolean
   date_scan: string
@@ -144,7 +142,7 @@ export type ScanISBNRead = {
 
 export type Stock = {
   id_stock: number
-  id_article: number
+  id_livre: number
   id_source_stock: number
   quantite_disponible: number
   quantite_reservee?: number

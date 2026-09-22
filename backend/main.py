@@ -6,7 +6,6 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
-from presentation.article_router import router as article_router
 from presentation.auth_router import router as auth_router
 from presentation.book_router import router as book_router
 from presentation.catalog_router import router as catalog_router
@@ -27,8 +26,7 @@ tags_metadata = [
     {"name": "auth", "description": "Inscription, connexion par mot de passe et Google Sign-In (JWT HS256)."},
     {"name": "users", "description": "Profil de l'utilisateur connecté (RGPD/nLPD : export et effacement) et administration des comptes."},
     {"name": "books", "description": "Catalogue des livres et récupération des métadonnées ISBN via OpenLibrary."},
-    {"name": "articles", "description": "Articles génériques du catalogue (surtype du livre)."},
-    {"name": "catalog", "description": "Listes de référence : types d'objet et états d'usure."},
+    {"name": "catalog", "description": "Liste de référence : états d'usure."},
     {"name": "stock", "description": "Sources de stock et quantités disponibles (réservé aux administrateurs)."},
     {"name": "scans", "description": "Historique des scans ISBN réalisés en recyclerie."},
     {"name": "orders", "description": "Panier et commandes de l'utilisateur connecté."},
@@ -96,7 +94,6 @@ async def health() -> dict[str, str | int]:
 app.include_router(book_router)
 app.include_router(auth_router)
 app.include_router(catalog_router)
-app.include_router(article_router)
 app.include_router(stock_router)
 app.include_router(order_router)
 app.include_router(payment_router)

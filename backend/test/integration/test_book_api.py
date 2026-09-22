@@ -69,7 +69,7 @@ def test_create_and_get_book():
     data = response.json()
     assert data["titre"] == payload["titre"]
     # Get
-    book_id = data["id_article"]
+    book_id = data["id_livre"]
     response = client.get(f"/books/{book_id}")
     assert response.status_code == 200
     data = response.json()

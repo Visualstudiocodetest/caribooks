@@ -5,7 +5,7 @@ import { useLocalStorageState } from '@/hooks/useLocalStorage'
 import type { ReactNode } from 'react'
 
 export type CartItem = {
-  id_article: number
+  id_livre: number
   titre: string
   prix_chf: number
   image_link?: string | null
@@ -18,8 +18,8 @@ type CartContextValue = {
   total: number
   hydrated: boolean
   addItem: (item: Omit<CartItem, 'quantity'>) => void
-  removeItem: (id_article: number) => void
-  setQuantity: (id_article: number, quantity: number) => void
+  removeItem: (id_livre: number) => void
+  setQuantity: (id_livre: number, quantity: number) => void
   clear: () => void
 }
 
@@ -39,17 +39,17 @@ export function CartProvider({ children }: { children: ReactNode }) {
       hydrated,
       addItem: (item) =>
         setItems((prev) => {
-          const existing = prev.find((p) => p.id_article === item.id_article)
+          const existing = prev.find((p) => p.id_livre === item.id_livre)
           if (!existing) return [...prev, { ...item, quantity: 1 }]
           return prev.map((p) =>
-            p.id_article === item.id_article ? { ...p, quantity: p.quantity + 1 } : p,
+            p.id_livre === item.id_livre ? { ...p, quantity: p.quantity + 1 } : p,
           )
         }),
-      removeItem: (id_article) => setItems((prev) => prev.filter((p) => p.id_article !== id_article)),
-      setQuantity: (id_article, quantity) =>
+      removeItem: (id_livre) => setItems((prev) => prev.filter((p) => p.id_livre !== id_livre)),
+      setQuantity: (id_livre, quantity) =>
         setItems((prev) =>
           prev
-            .map((p) => (p.id_article === id_article ? { ...p, quantity } : p))
+            .map((p) => (p.id_livre === id_livre ? { ...p, quantity } : p))
             .filter((p) => p.quantity > 0),
         ),
       clear: () => setItems([]),

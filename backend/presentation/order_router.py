@@ -163,27 +163,27 @@ def create_ligne(payload: LigneCommandeCreate, db: DbSession, current_user: Curr
     if (c.statut or "").upper() in ("CANCELLED", "FAILED"):
         raise HTTPException(status_code=409, detail="Votre réservation a expiré. Retournez au panier.")
     ensure_commande_mutable(c)
-    article = db.query(models.Article).filter(models.Article.id_article == payload.id_article).first()
-    if article is None:
-        raise HTTPException(status_code=404, detail="Article not found")
+    livre = db.query(models.Livre).filter(models.Livre.id_livre == payload.id_livre).first()
+    if livre is None:
+        raise HTTPException(status_code=404, detail="Livre not found")
     # Unit price always comes from the catalog, never the client — otherwise a
     # tampered request body could set an arbitrary prix_unitaire_chf.
-    unit_price = float(article.prix_chf)  # type: ignore[arg-type]
+    unit_price = float(livre.prix_chf)  # type: ignore[arg-type]
     try:
-        reserve_stock(db, int(payload.id_article), int(payload.quantite))
+        reserve_stock(db, int(payload.id_livre), int(payload.quantite))
 
-        # create the ligne and commit once (for articles without stock rows, we allow creation)
+        # create the ligne and commit once (for livres without stock rows, we allow creation)
         obj = models.LigneCommande(
             id_commande=payload.id_commande,
-            id_article=payload.id_article,
+            id_livre=payload.id_livre,
             quantite=payload.quantite,
             prix_unitaire_chf=unit_price,
         )
         db.add(obj)
 
-        # NOTE: we intentionally do NOT set article.actif = False here.
+        # NOTE: we intentionally do NOT set livre.actif = False here.
         # Reserving stock for a cart (which may be abandoned) must not delist the
-        # book from the catalogue. The article is only marked inactive when the
+        # book from the catalogue. The book is only marked inactive when the
         # order is actually paid (see finalize_commande). Over-reservation is
         # still prevented by the "Not enough stock" check above.
 
@@ -220,9 +220,9 @@ def update_ligne(
         if new_qty is not None and int(new_qty) != int(obj.quantite):  # type: ignore[arg-type]
             delta = int(new_qty) - int(obj.quantite)  # type: ignore[arg-type]
             if delta > 0:
-                reserve_stock(db, int(obj.id_article), delta)  # type: ignore[arg-type]
+                reserve_stock(db, int(obj.id_livre), delta)  # type: ignore[arg-type]
             else:
-                release_stock(db, int(obj.id_article), -delta)  # type: ignore[arg-type]
+                release_stock(db, int(obj.id_livre), -delta)  # type: ignore[arg-type]
             obj.quantite = int(new_qty)  # type: ignore[assignment]
 
         db.flush()

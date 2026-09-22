@@ -10,8 +10,6 @@ class ORMBase(BaseModel):
     model_config = {"from_attributes": True}
 
 class BookBase(BaseModel):
-    # Article fields (subset)
-    id_type_objet: int = 1
     id_etat_usure: int = 1
     titre: str
     isbn: str
@@ -27,13 +25,12 @@ class BookBase(BaseModel):
 class BookCreate(BookBase):
     # Which SourceStock the book's initial +1 unit is credited to. Optional and
     # BookCreate-only (not part of BookBase, so it never leaks into BookRead —
-    # Article/Livre has no such column, it only steers where the Stock row
-    # lands). Omitted falls back to crud_book's existing default (the oldest
+    # Livre has no such column, it only steers where the Stock row lands).
+    # Omitted falls back to crud_book's existing default (the oldest
     # SourceStock, auto-creating one if none exist yet).
     id_source_stock: Optional[int] = None
 
 class BookUpdate(BaseModel):
-    id_type_objet: Optional[int] = None
     id_etat_usure: Optional[int] = None
     titre: Optional[str] = None
     isbn: Optional[str] = None
@@ -47,29 +44,9 @@ class BookUpdate(BaseModel):
     actif: Optional[bool] = None
 
 class BookRead(BookBase, ORMBase):
-    id_article: int
+    id_livre: int
     date_creation: datetime
     etat_libelle: Optional[str] = None
-
-
-class TypeObjetBase(BaseModel):
-    libelle: str
-    code: str
-    description: Optional[str] = None
-
-
-class TypeObjetCreate(TypeObjetBase):
-    pass
-
-
-class TypeObjetUpdate(BaseModel):
-    libelle: Optional[str] = None
-    code: Optional[str] = None
-    description: Optional[str] = None
-
-
-class TypeObjetRead(TypeObjetBase, ORMBase):
-    id_type_objet: int
 
 
 class EtatUsureBase(BaseModel):
@@ -88,37 +65,6 @@ class EtatUsureUpdate(BaseModel):
 
 class EtatUsureRead(EtatUsureBase, ORMBase):
     id_etat_usure: int
-
-
-class ArticleBase(BaseModel):
-    id_type_objet: int
-    id_etat_usure: int
-    sku: str
-    titre: str
-    description: Optional[str] = None
-    image_link: Optional[str] = None
-    prix_chf: float = Field(..., ge=0)
-    actif: bool = True
-
-
-class ArticleCreate(ArticleBase):
-    pass
-
-
-class ArticleUpdate(BaseModel):
-    id_type_objet: Optional[int] = None
-    id_etat_usure: Optional[int] = None
-    sku: Optional[str] = None
-    titre: Optional[str] = None
-    description: Optional[str] = None
-    image_link: Optional[str] = None
-    prix_chf: Optional[float] = Field(default=None, ge=0)
-    actif: Optional[bool] = None
-
-
-class ArticleRead(ArticleBase, ORMBase):
-    id_article: int
-    date_creation: datetime
 
 
 class SourceStockBase(BaseModel):
@@ -142,7 +88,7 @@ class SourceStockRead(SourceStockBase, ORMBase):
 
 
 class StockBase(BaseModel):
-    id_article: int
+    id_livre: int
     id_source_stock: int
     quantite_disponible: int = Field(default=0, ge=0)
     quantite_reservee: int = Field(default=0, ge=0)
@@ -201,7 +147,7 @@ class CommandeRead(CommandeBase, ORMBase):
 
 class LigneCommandeBase(BaseModel):
     id_commande: int
-    id_article: int
+    id_livre: int
     quantite: int = Field(..., gt=0)
 
 
@@ -219,8 +165,8 @@ class LigneCommandeRead(LigneCommandeBase, ORMBase):
 
 
 class LigneCommandeAdminRead(LigneCommandeRead):
-    titre_article: Optional[str] = None
-    sku_article: Optional[str] = None
+    titre_livre: Optional[str] = None
+    sku_livre: Optional[str] = None
 
 
 class AdminCommandeStatusUpdate(BaseModel):
@@ -285,7 +231,7 @@ class PaiementRead(PaiementBase, ORMBase):
 
 
 class ScanISBNBase(BaseModel):
-    id_article_livre: int
+    id_livre: int
     isbn_lu: str
     valide: bool = False
 

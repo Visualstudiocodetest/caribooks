@@ -17,8 +17,7 @@ class TestCrudBook(unittest.TestCase):
         # crud_book only reads attributes off its `book` argument (duck-typed),
         # so a plain namespace matching BookCreate's shape is enough here.
         self.book = SimpleNamespace(
-            id_article=1,
-            id_type_objet=0,
+            id_livre=1,
             id_etat_usure=0,
             titre="Test Book",
             isbn="1234567890",

@@ -16,7 +16,6 @@ import { useBarcodeScanner } from '@/hooks/useBarcodeScanner'
 import type { BookRead, SourceStock } from '@/types/api'
 
 type EtatItem = { id_etat_usure: number; libelle: string }
-type TypeObjetItem = { id_type_objet: number; libelle: string; code?: string }
 
 export default function AdminNewBookPage() {
   const [titre, setTitre] = useState('')
@@ -24,10 +23,8 @@ export default function AdminNewBookPage() {
   const [auteur, setAuteur] = useState('')
   const [prix, setPrix] = useState('')
   const [idEtat, setIdEtat] = useState('')
-  const [idType, setIdType] = useState('')
   const [idSource, setIdSource] = useState('')
   const [etatList, setEtatList] = useState<EtatItem[]>([])
-  const [typeList, setTypeList] = useState<TypeObjetItem[]>([])
   const [sourceList, setSourceList] = useState<SourceStock[]>([])
   const [imageLink, setImageLink] = useState('')
   const [description, setDescription] = useState('')
@@ -49,11 +46,6 @@ export default function AdminNewBookPage() {
   const [created, setCreated] = useState<BookRead | null>(null)
   const videoRef = useRef<HTMLVideoElement | null>(null)
 
-  function defaultTypeId(): string {
-    const def = typeList.find((t) => t.code === 'BOOK' || (t.libelle || '').toLowerCase() === 'livre')
-    return def ? String(def.id_type_objet) : ''
-  }
-
   // Last-added source (end of the list, ordered by id_source_stock ascending
   // by the backend) is the one most likely to still be in active use — pre-select it.
   function defaultSourceId(): string {
@@ -67,7 +59,6 @@ export default function AdminNewBookPage() {
     setAuteur('')
     setPrix('')
     setIdEtat('')
-    setIdType(defaultTypeId())
     setIdSource(defaultSourceId())
     setImageLink('')
     setDescription('')
@@ -137,7 +128,7 @@ export default function AdminNewBookPage() {
     setError(null)
     try {
       const created = await createScan({
-        id_article_livre: existingBook.id_article,
+        id_livre: existingBook.id_livre,
         isbn_lu: clean,
         valide: false,
       })
@@ -205,15 +196,6 @@ export default function AdminNewBookPage() {
         // ignore
       }
       try {
-        const typesArr = await listCatalog<TypeObjetItem>('type-objets')
-        setTypeList(typesArr)
-        // default TypeObjet to 'Livre' when available
-        const def = typesArr.find((t) => t.code === 'BOOK' || (t.libelle || '').toLowerCase() === 'livre')
-        if (def && !idType) setIdType(String(def.id_type_objet))
-      } catch {
-        // ignore
-      }
-      try {
         const sourcesArr = await listSources()
         setSourceList(sourcesArr)
         // Pre-select the last (most recently added) source, per the volunteer
@@ -245,14 +227,13 @@ export default function AdminNewBookPage() {
     setLoading(true)
     try {
       // simple client-side validation: all fields required (description optional)
-      if (!titre.trim() || !isbn.trim() || !auteur.trim() || !prix.trim() || !idEtat || !idType) {
+      if (!titre.trim() || !isbn.trim() || !auteur.trim() || !prix.trim() || !idEtat) {
         const missing = new Set<string>()
         if (!titre.trim()) missing.add('titre')
         if (!isbn.trim()) missing.add('isbn')
         if (!auteur.trim()) missing.add('auteur')
         if (!prix.trim()) missing.add('prix')
         if (!idEtat) missing.add('etat')
-        if (!idType) missing.add('type')
         setInvalidFields(missing)
         setError('Veuillez remplir tous les champs obligatoires.')
         setLoading(false)
@@ -275,7 +256,6 @@ export default function AdminNewBookPage() {
         }
       }
       const createdBook = await createBook({
-        id_type_objet: Number(idType),
         id_etat_usure: Number(idEtat),
         titre,
         isbn,
@@ -324,7 +304,7 @@ export default function AdminNewBookPage() {
                 <div className="muted">ISBN: {created.isbn}</div>
                 <div className="muted">Prix: CHF {created.prix_chf.toFixed(2)}</div>
               </div>
-              <Link className="btn" href={`/admin/books/${created.id_article}`} aria-label={`Voir la fiche du livre ${created.titre}`}>
+              <Link className="btn" href={`/admin/books/${created.id_livre}`} aria-label={`Voir la fiche du livre ${created.titre}`}>
                 Voir la fiche
               </Link>
             </div>
@@ -353,7 +333,7 @@ export default function AdminNewBookPage() {
                 <div className="muted">ISBN: {existingBook.isbn}</div>
                 <div className="muted">Prix: CHF {existingBook.prix_chf.toFixed(2)}</div>
               </div>
-              <Link className="btn" href={`/admin/books/${existingBook.id_article}`} aria-label={`Voir les détails du livre ${existingBook.titre}`}>
+              <Link className="btn" href={`/admin/books/${existingBook.id_livre}`} aria-label={`Voir les détails du livre ${existingBook.titre}`}>
                 Détails
               </Link>
             </div>
@@ -434,40 +414,24 @@ export default function AdminNewBookPage() {
             </button>
           </div>
 
-          <div className="two-up">
-            <div>
-              {/* This page only ever creates a Livre (see createBook below), so
-                  the type is locked to "Livre" rather than offered as a free
-                  choice — picking e.g. "DVD" here would silently create a book
-                  row typed as something else. `idType` still resolves to the
-                  right id (see loadLists/defaultTypeId), it's just not editable. */}
-              <label htmlFor="new-book-type" className="sr-only">Type d&apos;objet</label>
-              <select id="new-book-type" className="input" value={idType} disabled required>
-                <option value={idType}>
-                  {typeList.find((t) => String(t.id_type_objet) === idType)?.libelle || 'Livre'}
+          <div>
+            <label htmlFor="new-book-etat" className="sr-only">État du livre</label>
+            <select
+              id="new-book-etat"
+              className="input"
+              value={idEtat}
+              onChange={(e) => { setIdEtat(e.target.value); if (invalidFields.has('etat')) setInvalidFields((s) => { const n = new Set(s); n.delete('etat'); return n }) }}
+              required
+              aria-invalid={invalidFields.has('etat')}
+              aria-describedby={invalidFields.has('etat') ? 'new-book-form-error' : undefined}
+            >
+              <option value="">État</option>
+              {etatList.map((e) => (
+                <option key={e.id_etat_usure} value={String(e.id_etat_usure)}>
+                  {e.libelle}
                 </option>
-              </select>
-            </div>
-
-            <div>
-              <label htmlFor="new-book-etat" className="sr-only">État du livre</label>
-              <select
-                id="new-book-etat"
-                className="input"
-                value={idEtat}
-                onChange={(e) => { setIdEtat(e.target.value); if (invalidFields.has('etat')) setInvalidFields((s) => { const n = new Set(s); n.delete('etat'); return n }) }}
-                required
-                aria-invalid={invalidFields.has('etat')}
-                aria-describedby={invalidFields.has('etat') ? 'new-book-form-error' : undefined}
-              >
-                <option value="">État</option>
-                {etatList.map((e) => (
-                  <option key={e.id_etat_usure} value={String(e.id_etat_usure)}>
-                    {e.libelle}
-                  </option>
-                ))}
-              </select>
-            </div>
+              ))}
+            </select>
           </div>
 
           <div style={{ display: 'grid', gap: 6 }}>

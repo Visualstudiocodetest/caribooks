@@ -4,14 +4,14 @@ import { useCart } from './CartProvider'
 import { useAvailability } from '@/hooks/useAvailability'
 
 export function AddToCartButton(props: {
-  id_article: number
+  id_livre: number
   titre: string
   prix_chf: number
   image_link?: string | null
 }) {
   const { addItem, items, setQuantity } = useCart()
-  const { available, isLoading: loading } = useAvailability(props.id_article)
-  const existing = items.find((i) => i.id_article === props.id_article)
+  const { available, isLoading: loading } = useAvailability(props.id_livre)
+  const existing = items.find((i) => i.id_livre === props.id_livre)
 
   const isDisabled =
     loading ||
@@ -38,10 +38,10 @@ export function AddToCartButton(props: {
         if (currentQty + 1 > avail) return
 
         if (existing) {
-          setQuantity(props.id_article, currentQty + 1)
+          setQuantity(props.id_livre, currentQty + 1)
         } else {
           addItem({
-            id_article: props.id_article,
+            id_livre: props.id_livre,
             titre: props.titre,
             prix_chf: props.prix_chf,
             image_link: props.image_link,

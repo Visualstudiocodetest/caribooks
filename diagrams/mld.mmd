@@ -1,22 +1,15 @@
-%% Modèle Logique de Données (MLD) — 11 tables MySQL
+%% Modèle Logique de Données (MLD) — CARIBOOKS (livre autonome, sans héritage de table)
 erDiagram
-    type_objet ||--o{ article : "id_type_objet"
-    etat_usure ||--o{ article : "id_etat_usure"
-    article ||--o| livre : "id_article (PK partagée)"
-    article ||--o{ stock : "id_article"
+    etat_usure ||--o{ livre : "id_etat_usure"
+    livre ||--o{ stock : "id_livre"
     source_stock ||--o{ stock : "id_source_stock"
     utilisateur ||--o{ commande : "id_utilisateur"
     commande ||--|{ ligne_commande : "id_commande"
-    article ||--o{ ligne_commande : "id_article"
+    livre ||--o{ ligne_commande : "id_livre"
     commande ||--o{ paiement : "id_commande"
     utilisateur ||--o{ scan_isbn : "id_utilisateur"
-    livre ||--o{ scan_isbn : "id_article_livre"
+    livre ||--o{ scan_isbn : "id_livre"
 
-    type_objet {
-        bigint id_type_objet PK
-        string libelle
-        string code
-    }
     etat_usure {
         bigint id_etat_usure PK
         string libelle
@@ -26,17 +19,13 @@ erDiagram
         string libelle
         string type_source
     }
-    article {
-        bigint id_article PK
-        bigint id_type_objet FK
+    livre {
+        bigint id_livre PK
         bigint id_etat_usure FK
         string sku
         string titre
         decimal prix_chf
         bool actif
-    }
-    livre {
-        bigint id_article PK,FK
         string isbn
         string auteur
         string editeur
@@ -45,7 +34,7 @@ erDiagram
     }
     stock {
         bigint id_stock PK
-        bigint id_article FK
+        bigint id_livre FK
         bigint id_source_stock FK
         int quantite_disponible
         int quantite_reservee
@@ -70,7 +59,7 @@ erDiagram
     ligne_commande {
         bigint id_ligne_commande PK
         bigint id_commande FK
-        bigint id_article FK
+        bigint id_livre FK
         int quantite
         decimal prix_unitaire_chf
     }
@@ -84,7 +73,7 @@ erDiagram
     scan_isbn {
         bigint id_scan_isbn PK
         bigint id_utilisateur FK
-        bigint id_article_livre FK
+        bigint id_livre FK
         string isbn_lu
         bool valide
     }

@@ -41,7 +41,7 @@ def get_scan(id_scan_isbn: int, db: DbSession, current_user: AdminUser):
 @router.post("", response_model=ScanISBNRead, status_code=status.HTTP_201_CREATED, include_in_schema=False)
 def create_scan(payload: ScanISBNCreate, db: DbSession, current_user: AdminUser):
     # ensure referenced livre exists
-    livre = db.query(models.Livre).filter(models.Livre.id_article == payload.id_article_livre).first()
+    livre = db.query(models.Livre).filter(models.Livre.id_livre == payload.id_livre).first()
     if livre is None:
         raise HTTPException(status_code=404, detail="Livre not found")
     obj = models.ScanISBN(id_utilisateur=current_user.id_utilisateur, **payload.model_dump())
