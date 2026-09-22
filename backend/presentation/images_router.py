@@ -1,3 +1,5 @@
+from typing import Annotated
+
 from fastapi import APIRouter, File, HTTPException, Request, UploadFile
 from pydantic import BaseModel
 
@@ -29,7 +31,7 @@ def fetch_image(payload: ImageFetchIn, request: Request, admin: AdminUser):
 
 
 @router.post("/upload")
-async def upload_image(request: Request, admin: AdminUser, file: UploadFile = File(...)):
+async def upload_image(request: Request, admin: AdminUser, file: Annotated[UploadFile, File()]):
     """Store a photo taken/picked directly in the browser (eg. a picture of a
     book's cover) as the book's image -- the fallback path for when OpenLibrary
     has no cover art, or the ISBN lookup fails outright."""
