@@ -9,7 +9,7 @@ import { listCatalog } from '@/services/catalog'
 import { listSources } from '@/services/stocks'
 import Image from 'next/image'
 import { lookupIsbn } from '@/services/openlibrary'
-import { fetchRemoteImage } from '@/services/images'
+import { fetchRemoteImage, uploadLocalImage } from '@/services/images'
 import { cleanIsbn } from '@/lib/isbn'
 import { isExternalImage } from '@/lib/images'
 import { useBarcodeScanner } from '@/hooks/useBarcodeScanner'
@@ -35,6 +35,7 @@ export default function AdminNewBookPage() {
   const [invalidFields, setInvalidFields] = useState<Set<string>>(new Set())
   const [loading, setLoading] = useState(false)
   const [autofillLoading, setAutofillLoading] = useState(false)
+  const [photoUploading, setPhotoUploading] = useState(false)
   // Set when the scanned/typed ISBN already matches a book in the Caribooks
   // catalog: creating it again would just fail on the unique ISBN constraint,
   // so instead we show the existing book and offer to log a traceability scan
@@ -167,24 +168,32 @@ export default function AdminNewBookPage() {
     const f = e.target.files?.[0]
     if (!f) return
     setScanError(null)
+
+    // The photo may happen to frame the back-cover barcode -- try reading an
+    // ISBN off it first, purely as a convenience (triggers the usual
+    // OpenLibrary autofill). Either way, the button's real purpose is below:
+    // use the picture itself as the book's cover, since OpenLibrary often has
+    // no cover art, or the lookup fails outright.
     try {
       const bitmap = await createImageBitmap(f)
-      const detector = typeof window.BarcodeDetector !== 'undefined'
-        ? new BarcodeDetector({ formats: ['ean_13', 'ean_8', 'qr_code'] })
-        : null
-      if (detector) {
+      if (typeof window.BarcodeDetector !== 'undefined') {
+        const detector = new BarcodeDetector({ formats: ['ean_13', 'ean_8', 'qr_code'] })
         const results = await detector.detect(bitmap)
-        if (results && results.length) {
-          const code = results[0].rawValue
-          if (code) {
-            await handleIsbn(cleanIsbn(code))
-            return
-          }
-        }
+        const code = results?.[0]?.rawValue
+        if (code) void handleIsbn(cleanIsbn(code))
       }
-      setScanError('Aucun code détecté dans l\u2019image')
     } catch {
-      setScanError('Impossible de traiter l\u2019image')
+      // not decodable as a barcode photo -- fine, still used as the cover below
+    }
+
+    setPhotoUploading(true)
+    try {
+      const uploaded = await uploadLocalImage(f)
+      setImageLink(uploaded)
+    } catch {
+      setScanError('Impossible d\u2019envoyer la photo')
+    } finally {
+      setPhotoUploading(false)
     }
   }
 
@@ -375,10 +384,20 @@ export default function AdminNewBookPage() {
                 Scanner un code-barres
               </button>
               <label className="btn" style={{ cursor: 'pointer' }}>
-                Upload image
-                <input type="file" accept="image/*" onChange={onFileUpload} style={{ display: 'none' }} />
+                {photoUploading ? 'Envoi…' : 'Photographier le livre'}
+                <input
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  onChange={onFileUpload}
+                  disabled={photoUploading}
+                  style={{ display: 'none' }}
+                />
               </label>
             </div>
+            {/* Fallback for when OpenLibrary has no cover art (or the ISBN
+                lookup fails outright): opens the device's rear camera so the
+                admin can photograph the book itself and use that as its image. */}
             {scanError ? <div className="banner-error" role="alert">{scanError}</div> : null}
           </div>
 
