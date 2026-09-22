@@ -20,3 +20,8 @@ docs/
 questions_jury.md
 overleaf-sync-*.sh
 backend/.coverage
+
+images/
+CARIBOOKS_presentation.pdf
+CARIBOOKS_presentation.pptx
+~$*.ppt*
