@@ -58,7 +58,7 @@ def test_book_crud_flow():
     r = client.post("/books/", json=payload, headers=headers)
     assert r.status_code == 201
     book = r.json()
-    book_id = book["id_article"]
+    book_id = book["id_livre"]
     # Update
     update = {"titre": "Flow Book Updated"}
     r = client.put(f"/books/{book_id}", json=update, headers=headers)

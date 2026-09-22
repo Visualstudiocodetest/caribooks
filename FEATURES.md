@@ -11,7 +11,7 @@ métadonnées ISBN via **OpenLibrary**, principes **SOLID / KISS**.
 - [x] **React Query** pour le fetch client (cache/dedup/retry).
 
 ## Prioritaire (valeur haute)
-- [ ] **Liste de souhaits / favoris** — table `favori(id_utilisateur, id_article, date_ajout)`,
+- [ ] **Liste de souhaits / favoris** — table `favori(id_utilisateur, id_livre, date_ajout)`,
       endpoints `GET/POST/DELETE /users/me/favoris`, bouton cœur sur `BookCard`, page `/account/favoris`.
       Migration SQL dédiée dans `backend/migrations/`.
 - [ ] **Alerte réappro** ("prévenez-moi quand disponible") — table `alerte_stock`, déclenchée
@@ -34,8 +34,9 @@ métadonnées ISBN via **OpenLibrary**, principes **SOLID / KISS**.
       `usePostFinanceHandler` / `useCountdown` + présentation ; `admin/books/new` (~400 l.)
       → hook scanner/caméra + autofill OpenLibrary. (Reporté : zone de paiement fragile, à
       faire avec une couverture de tests renforcée.)
-- [ ] **Composant générique de liste-CRUD admin** pour remplacer les 2 pages quasi
-      identiques `admin/lists/*` (etat-usures, type-objets).
+- [ ] **Composant générique de liste-CRUD admin** pour factoriser la page
+      `admin/lists/etat-usures` si d'autres référentiels similaires apparaissent
+      (la page `admin/lists/type-objets` a été supprimée avec la table `type_objet`).
 - [ ] **Rate limiter partagé (Redis)** — l'actuel est en mémoire par worker ; suffisant pour
       une VM unique, à remplacer si passage multi-instances.
 - [ ] **Dockerfile** : ajouter un superviseur de process (ou séparer backend/frontend en deux

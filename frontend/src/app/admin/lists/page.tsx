@@ -9,7 +9,6 @@ export default function AdminListsIndex() {
       <nav aria-label="Listes de référence" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 12 }}>
         {[
           { href: '/admin/lists/etat-usures', label: 'États d\'usure', icon: '⭐', desc: 'Neuf, Bon état, Acceptable…' },
-          { href: '/admin/lists/type-objets', label: 'Types d\'objets', icon: '🗂️', desc: 'Livre, DVD, Jeu…' },
         ].map((item) => (
           <Link key={item.href} href={item.href} className="card" style={{ padding: 16, display: 'grid', gap: 6, textDecoration: 'none' }}>
             <div style={{ fontSize: 22 }} aria-hidden="true">{item.icon}</div>

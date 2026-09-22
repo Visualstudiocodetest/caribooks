@@ -1,12 +1,12 @@
 import { apiFetch } from './api'
 
-// Catalog reference data (type-objets, etat-usures). Centralizes the endpoint
-// strings that were previously hard-coded with inline apiFetch calls in the
-// admin book forms and the admin list pages.
+// Catalog reference data (etat-usures). Centralizes the endpoint strings that
+// were previously hard-coded with inline apiFetch calls in the admin book
+// forms and the admin list pages.
 
 export type CatalogItem = { id?: number; libelle: string; code?: string } & Record<string, unknown>
 
-export type CatalogResource = 'type-objets' | 'etat-usures'
+export type CatalogResource = 'etat-usures'
 
 export function listCatalog<T = CatalogItem>(resource: CatalogResource): Promise<T[]> {
   return apiFetch<T[]>(`/catalog/${resource}`)

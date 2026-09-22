@@ -6,7 +6,7 @@ export function BookGrid({
   availability,
 }: {
   books: BookRead[]
-  // Real remaining quantity per id_article, so BookCard can cap "Ajouter au
+  // Real remaining quantity per id_livre, so BookCard can cap "Ajouter au
   // panier" instead of allowing unlimited clicks on an out-of-stock book.
   // Omitted (undefined) means "unknown" — BookCard stays permissive.
   availability?: Record<number, number>
@@ -22,7 +22,7 @@ export function BookGrid({
   return (
     <div className="book-grid">
       {books.map((b) => (
-        <BookCard key={b.id_article} book={b} available={availability?.[b.id_article] ?? null} />
+        <BookCard key={b.id_livre} book={b} available={availability?.[b.id_livre] ?? null} />
       ))}
     </div>
   )

@@ -50,8 +50,8 @@ def admin_get_lignes(id_commande: int, db: DbSession, _admin: AdminUser):
     return [
         LigneCommandeAdminRead(
             **LigneCommandeRead.model_validate(ligne).model_dump(),
-            titre_article=ligne.article.titre if ligne.article else None,
-            sku_article=ligne.article.sku if ligne.article else None,
+            titre_livre=ligne.livre.titre if ligne.livre else None,
+            sku_livre=ligne.livre.sku if ligne.livre else None,
         )
         for ligne in lignes
     ]

@@ -646,7 +646,7 @@ Documentation et certification &
     \label{fig:classes}
 \end{figure}
 
-\noindent Le diagramme de classes présente les entités principales du domaine métier : \texttt{Utilisateur}, \texttt{Article}, \texttt{Livre} (sous-classe d'\texttt{Article}), \texttt{EtatUsure}, \texttt{TypeObjet}, \texttt{Stock}, \texttt{Commande}, \texttt{LigneCommande}, \texttt{Paiement}, \texttt{ScanIsbn}. La relation d'héritage entre \texttt{Article} et \texttt{Livre} reflète la table \texttt{livre} liée à la table \texttt{article} par une clé primaire partagée.
+\noindent Le diagramme de classes présente les entités principales du domaine métier : \texttt{Utilisateur}, \texttt{Livre}, \texttt{EtatUsure}, \texttt{Stock}, \texttt{Commande}, \texttt{LigneCommande}, \texttt{Paiement}, \texttt{ScanIsbn}. \texttt{Livre} porte directement tous les attributs d'un exemplaire en vente (SKU, titre, description, prix, image, statut actif) ainsi que ses attributs propres (ISBN, auteur, éditeur, date de publication, langue), et référence \texttt{EtatUsure} par clé étrangère.
 
 \subsection{Diagramme d'objets}
 
@@ -684,14 +684,14 @@ Documentation et certification &
     \label{fig:mld}
 \end{figure}
 
-\noindent La base de données CARIBOOKS repose sur \textbf{11 tables} organisées autour d'une architecture en héritage de table (\textit{table per class}) pour les articles : la table \texttt{article} contient les attributs communs à tout objet en vente, et la table \texttt{livre} étend \texttt{article} avec les attributs spécifiques aux livres (ISBN, auteur, éditeur, date de publication, langue). Ce design permet d'étendre la plateforme à d'autres types d'objets (vêtements, jouets, etc.) sans restructurer le schéma de base.
+\noindent La base de données CARIBOOKS repose sur \textbf{10 tables}. Le catalogue est centré sur une unique table \texttt{livre}, qui porte à la fois les attributs communs à tout article en vente (SKU, titre, description, prix, image, statut actif) et les attributs spécifiques aux livres (ISBN, auteur, éditeur, date de publication, langue) : la plateforme ne vendant que des livres, une architecture en héritage de table (\textit{table per class}) séparant un \texttt{article} générique d'un \texttt{livre} spécialisé — complétée d'une table \texttt{type\_objet} censée permettre d'étendre à d'autres types d'objets — n'apportait aucun bénéfice concret et a été supprimée au profit de ce modèle simplifié (principe KISS/YAGNI), \texttt{livre} conservant sa propre clé primaire \texttt{id\_livre}.
 
 \noindent Les principales relations sont :
 \begin{itemize}
-    \item \texttt{article} $\leftrightarrow$ \texttt{livre} : héritage 1-1 (clé primaire partagée)
-    \item \texttt{article} $\leftrightarrow$ \texttt{stock} : 1-N par source de stock
+    \item \texttt{livre} $\leftrightarrow$ \texttt{etat\_usure} : N-1
+    \item \texttt{livre} $\leftrightarrow$ \texttt{stock} : 1-N par source de stock
     \item \texttt{utilisateur} $\leftrightarrow$ \texttt{commande} : 1-N
-    \item \texttt{commande} $\leftrightarrow$ \texttt{ligne\_commande} $\leftrightarrow$ \texttt{article} : N-N décomposée
+    \item \texttt{commande} $\leftrightarrow$ \texttt{ligne\_commande} $\leftrightarrow$ \texttt{livre} : N-N décomposée
     \item \texttt{commande} $\leftrightarrow$ \texttt{paiement} : 1-1
     \item \texttt{utilisateur} $\leftrightarrow$ \texttt{scan\_isbn} $\leftrightarrow$ \texttt{livre} : traçabilité des scans
 \end{itemize}
@@ -806,7 +806,7 @@ l'écran de scan ISBN telle qu'implémentée.
 Le backend suit une \textbf{architecture en couches} inspirée des principes de l'architecture hexagonale, garantissant la séparation des préoccupations exigée par le bloc 2 du référentiel. Le code est organisé en trois répertoires :
 
 \begin{itemize}
-    \item \texttt{presentation/} — couche de présentation : les \textit{routers} FastAPI (un par domaine fonctionnel : \texttt{auth\_router}, \texttt{book\_router}, \texttt{catalog\_router}, \texttt{article\_router}, \texttt{stock\_router}, \texttt{order\_router} pour les commandes/lignes, \texttt{payment\_router} pour les paiements et l'orchestration PostFinance, \texttt{order\_admin\_router}, \texttt{scan\_router}, \texttt{user\_router}, \texttt{images\_router}), les schémas Pydantic de validation (\texttt{schemas.py}, \texttt{auth\_schemas.py}) et les dépendances d'injection (\texttt{deps.py}).
+    \item \texttt{presentation/} — couche de présentation : les \textit{routers} FastAPI (un par domaine fonctionnel : \texttt{auth\_router}, \texttt{book\_router}, \texttt{catalog\_router}, \texttt{stock\_router}, \texttt{order\_router} pour les commandes/lignes, \texttt{payment\_router} pour les paiements et l'orchestration PostFinance, \texttt{order\_admin\_router}, \texttt{scan\_router}, \texttt{user\_router}, \texttt{images\_router}), les schémas Pydantic de validation (\texttt{schemas.py}, \texttt{auth\_schemas.py}) et les dépendances d'injection (\texttt{deps.py}).
     \item \texttt{services/} — couche métier : logique applicative isolée des routes (\texttt{jwt\_service}, \texttt{order\_service}, \texttt{postfinance\_service}, \texttt{book\_service}, \texttt{image\_service}, \texttt{rate\_limit}).
     \item \texttt{infrastructure/} — couche d'accès aux données : configuration SQLAlchemy (\texttt{db.py}), modèles ORM (\texttt{models.py}) et opérations CRUD génériques et spécialisées (\texttt{crud\_base}, \texttt{crud\_user}, \texttt{crud\_book}).
 \end{itemize}
@@ -817,9 +817,9 @@ Le backend suit une \textbf{architecture en couches} inspirée des principes de 
 
 Le module d'authentification expose trois endpoints : \texttt{POST /auth/register} (création de compte, renvoie un \texttt{201} ou un \texttt{400} si l'email existe déjà), \texttt{POST /auth/token} (connexion par email/mot de passe, convention OAuth2) et \texttt{POST /auth/google} (connexion via \textbf{Google Sign-In} : le jeton d'identité Google est vérifié auprès de \texttt{oauth2.googleapis.com/tokeninfo}, l'email doit être vérifié côté Google, puis le compte est retrouvé ou créé via son \texttt{google\_id}). Pour la connexion par mot de passe, l'utilisateur est récupéré par email via \texttt{crud\_user}, et le mot de passe est vérifié avec \texttt{pwdlib} (bcrypt) ; le champ \texttt{mot\_de\_passe\_hash} est nullable, car les comptes créés via Google n'en possèdent pas. Si les identifiants sont valides, un JWT signé en \textbf{HS256} est généré (\texttt{jwt\_service.create\_access\_token}), contenant l'email (\texttt{sub}), le rôle et une expiration de \textbf{480 minutes}. Les trois routes d'authentification sont protégées par un \textit{rate limiting} applicatif (\texttt{services/rate\_limit.py}) contre le \textit{credential stuffing}. La protection des routes repose sur deux dépendances FastAPI : \texttt{get\_current\_user} (décode et valide le token via le schéma \texttt{HTTPBearer}) et \texttt{require\_admin} (contrôle du rôle \texttt{admin}) — il n'existe que deux rôles, \texttt{admin} et \texttt{user}. Au démarrage, l'application refuse de fonctionner avec une \texttt{SECRET\_KEY} correspondant à une valeur faible ou de type \og placeholder \fg{} connue (quel que soit l'environnement) ; en son absence totale, une clé aléatoire est générée pour la session en cours.
 
-\subsection{Module catalogue, articles et stock}
+\subsection{Module catalogue, livres et stock}
 
-Le catalogue s'appuie sur une classe CRUD générique typée (\texttt{CrudBase}) réutilisée par tous les routers, ce qui factorise les opérations \texttt{list / get / create / update / delete}. Le \texttt{catalog\_router} gère les référentiels (types d'objet, états d'usure), le \texttt{book\_router} expose les livres (notamment \texttt{GET /books/by-isbn/\{isbn\}} et \texttt{GET /books/\{id\}}) via un \texttt{BookService} dédié, et le \texttt{stock\_router} pilote les quantités disponibles et réservées. Les lectures du catalogue sont publiques ; les opérations d'écriture exigent un utilisateur authentifié (et un rôle \texttt{admin} pour la création de livres). Côté frontend, la page d'accueil (\texttt{app/page.tsx}) \textbf{est} le catalogue complet (recherche, filtre par état, tri, pagination visuelle) : une ancienne page \texttt{/catalog} redondante, qui dupliquait le même appel \texttt{listBooks}/\texttt{getAvailabilityMap} en version tronquée, a été supprimée afin de n'avoir plus qu'un seul point d'entrée pour parcourir le catalogue. Une classification par catégorie/genre (table \texttt{categorie}, association N-N \texttt{article\_categorie}) avait été mise en place au niveau de l'API générique \texttt{/articles}, mais n'a jamais été reliée au parcours de création/édition d'un livre (\texttt{/books}) : le formulaire d'ajout n'exposait pas ce champ, et celui d'édition l'exposait sans que le schéma \texttt{BookUpdate} ne le transmette au service, si bien qu'aucun livre n'a jamais reçu de catégorie en pratique. Ces tables, la case à cocher correspondante côté back-office et le filtre catalogue associé ont été supprimés (migration \texttt{20260912\_drop\_categorie\_tables.sql}) plutôt que maintenus non fonctionnels.
+Le catalogue s'appuie sur une classe CRUD générique typée (\texttt{CrudBase}) réutilisée par tous les routers, ce qui factorise les opérations \texttt{list / get / create / update / delete}. Le \texttt{catalog\_router} gère désormais le seul référentiel des états d'usure (\texttt{/catalog/etat-usures}), le \texttt{book\_router} expose les livres (notamment \texttt{GET /books/by-isbn/\{isbn\}} et \texttt{GET /books/\{id\_livre\}}) via un \texttt{BookService} dédié, et le \texttt{stock\_router} pilote les quantités disponibles et réservées. Les lectures du catalogue sont publiques ; les opérations d'écriture exigent un utilisateur authentifié (et un rôle \texttt{admin} pour la création de livres). Côté frontend, la page d'accueil (\texttt{app/page.tsx}) \textbf{est} le catalogue complet (recherche, filtre par état, tri, pagination visuelle) : une ancienne page \texttt{/catalog} redondante, qui dupliquait le même appel \texttt{listBooks}/\texttt{getAvailabilityMap} en version tronquée, a été supprimée afin de n'avoir plus qu'un seul point d'entrée pour parcourir le catalogue. Une classification par catégorie/genre (table \texttt{categorie}, association N-N \texttt{article\_categorie}) avait été mise en place au niveau de l'ancienne API générique \texttt{/articles}, mais n'a jamais été reliée au parcours de création/édition d'un livre (\texttt{/books}) : le formulaire d'ajout n'exposait pas ce champ, et celui d'édition l'exposait sans que le schéma \texttt{BookUpdate} ne le transmette au service, si bien qu'aucun livre n'a jamais reçu de catégorie en pratique. Ces tables, la case à cocher correspondante côté back-office et le filtre catalogue associé ont été supprimés (migration \texttt{20260912\_drop\_categorie\_tables.sql}) plutôt que maintenus non fonctionnels. L'API générique \texttt{/articles} elle-même — vestige de l'architecture en héritage de table (\texttt{article}/\texttt{type\_objet}) — a depuis été supprimée à son tour, la plateforme ne vendant que des livres : la création, la modification et la suppression d'un exemplaire passent désormais exclusivement par \texttt{/books}.
 
 \subsection{Module scan ISBN}
 
@@ -840,7 +840,7 @@ Côté frontend, l'ensemble de la section \texttt{/admin} est protégé par un l
 
 \paragraph{Gestion des utilisateurs et du stock.} Deux écrans complètent le back-office. La page \texttt{/admin/stock} liste l'ensemble des articles avec leurs quantités disponibles et réservées, avec recherche par titre. La page \texttt{/admin/users} liste tous les comptes (recherche par nom ou e-mail) et permet à un administrateur de promouvoir un utilisateur au rôle \texttt{admin}, de rétrograder un administrateur, ou d'anonymiser un compte (même logique et même garde-fou que l'auto-suppression, cf. \S RGPD ci-après) — trois actions exposées par le \texttt{user\_router} (\texttt{GET /users/}, \texttt{PUT /users/\{id\}}, \texttt{DELETE /users/\{id\}}), réservées au rôle \texttt{admin} et validées par le schéma Pydantic \texttt{UserUpdate} (plutôt qu'un dictionnaire libre, afin que les mêmes contraintes de validation — notamment la longueur minimale du mot de passe — s'appliquent qu'un utilisateur modifie son propre profil ou qu'un administrateur modifie celui d'un tiers). Un administrateur ne peut ni changer son propre rôle, ni supprimer son propre compte depuis cette interface, ce qui évite qu'il se prive lui-même de ses droits par erreur.
 
-\paragraph{Fiabilité du proxy \texttt{/api/proxy}.} Le frontend appelle systématiquement le backend via une réécriture Next.js (\texttt{/api/proxy/:path*} $\rightarrow$ l'origine du backend), afin que le navigateur ne fasse que des requêtes de même origine et n'ait jamais besoin de CORS. Les routes de collection du backend (\texttt{GET /books/}, \texttt{/scans/}, \texttt{/stock/}, \texttt{/users/}, \texttt{/articles/}) sont enregistrées côté FastAPI avec un slash final ; une requête envoyée sans ce slash y était auparavant redirigée par FastAPI (\texttt{redirect\_slashes}) vers l'URL absolue \textbf{du backend lui-même}, que le navigateur suivait alors directement — transformant de facto un appel censé rester de même origine en un appel réellement inter-origines, avec pour conséquence la perte de l'en-tête \texttt{Authorization} (comportement standard des navigateurs sur une redirection inter-origines) et un blocage CORS. C'est ce défaut, combiné à la normalisation automatique des barres obliques finales par Next.js lui-même en amont de la règle de réécriture, qui rendait la page \texttt{/admin/users} inutilisable (\og Échec de la récupération \fg{}, page bloquée sur \og Vérification des droits… \fg{}). La correction repose sur deux volets : la désactivation de la normalisation automatique de Next.js (\texttt{skipTrailingSlashRedirect}) et l'acceptation, par chacune des routes de collection concernées, des deux formes (avec ou sans slash final) sans jamais émettre de redirection.
+\paragraph{Fiabilité du proxy \texttt{/api/proxy}.} Le frontend appelle systématiquement le backend via une réécriture Next.js (\texttt{/api/proxy/:path*} $\rightarrow$ l'origine du backend), afin que le navigateur ne fasse que des requêtes de même origine et n'ait jamais besoin de CORS. Les routes de collection du backend (\texttt{GET /books/}, \texttt{/scans/}, \texttt{/stock/}, \texttt{/users/}) sont enregistrées côté FastAPI avec un slash final ; une requête envoyée sans ce slash y était auparavant redirigée par FastAPI (\texttt{redirect\_slashes}) vers l'URL absolue \textbf{du backend lui-même}, que le navigateur suivait alors directement — transformant de facto un appel censé rester de même origine en un appel réellement inter-origines, avec pour conséquence la perte de l'en-tête \texttt{Authorization} (comportement standard des navigateurs sur une redirection inter-origines) et un blocage CORS. C'est ce défaut, combiné à la normalisation automatique des barres obliques finales par Next.js lui-même en amont de la règle de réécriture, qui rendait la page \texttt{/admin/users} inutilisable (\og Échec de la récupération \fg{}, page bloquée sur \og Vérification des droits… \fg{}). La correction repose sur deux volets : la désactivation de la normalisation automatique de Next.js (\texttt{skipTrailingSlashRedirect}) et l'acceptation, par chacune des routes de collection concernées, des deux formes (avec ou sans slash final) sans jamais émettre de redirection.
 
 \section{Sécurité et architecture logicielle}
 
@@ -930,9 +930,8 @@ Auth & Route protégée sans token & Requête sans header Bearer & 403 \\
 Auth & Route protégée token expiré & Token JWT expiré & 401 \\
 ISBN & Scan ISBN reconnu & ISBN valide (ex. 9782070413119) & 200, métadonnées retournées \\
 ISBN & Scan ISBN inconnu & ISBN non référencé & 404, fallback saisie manuelle \\
-Articles & Création article & Données valides, token utilisateur & 201, article créé \\
-Articles & Création sans auth & Données valides, sans token & 403 \\
-Articles & Récupération catalogue & — & 200, liste paginée \\
+Livres & Création livre & Données valides, token admin & 201, livre créé \\
+Livres & Récupération livre par ID & \texttt{id\_livre} existant & 200, livre retourné \\
 Commande & Passer commande & Panier non vide, user connecté & 201, commande créée \\
 Paiement & Initiation paiement & Commande valide, sandbox PostFinance & Redirection URL PostFinance \\
 Paiement & Webhook succès & Callback PostFinance success & Statut commande = PAYÉE \\
@@ -1024,7 +1023,6 @@ La suite de tests automatisés a été exécutée avec \textbf{pytest} et l'exte
 \texttt{services/jwt\_service.py}         & 14  & 100\,\% \\
 \texttt{services/rate\_limit.py}          & 18  & 100\,\% \\
 \texttt{presentation/schemas.py}          & 191 & 97\,\% \\
-\texttt{presentation/article\_router.py}  & 47  & 94\,\% \\
 \texttt{presentation/deps.py}             & 41  & 93\,\% \\
 \texttt{presentation/auth\_router.py}     & 73  & 90\,\% \\
 \texttt{presentation/catalog\_router.py}  & 58  & 90\,\% \\
@@ -1331,169 +1329,207 @@ suivante :
 
 Le script DDL ci-dessous présente la création complète de la base de données MySQL de CARIBOOKS.
 
-\begin{lstlisting}[style=sqlstyle, caption={Script DDL — Création de la base de données CARIBOOKS}, label={lst:ddl}]
-CREATE DATABASE caribooks;
-USE caribooks;
+\begin{lstlisting}[style=sqlstyle, caption={Script DDL — Création de la base de données CARIBOOKS (extrait verbatim de \texttt{Schema.SQL})}, label={lst:ddl}]
+CREATE DATABASE IF NOT EXISTS `caribooks` /*!40100 DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci */;
+USE `caribooks`;
+SET FOREIGN_KEY_CHECKS = 0;
 
-CREATE TABLE type_objet (
-    id_type_objet BIGINT AUTO_INCREMENT PRIMARY KEY,
-    libelle VARCHAR(100) NOT NULL,
-    code VARCHAR(50) NOT NULL UNIQUE,
-    description TEXT
-);
+--
+-- Table structure for table `etat_usure`
+--
 
-CREATE TABLE etat_usure (
-    id_etat_usure BIGINT AUTO_INCREMENT PRIMARY KEY,
-    libelle VARCHAR(100) NOT NULL UNIQUE,
-    description TEXT
-);
+CREATE TABLE IF NOT EXISTS `etat_usure` (
+  `id_etat_usure` bigint NOT NULL AUTO_INCREMENT,
+  `libelle` varchar(100) NOT NULL,
+  `description` text,
+  PRIMARY KEY (`id_etat_usure`),
+  UNIQUE KEY `libelle` (`libelle`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
-CREATE TABLE article (
-    id_article BIGINT AUTO_INCREMENT PRIMARY KEY,
-    id_type_objet BIGINT NOT NULL,
-    id_etat_usure BIGINT NOT NULL,
-    sku VARCHAR(100) NOT NULL UNIQUE,
-    titre VARCHAR(255) NOT NULL,
-    description TEXT,
-    prix_chf DECIMAL(10,2) NOT NULL CHECK (prix_chf >= 0),
-    image_link VARCHAR(500) NULL,
-    actif BOOLEAN NOT NULL DEFAULT TRUE,
-    date_creation TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (id_type_objet)
-        REFERENCES type_objet(id_type_objet)
-        ON DELETE RESTRICT ON UPDATE CASCADE,
-    FOREIGN KEY (id_etat_usure)
-        REFERENCES etat_usure(id_etat_usure)
-        ON DELETE RESTRICT ON UPDATE CASCADE
-);
+--
+-- Table structure for table `source_stock`
+--
 
-CREATE TABLE livre (
-    id_article BIGINT PRIMARY KEY,
-    isbn VARCHAR(20) NOT NULL UNIQUE,
-    auteur VARCHAR(255),
-    editeur VARCHAR(255),
-    date_publication DATE,
-    langue VARCHAR(50),
-    FOREIGN KEY (id_article)
-        REFERENCES article(id_article)
-        ON DELETE CASCADE ON UPDATE CASCADE
-);
+CREATE TABLE IF NOT EXISTS `source_stock` (
+  `id_source_stock` bigint NOT NULL AUTO_INCREMENT,
+  `libelle` varchar(150) NOT NULL,
+  `type_source` varchar(50) NOT NULL,
+  `description` text,
+  PRIMARY KEY (`id_source_stock`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
-CREATE TABLE source_stock (
-    id_source_stock BIGINT AUTO_INCREMENT PRIMARY KEY,
-    libelle VARCHAR(150) NOT NULL,
-    type_source VARCHAR(50) NOT NULL,
-    description TEXT
-);
+--
+-- Table structure for table `utilisateur`
+--
 
-CREATE TABLE stock (
-    id_stock BIGINT AUTO_INCREMENT PRIMARY KEY,
-    id_article BIGINT NOT NULL,
-    id_source_stock BIGINT NOT NULL,
-    quantite_disponible INT NOT NULL DEFAULT 0
-        CHECK (quantite_disponible >= 0),
-    quantite_reservee INT NOT NULL DEFAULT 0
-        CHECK (quantite_reservee >= 0),
-    date_mise_a_jour TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT uq_stock_article_source
-        UNIQUE (id_article, id_source_stock),
-    FOREIGN KEY (id_article)
-        REFERENCES article(id_article)
-        ON DELETE CASCADE ON UPDATE CASCADE,
-    FOREIGN KEY (id_source_stock)
-        REFERENCES source_stock(id_source_stock)
-        ON DELETE RESTRICT ON UPDATE CASCADE
-);
+CREATE TABLE IF NOT EXISTS `utilisateur` (
+  `id_utilisateur` bigint NOT NULL AUTO_INCREMENT,
+  `nom` varchar(100) NOT NULL,
+  `prenom` varchar(100) NOT NULL,
+  `email` varchar(255) NOT NULL,
+  `mot_de_passe_hash` varchar(255) DEFAULT NULL,
+  `google_id` varchar(255) DEFAULT NULL,
+  `role` varchar(50) NOT NULL DEFAULT 'user',
+  `date_creation` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `billing_address_line1` varchar(255) DEFAULT NULL,
+  `billing_address_line2` varchar(255) DEFAULT NULL,
+  `billing_postal_code` varchar(30) DEFAULT NULL,
+  `billing_city` varchar(100) DEFAULT NULL,
+  `billing_country` varchar(100) DEFAULT NULL,
+  `billing_phone` varchar(50) DEFAULT NULL,
+  PRIMARY KEY (`id_utilisateur`),
+  UNIQUE KEY `email` (`email`),
+  UNIQUE KEY `google_id` (`google_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
-CREATE TABLE utilisateur (
-    id_utilisateur BIGINT AUTO_INCREMENT PRIMARY KEY,
-    nom VARCHAR(100) NOT NULL,
-    prenom VARCHAR(100) NOT NULL,
-    email VARCHAR(255) NOT NULL UNIQUE,
-    mot_de_passe_hash VARCHAR(255) NULL, -- NULL pour les comptes crees via Google Sign-In
-    google_id VARCHAR(255) NULL UNIQUE,
-    role VARCHAR(50) NOT NULL DEFAULT 'user',
-    date_creation TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    billing_address_line1 VARCHAR(255) NULL,
-    billing_address_line2 VARCHAR(255) NULL,
-    billing_postal_code VARCHAR(30) NULL,
-    billing_city VARCHAR(100) NULL,
-    billing_country VARCHAR(100) NULL,
-    billing_phone VARCHAR(50) NULL
-);
+--
+-- Table structure for table `livre`
+--
 
-CREATE TABLE commande (
-    id_commande BIGINT AUTO_INCREMENT PRIMARY KEY,
-    id_utilisateur BIGINT NOT NULL,
-    numero_commande VARCHAR(50) NOT NULL UNIQUE,
-    date_commande TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    montant_total_chf DECIMAL(10,2) NOT NULL
-        CHECK (montant_total_chf >= 0),
-    statut VARCHAR(50) NOT NULL,
-    shipping_method VARCHAR(50) NOT NULL DEFAULT 'POST', -- 'POST' (9 CHF) ou 'CLICK_COLLECT' (1 CHF)
-    frais_port_chf DECIMAL(10,2) NOT NULL DEFAULT 0.00,
-    cart_expires_at TIMESTAMP NULL DEFAULT NULL, -- fin de la reservation de stock (20 min)
-    FOREIGN KEY (id_utilisateur)
-        REFERENCES utilisateur(id_utilisateur)
-        ON DELETE RESTRICT ON UPDATE CASCADE
-);
+CREATE TABLE IF NOT EXISTS `livre` (
+  `id_livre` bigint NOT NULL AUTO_INCREMENT,
+  `id_etat_usure` bigint NOT NULL,
+  `sku` varchar(100) NOT NULL,
+  `titre` varchar(255) NOT NULL,
+  `description` text,
+  `image_link` varchar(500) DEFAULT NULL,
+  `prix_chf` decimal(10,2) NOT NULL,
+  `actif` tinyint(1) NOT NULL DEFAULT '1',
+  `date_creation` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `isbn` varchar(20) NOT NULL,
+  `auteur` varchar(255) DEFAULT NULL,
+  `editeur` varchar(255) DEFAULT NULL,
+  `date_publication` date DEFAULT NULL,
+  `langue` varchar(50) DEFAULT NULL,
+  PRIMARY KEY (`id_livre`),
+  UNIQUE KEY `sku` (`sku`),
+  UNIQUE KEY `isbn` (`isbn`),
+  KEY `idx_livre_etat_usure` (`id_etat_usure`),
+  KEY `idx_livre_isbn` (`isbn`),
+  CONSTRAINT `livre_ibfk_1` FOREIGN KEY (`id_etat_usure`) REFERENCES `etat_usure` (`id_etat_usure`) ON DELETE RESTRICT ON UPDATE CASCADE,
+  CONSTRAINT `livre_chk_1` CHECK ((`prix_chf` >= 0))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
-CREATE TABLE ligne_commande (
-    id_ligne_commande BIGINT AUTO_INCREMENT PRIMARY KEY,
-    id_commande BIGINT NOT NULL,
-    id_article BIGINT NOT NULL,
-    quantite INT NOT NULL CHECK (quantite > 0),
-    prix_unitaire_chf DECIMAL(10,2) NOT NULL
-        CHECK (prix_unitaire_chf >= 0),
-    FOREIGN KEY (id_commande)
-        REFERENCES commande(id_commande)
-        ON DELETE CASCADE ON UPDATE CASCADE,
-    FOREIGN KEY (id_article)
-        REFERENCES article(id_article)
-        ON DELETE RESTRICT ON UPDATE CASCADE
-);
+--
+-- Table structure for table `stock`
+--
 
-CREATE TABLE paiement (
-    id_paiement BIGINT AUTO_INCREMENT PRIMARY KEY,
-    id_commande BIGINT NOT NULL,
-    fournisseur_paiement VARCHAR(50) NOT NULL DEFAULT 'POSTFINANCE',
-    reference_externe VARCHAR(255) NOT NULL UNIQUE,
-    montant_chf DECIMAL(10,2) NOT NULL CHECK (montant_chf >= 0),
-    devise CHAR(3) NOT NULL DEFAULT 'CHF',
-    statut VARCHAR(50) NOT NULL,
-    date_paiement TIMESTAMP NULL DEFAULT NULL,
-    FOREIGN KEY (id_commande)
-        REFERENCES commande(id_commande)
-        ON DELETE RESTRICT ON UPDATE CASCADE
-);
+CREATE TABLE IF NOT EXISTS `stock` (
+  `id_stock` bigint NOT NULL AUTO_INCREMENT,
+  `id_livre` bigint NOT NULL,
+  `id_source_stock` bigint NOT NULL,
+  `quantite_disponible` int NOT NULL DEFAULT '0',
+  `quantite_reservee` int NOT NULL DEFAULT '0',
+  `date_mise_a_jour` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id_stock`),
+  UNIQUE KEY `uq_stock_livre_source` (`id_livre`,`id_source_stock`),
+  KEY `idx_stock_livre` (`id_livre`),
+  KEY `idx_stock_source` (`id_source_stock`),
+  CONSTRAINT `stock_ibfk_1` FOREIGN KEY (`id_livre`) REFERENCES `livre` (`id_livre`) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `stock_ibfk_2` FOREIGN KEY (`id_source_stock`) REFERENCES `source_stock` (`id_source_stock`) ON DELETE RESTRICT ON UPDATE CASCADE,
+  CONSTRAINT `stock_chk_1` CHECK ((`quantite_disponible` >= 0)),
+  CONSTRAINT `stock_chk_2` CHECK ((`quantite_reservee` >= 0))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
-CREATE TABLE scan_isbn (
-    id_scan_isbn BIGINT AUTO_INCREMENT PRIMARY KEY,
-    id_utilisateur BIGINT NOT NULL,
-    id_article_livre BIGINT NOT NULL,
-    isbn_lu VARCHAR(20) NOT NULL,
-    date_scan TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    valide BOOLEAN NOT NULL DEFAULT FALSE,
-    FOREIGN KEY (id_utilisateur)
-        REFERENCES utilisateur(id_utilisateur)
-        ON DELETE CASCADE ON UPDATE CASCADE,
-    FOREIGN KEY (id_article_livre)
-        REFERENCES livre(id_article)
-        ON DELETE CASCADE ON UPDATE CASCADE
-);
+--
+-- Table structure for table `commande`
+--
 
--- Index de performance
-CREATE INDEX idx_article_type_objet ON article(id_type_objet);
-CREATE INDEX idx_article_etat_usure ON article(id_etat_usure);
-CREATE INDEX idx_stock_article ON stock(id_article);
-CREATE INDEX idx_stock_source ON stock(id_source_stock);
-CREATE INDEX idx_commande_utilisateur ON commande(id_utilisateur);
-CREATE INDEX idx_ligne_commande_commande ON ligne_commande(id_commande);
-CREATE INDEX idx_ligne_commande_article ON ligne_commande(id_article);
-CREATE INDEX idx_paiement_commande ON paiement(id_commande);
-CREATE INDEX idx_scan_utilisateur ON scan_isbn(id_utilisateur);
-CREATE INDEX idx_scan_livre ON scan_isbn(id_article_livre);
-CREATE INDEX idx_livre_isbn ON livre(isbn);
+CREATE TABLE IF NOT EXISTS `commande` (
+  `id_commande` bigint NOT NULL AUTO_INCREMENT,
+  `id_utilisateur` bigint NOT NULL,
+  `numero_commande` varchar(50) NOT NULL,
+  `date_commande` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `montant_total_chf` decimal(10,2) NOT NULL,
+  `statut` varchar(50) NOT NULL,
+  `shipping_method` varchar(50) NOT NULL DEFAULT 'POST',
+  `frais_port_chf` decimal(10,2) NOT NULL DEFAULT '0.00',
+  `cart_expires_at` timestamp NULL DEFAULT NULL,
+  PRIMARY KEY (`id_commande`),
+  UNIQUE KEY `numero_commande` (`numero_commande`),
+  KEY `idx_commande_utilisateur` (`id_utilisateur`),
+  CONSTRAINT `commande_ibfk_1` FOREIGN KEY (`id_utilisateur`) REFERENCES `utilisateur` (`id_utilisateur`) ON DELETE RESTRICT ON UPDATE CASCADE,
+  CONSTRAINT `commande_chk_1` CHECK ((`montant_total_chf` >= 0))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+--
+-- Table structure for table `ligne_commande`
+--
+
+CREATE TABLE IF NOT EXISTS `ligne_commande` (
+  `id_ligne_commande` bigint NOT NULL AUTO_INCREMENT,
+  `id_commande` bigint NOT NULL,
+  `id_livre` bigint NOT NULL,
+  `quantite` int NOT NULL,
+  `prix_unitaire_chf` decimal(10,2) NOT NULL,
+  PRIMARY KEY (`id_ligne_commande`),
+  KEY `idx_ligne_commande_commande` (`id_commande`),
+  KEY `idx_ligne_commande_livre` (`id_livre`),
+  CONSTRAINT `ligne_commande_ibfk_1` FOREIGN KEY (`id_commande`) REFERENCES `commande` (`id_commande`) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `ligne_commande_ibfk_2` FOREIGN KEY (`id_livre`) REFERENCES `livre` (`id_livre`) ON DELETE RESTRICT ON UPDATE CASCADE,
+  CONSTRAINT `ligne_commande_chk_1` CHECK ((`quantite` > 0)),
+  CONSTRAINT `ligne_commande_chk_2` CHECK ((`prix_unitaire_chf` >= 0))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+--
+-- Table structure for table `stock_mouvement`
+--
+
+CREATE TABLE IF NOT EXISTS `stock_mouvement` (
+  `id_mouvement` bigint NOT NULL AUTO_INCREMENT,
+  `id_ligne_commande` bigint NOT NULL,
+  `id_stock` bigint NOT NULL,
+  `quantite` int NOT NULL,
+  `date_mouvement` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id_mouvement`),
+  KEY `idx_stock_mouvement_ligne` (`id_ligne_commande`),
+  KEY `idx_stock_mouvement_stock` (`id_stock`),
+  CONSTRAINT `stock_mouvement_ibfk_1` FOREIGN KEY (`id_ligne_commande`) REFERENCES `ligne_commande` (`id_ligne_commande`) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `stock_mouvement_ibfk_2` FOREIGN KEY (`id_stock`) REFERENCES `stock` (`id_stock`) ON DELETE RESTRICT ON UPDATE CASCADE,
+  CONSTRAINT `stock_mouvement_chk_1` CHECK ((`quantite` > 0))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+--
+-- Table structure for table `paiement`
+--
+
+CREATE TABLE IF NOT EXISTS `paiement` (
+  `id_paiement` bigint NOT NULL AUTO_INCREMENT,
+  `id_commande` bigint NOT NULL,
+  `fournisseur_paiement` varchar(50) NOT NULL DEFAULT 'POSTFINANCE',
+  `reference_externe` varchar(255) NOT NULL,
+  `montant_chf` decimal(10,2) NOT NULL,
+  `devise` char(3) NOT NULL DEFAULT 'CHF',
+  `statut` varchar(50) NOT NULL,
+  `date_paiement` timestamp NULL DEFAULT NULL,
+  PRIMARY KEY (`id_paiement`),
+  UNIQUE KEY `reference_externe` (`reference_externe`),
+  KEY `idx_paiement_commande` (`id_commande`),
+  CONSTRAINT `paiement_ibfk_1` FOREIGN KEY (`id_commande`) REFERENCES `commande` (`id_commande`) ON DELETE RESTRICT ON UPDATE CASCADE,
+  CONSTRAINT `paiement_chk_1` CHECK ((`montant_chf` >= 0))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+--
+-- Table structure for table `scan_isbn`
+--
+
+CREATE TABLE IF NOT EXISTS `scan_isbn` (
+  `id_scan_isbn` bigint NOT NULL AUTO_INCREMENT,
+  `id_utilisateur` bigint NOT NULL,
+  `id_livre` bigint NOT NULL,
+  `isbn_lu` varchar(20) NOT NULL,
+  `date_scan` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `valide` tinyint(1) NOT NULL DEFAULT '0',
+  PRIMARY KEY (`id_scan_isbn`),
+  KEY `idx_scan_utilisateur` (`id_utilisateur`),
+  KEY `idx_scan_livre` (`id_livre`),
+  CONSTRAINT `scan_isbn_ibfk_1` FOREIGN KEY (`id_utilisateur`) REFERENCES `utilisateur` (`id_utilisateur`) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `scan_isbn_ibfk_2` FOREIGN KEY (`id_livre`) REFERENCES `livre` (`id_livre`) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+SET FOREIGN_KEY_CHECKS = 1;
+
+COMMIT;
 \end{lstlisting}
 
 \section*{Annexe C — Extraits de code significatifs}

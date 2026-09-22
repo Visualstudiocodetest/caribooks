@@ -44,7 +44,7 @@ export default function CartPage() {
           <>
             <div className="card cardPadding">
               {items.map((it) => (
-                <CartItemRow key={it.id_article} item={it} onRemove={removeItem} onSetQuantity={setQuantity} />
+                <CartItemRow key={it.id_livre} item={it} onRemove={removeItem} onSetQuantity={setQuantity} />
               ))}
             </div>
 

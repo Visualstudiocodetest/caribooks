@@ -22,7 +22,7 @@ export function useCreateOrder() {
         items.map((it) =>
           createLigne({
             id_commande: commande.id_commande,
-            id_article: it.id_article,
+            id_livre: it.id_livre,
             quantite: it.quantity,
           }),
         ),

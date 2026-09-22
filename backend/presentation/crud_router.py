@@ -32,8 +32,8 @@ def simple_crud_router(
 ) -> APIRouter:
     """Build the standard list/get/create/update/delete endpoints for a plain
     reference-data resource: no ownership, no business rules beyond
-    admin-gated writes (e.g. TypeObjet, EtatUsure). catalog_router.py used to
-    hand-write these twice, identical apart from the model/schema names.
+    admin-gated writes (e.g. EtatUsure). catalog_router.py used to hand-write
+    these twice, identical apart from the model/schema names.
 
     Anything with real logic beyond that (filters, ownership, side effects —
     e.g. stock_router.py, order_router.py) stays a hand-written router; this
@@ -41,7 +41,7 @@ def simple_crud_router(
 
     The path parameter is always named `item_id` here regardless of the
     resource -- that's a Python-side implementation detail invisible in the
-    actual URL (e.g. still `/catalog/type-objets/42`), so it doesn't change
+    actual URL (e.g. still `/catalog/etat-usures/42`), so it doesn't change
     the public API at all.
     """
     router = APIRouter(prefix=prefix, tags=tags)

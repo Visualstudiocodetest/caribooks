@@ -92,27 +92,27 @@ def list_stock(db: DbSession):
 
 
 @router.get("/availability", response_model=dict[int, int])
-def stock_availability(db: DbSession, article_ids: str | None = None):
-    """Available quantity per article in a single query — max(0, sum(disponible - reservee)).
+def stock_availability(db: DbSession, livre_ids: str | None = None):
+    """Available quantity per livre in a single query — max(0, sum(disponible - reservee)).
 
     Replaces the frontend N+1 where every cart/catalogue item fetched the whole
-    /stock/ list to compute one article's availability. Optional `article_ids` is a
+    /stock/ list to compute one livre's availability. Optional `livre_ids` is a
     comma-separated filter; omit it to get the whole catalogue's availability map.
     """
     from services.order_service import cleanup_expired_carts
 
     cleanup_expired_carts(db)
     q = db.query(
-        models.Stock.id_article,
+        models.Stock.id_livre,
         func.sum(models.Stock.quantite_disponible - models.Stock.quantite_reservee),
     )
-    if article_ids:
-        ids = [int(x) for x in article_ids.split(",") if x.strip().isdigit()]
+    if livre_ids:
+        ids = [int(x) for x in livre_ids.split(",") if x.strip().isdigit()]
         if not ids:
             return {}
-        q = q.filter(models.Stock.id_article.in_(ids))
-    rows = q.group_by(models.Stock.id_article).all()
-    return {int(id_article): max(0, int(total or 0)) for id_article, total in rows}
+        q = q.filter(models.Stock.id_livre.in_(ids))
+    rows = q.group_by(models.Stock.id_livre).all()
+    return {int(id_livre): max(0, int(total or 0)) for id_livre, total in rows}
 
 
 @router.get("/{id_stock}", response_model=StockRead)

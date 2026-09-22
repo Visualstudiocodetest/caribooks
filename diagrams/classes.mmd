@@ -2,11 +2,6 @@
 classDiagram
     direction LR
 
-    class TypeObjet {
-        +id_type_objet
-        +libelle
-        +code
-    }
     class EtatUsure {
         +id_etat_usure
         +libelle
@@ -16,14 +11,14 @@ classDiagram
         +libelle
         +type_source
     }
-    class Article {
-        +id_article
+    class Livre {
+        +id_livre
         +sku
         +titre
+        +description
+        +image_link
         +prix_chf
         +actif
-    }
-    class Livre {
         +isbn
         +auteur
         +editeur
@@ -69,14 +64,12 @@ classDiagram
         +statut
     }
 
-    Article <|-- Livre : héritage (PK partagée)
-    Article "*" --> "1" TypeObjet
-    Article "*" --> "1" EtatUsure
-    Stock "*" --> "1" Article
+    Livre "*" --> "1" EtatUsure
+    Stock "*" --> "1" Livre
     Stock "*" --> "1" SourceStock
     Commande "*" --> "1" Utilisateur
     LigneCommande "*" --> "1" Commande
-    LigneCommande "*" --> "1" Article
+    LigneCommande "*" --> "1" Livre
     Paiement "*" --> "1" Commande : plusieurs paiements possibles (retries)
     ScanISBN "*" --> "1" Utilisateur
     ScanISBN "*" --> "1" Livre

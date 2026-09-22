@@ -40,7 +40,7 @@ export default function AdminBooksPage() {
     setDeletingId(id)
     try {
       await deleteBook(id)
-      setBooks((prev) => prev.filter((x) => x.id_article !== id))
+      setBooks((prev) => prev.filter((x) => x.id_livre !== id))
     } catch {
       alert('Erreur lors de la suppression')
     } finally {
@@ -85,10 +85,10 @@ export default function AdminBooksPage() {
             </thead>
             <tbody>
               {filtered.map((b) => {
-                const stock = stockMap[b.id_article] ?? 0
+                const stock = stockMap[b.id_livre] ?? 0
                 return (
                   <tr
-                    key={b.id_article}
+                    key={b.id_livre}
                     style={{ borderBottom: '1px solid var(--color-border)' }}
                   >
                     <td style={{ padding: '10px 0 10px 14px', width: 40 }}>
@@ -121,7 +121,7 @@ export default function AdminBooksPage() {
                         <Link
                           className="btn"
                           style={{ fontSize: 12, padding: '4px 10px' }}
-                          href={`/admin/books/${b.id_article}`}
+                          href={`/admin/books/${b.id_livre}`}
                           aria-label={`Modifier le livre ${b.titre}`}
                         >
                           Modifier
@@ -129,11 +129,11 @@ export default function AdminBooksPage() {
                         <button
                           className="btn"
                           style={{ fontSize: 12, padding: '4px 10px', color: '#dc2626' }}
-                          disabled={deletingId === b.id_article}
-                          onClick={() => onDelete(b.id_article)}
+                          disabled={deletingId === b.id_livre}
+                          onClick={() => onDelete(b.id_livre)}
                           aria-label={`Supprimer le livre ${b.titre}`}
                         >
-                          {deletingId === b.id_article ? '…' : 'Supprimer'}
+                          {deletingId === b.id_livre ? '…' : 'Supprimer'}
                         </button>
                       </div>
                     </td>

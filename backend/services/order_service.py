@@ -151,26 +151,26 @@ def recompute_commande_total(db: Session, commande: models.Commande) -> None:
     commande.montant_total_chf = _chf(Decimal(str(lignes_total)) + Decimal(str(commande.frais_port_chf or 0)))  # type: ignore[assignment]
 
 
-def _lock_stock_rows(db: Session, id_article: int) -> list[models.Stock]:
-    """Lock (FOR UPDATE) all stock rows for an article, oldest first. Shared by
+def _lock_stock_rows(db: Session, id_livre: int) -> list[models.Stock]:
+    """Lock (FOR UPDATE) all stock rows for a livre, oldest first. Shared by
     every stock mutation (reserve/release/finalize/refund) so concurrent
-    requests for the same article always serialize on the same row order."""
+    requests for the same livre always serialize on the same row order."""
     return (
         db.query(models.Stock)
-        .filter(models.Stock.id_article == id_article)
+        .filter(models.Stock.id_livre == id_livre)
         .order_by(models.Stock.id_stock.asc())
         .with_for_update()
         .all()
     )
 
 
-def reserve_stock(db: Session, id_article: int, quantity: int) -> None:
-    """Reserve `quantity` units of an article across its stock rows.
+def reserve_stock(db: Session, id_livre: int, quantity: int) -> None:
+    """Reserve `quantity` units of a livre across its stock rows.
 
     Raises HTTPException(400) if not enough stock is available. Used when a
     ligne is created or its quantity is increased.
     """
-    stocks = _lock_stock_rows(db, id_article)
+    stocks = _lock_stock_rows(db, id_livre)
     if not stocks:
         return
     total_available = sum((s.quantite_disponible or 0) - (s.quantite_reservee or 0) for s in stocks)
@@ -188,10 +188,10 @@ def reserve_stock(db: Session, id_article: int, quantity: int) -> None:
         remaining -= take
 
 
-def release_stock(db: Session, id_article: int, quantity: int) -> None:
-    """Release `quantity` previously-reserved units of an article back to
+def release_stock(db: Session, id_livre: int, quantity: int) -> None:
+    """Release `quantity` previously-reserved units of a livre back to
     availability. Used when a ligne is deleted or its quantity is decreased."""
-    stocks = _lock_stock_rows(db, id_article)
+    stocks = _lock_stock_rows(db, id_livre)
     remaining = quantity
     for s in stocks:
         if remaining <= 0:  # type: ignore[operator]
@@ -219,25 +219,25 @@ def build_pending_paiement(payload: Any, commande: models.Commande) -> models.Pa
     )
 
 
-def _reactivate_article_if_available(db: Session, id_article: int) -> None:
+def _reactivate_livre_if_available(db: Session, id_livre: int) -> None:
     avail = (
         db.query(func.sum(models.Stock.quantite_disponible - models.Stock.quantite_reservee))
-        .filter(models.Stock.id_article == id_article)
+        .filter(models.Stock.id_livre == id_livre)
         .scalar()
         or 0
     )
     if avail > 0:
-        art = db.query(models.Article).filter(models.Article.id_article == id_article).first()
-        if art and not art.actif: # type: ignore[assignment]
-            art.actif = True  # type: ignore[assignment]
+        livre = db.query(models.Livre).filter(models.Livre.id_livre == id_livre).first()
+        if livre and not livre.actif: # type: ignore[assignment]
+            livre.actif = True  # type: ignore[assignment]
 
 
 def release_ligne_reservation(db: Session, ligne: models.LigneCommande) -> None:
     """Reverse the quantite_reservee increment made when this single ligne was
     added to a cart. Used both by release_cart_reservation (whole commande)
     and directly when a single ligne is deleted, so stock is never leaked."""
-    release_stock(db, int(ligne.id_article), int(ligne.quantite))  # type: ignore[arg-type]
-    _reactivate_article_if_available(db, int(ligne.id_article))  # type: ignore[arg-type]
+    release_stock(db, int(ligne.id_livre), int(ligne.quantite))  # type: ignore[arg-type]
+    _reactivate_livre_if_available(db, int(ligne.id_livre))  # type: ignore[arg-type]
 
 
 def release_cart_reservation(db: Session, id_commande: int) -> None:
@@ -331,7 +331,7 @@ def finalize_commande(db: Session, id_commande: int) -> None:
     # For each ligne in the commande, finalize reserved stock into sold stock
     lignes = db.query(models.LigneCommande).filter(models.LigneCommande.id_commande == id_commande).all()
     for ligne in lignes:
-        stocks = _lock_stock_rows(db, int(ligne.id_article))  # type: ignore[arg-type]
+        stocks = _lock_stock_rows(db, int(ligne.id_livre))  # type: ignore[arg-type]
         if not stocks:
             # nothing to do if no stock rows exist
             continue
@@ -365,19 +365,19 @@ def finalize_commande(db: Session, id_commande: int) -> None:
             s.quantite_disponible = avail - take  # type: ignore
             remaining -= take
             db.add(models.StockMouvement(id_ligne_commande=ligne.id_ligne_commande, id_stock=s.id_stock, quantite=take))
-    # mark articles inactive if no stock left (only those in this order)
-    art_ids = [ligne.id_article for ligne in lignes]
-    for aid in art_ids:
+    # mark livres inactive if no stock left (only those in this order)
+    livre_ids = [ligne.id_livre for ligne in lignes]
+    for lid in livre_ids:
         total_left = (
             db.query(models.Stock)
-            .filter(models.Stock.id_article == aid)
+            .filter(models.Stock.id_livre == lid)
             .with_entities(func.sum(models.Stock.quantite_disponible))
             .scalar()
         )
         if not total_left:  # type: ignore
-            art = db.query(models.Article).filter(models.Article.id_article == aid).first()
-            if art:
-                art.actif = False  # type: ignore
+            livre = db.query(models.Livre).filter(models.Livre.id_livre == lid).first()
+            if livre:
+                livre.actif = False  # type: ignore
 
     # Mark the order paid and drop the cart-expiry deadline so cleanup_expired_carts
     # can no longer cancel it. Admins advance PAID -> SENT/AT_RECEPTION/FINISHED later.
@@ -391,7 +391,7 @@ def refund_commande(db: Session, id_commande: int) -> None:
     Prefers an exact reversal via the StockMouvement rows finalize_commande
     wrote: each one says precisely which Stock row (and how much) a ligne's
     sale came from, so quantite_disponible is credited back there — not to
-    whichever row happens to be first for the article. The previous behaviour
+    whichever row happens to be first for the livre. The previous behaviour
     credited the *entire* refund to a single arbitrary row: the total
     available-for-sale count stayed correct either way (it's a plain sum),
     but which source_stock the stock was attributed to drifted with every
@@ -427,19 +427,19 @@ def refund_commande(db: Session, id_commande: int) -> None:
 
         # No tracked mouvement for this ligne (paid before StockMouvement
         # existed) -- best-effort fallback, same behaviour as before.
-        stocks = _lock_stock_rows(db, int(ligne.id_article))  # type: ignore[arg-type]
+        stocks = _lock_stock_rows(db, int(ligne.id_livre))  # type: ignore[arg-type]
         if not stocks:
             continue
         logger.warning(
-            "refund_commande: no StockMouvement for ligne=%s (article=%s) -- crediting "
+            "refund_commande: no StockMouvement for ligne=%s (livre=%s) -- crediting "
             "qty=%s to a single row (pre-tracking order, best-effort fallback)",
             ligne.id_ligne_commande,
-            ligne.id_article,
+            ligne.id_livre,
             ligne.quantite,
         )
         stocks[0].quantite_disponible = (stocks[0].quantite_disponible or 0) + ligne.quantite  # type: ignore[operator]
-    for aid in {ligne.id_article for ligne in lignes}:
-        _reactivate_article_if_available(db, int(aid))  # type: ignore[arg-type]
+    for lid in {ligne.id_livre for ligne in lignes}:
+        _reactivate_livre_if_available(db, int(lid))  # type: ignore[arg-type]
 
 
 def load_commande_context(db: Session, id_commande: int, id_utilisateur: int):
@@ -453,8 +453,8 @@ def load_commande_context(db: Session, id_commande: int, id_utilisateur: int):
         .all()
     )
     for ligne in lignes:
-        if getattr(ligne, "article", None) is None:
-            ligne.article = db.query(models.Article).filter(models.Article.id_article == ligne.id_article).first()
+        if getattr(ligne, "livre", None) is None:
+            ligne.livre = db.query(models.Livre).filter(models.Livre.id_livre == ligne.id_livre).first()
 
     user = db.query(models.Utilisateur).filter(models.Utilisateur.id_utilisateur == id_utilisateur).first()
     return commande, lignes, user

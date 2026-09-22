@@ -22,23 +22,21 @@ _openlibrary_client = httpx.Client(timeout=8.0, limits=httpx.Limits(max_keepaliv
 
 
 def _to_book_read(db_livre: models.Livre) -> BookRead:
-    article = db_livre.article
-    etat_label = article.etat_usure.libelle if getattr(article, "etat_usure", None) else None
+    etat_label = db_livre.etat_usure.libelle if getattr(db_livre, "etat_usure", None) else None
     return BookRead(
-        id_article=int(db_livre.id_article),
-        id_type_objet=int(article.id_type_objet),
-        id_etat_usure=int(article.id_etat_usure),
-        titre=article.titre,
+        id_livre=int(db_livre.id_livre),
+        id_etat_usure=int(db_livre.id_etat_usure),
+        titre=db_livre.titre,
         isbn=db_livre.isbn,
         auteur=db_livre.auteur,
         editeur=db_livre.editeur,
         date_publication=db_livre.date_publication,
         langue=db_livre.langue,
-        description=article.description,
-        image_link=article.image_link,
-        prix_chf=float(article.prix_chf),
-        actif=bool(article.actif),
-        date_creation=article.date_creation,
+        description=db_livre.description,
+        image_link=db_livre.image_link,
+        prix_chf=float(db_livre.prix_chf),
+        actif=bool(db_livre.actif),
+        date_creation=db_livre.date_creation,
         etat_libelle=etat_label,
     )
 
@@ -83,10 +81,10 @@ def get_isbn_metadata(isbn: str) -> Dict[str, Any]:
     raise HTTPException(status_code=404, detail="ISBN introuvable")
 
 
-@router.get("/{id_article}", response_model=BookRead)
-def get_book(id_article: int, db: DbSession):
+@router.get("/{id_livre}", response_model=BookRead)
+def get_book(id_livre: int, db: DbSession):
     service = BookService(db)
-    book = service.get_book(id_article)
+    book = service.get_book(id_livre)
     if not book:
         raise HTTPException(status_code=404, detail="Book not found")
     return _to_book_read(book)
@@ -102,18 +100,18 @@ def create_book(book_in: BookCreate, request: Request, db: DbSession, _admin: Ad
     return _to_book_read(created)
 
 
-@router.put("/{id_article}", response_model=BookRead)
-def update_book(id_article: int, book_update: BookUpdate, db: DbSession, _admin: AdminUser):
+@router.put("/{id_livre}", response_model=BookRead)
+def update_book(id_livre: int, book_update: BookUpdate, db: DbSession, _admin: AdminUser):
     service = BookService(db)
-    updated = service.update_book(id_article, book_update.model_dump(exclude_unset=True))
+    updated = service.update_book(id_livre, book_update.model_dump(exclude_unset=True))
     if not updated:
         raise HTTPException(status_code=404, detail="Book not found")
     return _to_book_read(updated)
 
-@router.delete("/{id_article}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_book(id_article: int, db: DbSession, _admin: AdminUser):
+@router.delete("/{id_livre}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_book(id_livre: int, db: DbSession, _admin: AdminUser):
     service = BookService(db)
-    deleted = service.delete_book(id_article)
+    deleted = service.delete_book(id_livre)
     if not deleted:
         raise HTTPException(status_code=404, detail="Book not found")
     return None

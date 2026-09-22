@@ -97,19 +97,19 @@ export default function AdminStockPage() {
   }
 
   async function onAddStock(book: BookRead) {
-    const sourceIdStr = addStockBookId[book.id_article]
-    const qtyStr = addStockQty[book.id_article] || '1'
+    const sourceIdStr = addStockBookId[book.id_livre]
+    const qtyStr = addStockQty[book.id_livre] || '1'
     if (!sourceIdStr) return
-    setBusyKey(`add-${book.id_article}`)
+    setBusyKey(`add-${book.id_livre}`)
     setError(null)
     try {
       await createStock({
-        id_article: book.id_article,
+        id_livre: book.id_livre,
         id_source_stock: Number(sourceIdStr),
         quantite_disponible: Number(qtyStr) || 0,
       })
-      setAddStockBookId((m) => ({ ...m, [book.id_article]: '' }))
-      setAddStockQty((m) => ({ ...m, [book.id_article]: '' }))
+      setAddStockBookId((m) => ({ ...m, [book.id_livre]: '' }))
+      setAddStockQty((m) => ({ ...m, [book.id_livre]: '' }))
       await load()
     } catch (e) {
       setError((e as Error).message || 'Ajout impossible (peut-être déjà une entrée pour ce livre+source ?)')
@@ -199,17 +199,17 @@ export default function AdminStockPage() {
               </thead>
               <tbody>
                 {filteredBooks.map((b) => {
-                  const rows = stocks.filter((s) => s.id_article === b.id_article)
+                  const rows = stocks.filter((s) => s.id_livre === b.id_livre)
                   const bookCell = (
                     <div>
-                      <Link href={`/admin/books/${b.id_article}`} style={{ fontWeight: 700, textDecoration: 'none', color: 'var(--color-text)' }}>{b.titre}</Link>
+                      <Link href={`/admin/books/${b.id_livre}`} style={{ fontWeight: 700, textDecoration: 'none', color: 'var(--color-text)' }}>{b.titre}</Link>
                       <div className="muted" style={{ fontSize: 11 }}>ISBN {b.isbn}</div>
                     </div>
                   )
                   return (
-                    <Fragment key={b.id_article}>
+                    <Fragment key={b.id_livre}>
                       {rows.length === 0 ? (
-                        <tr key={`${b.id_article}-empty`} style={{ borderBottom: '1px solid var(--color-border)' }}>
+                        <tr key={`${b.id_livre}-empty`} style={{ borderBottom: '1px solid var(--color-border)' }}>
                           <td style={{ padding: '10px 8px', verticalAlign: 'top' }}>{bookCell}</td>
                           <td colSpan={3} className="muted" style={{ padding: '10px 8px', fontSize: 12 }}>Aucun stock enregistré</td>
                           <td />
@@ -247,16 +247,16 @@ export default function AdminStockPage() {
                         </tr>
                       ))}
                       {sources.length > 0 ? (
-                        <tr key={`${b.id_article}-add`} style={{ borderBottom: '1px solid var(--color-border)' }}>
+                        <tr key={`${b.id_livre}-add`} style={{ borderBottom: '1px solid var(--color-border)' }}>
                           <td style={{ padding: '6px 8px' }} className="muted" aria-hidden="true">+ nouvelle source pour {b.titre}</td>
                           <td style={{ padding: '6px 8px' }}>
-                            <label htmlFor={`add-stock-source-${b.id_article}`} className="sr-only">Nouvelle source de stock pour {b.titre}</label>
+                            <label htmlFor={`add-stock-source-${b.id_livre}`} className="sr-only">Nouvelle source de stock pour {b.titre}</label>
                             <select
-                              id={`add-stock-source-${b.id_article}`}
+                              id={`add-stock-source-${b.id_livre}`}
                               className="input"
                               style={{ fontSize: 12, padding: '3px 6px' }}
-                              value={addStockBookId[b.id_article] || ''}
-                              onChange={(e) => setAddStockBookId((m) => ({ ...m, [b.id_article]: e.target.value }))}
+                              value={addStockBookId[b.id_livre] || ''}
+                              onChange={(e) => setAddStockBookId((m) => ({ ...m, [b.id_livre]: e.target.value }))}
                             >
                               <option value="">+ nouvelle source de stock…</option>
                               {sources
@@ -267,16 +267,16 @@ export default function AdminStockPage() {
                             </select>
                           </td>
                           <td style={{ padding: '6px 8px' }}>
-                            <label htmlFor={`add-stock-qty-${b.id_article}`} className="sr-only">Quantité initiale pour {b.titre}</label>
+                            <label htmlFor={`add-stock-qty-${b.id_livre}`} className="sr-only">Quantité initiale pour {b.titre}</label>
                             <input
-                              id={`add-stock-qty-${b.id_article}`}
+                              id={`add-stock-qty-${b.id_livre}`}
                               className="input"
                               type="number"
                               min={0}
                               style={{ width: 70, fontSize: 12, padding: '3px 6px' }}
                               placeholder="qté"
-                              value={addStockQty[b.id_article] || ''}
-                              onChange={(e) => setAddStockQty((m) => ({ ...m, [b.id_article]: e.target.value }))}
+                              value={addStockQty[b.id_livre] || ''}
+                              onChange={(e) => setAddStockQty((m) => ({ ...m, [b.id_livre]: e.target.value }))}
                             />
                           </td>
                           <td />
@@ -284,7 +284,7 @@ export default function AdminStockPage() {
                             <button
                               className="btn"
                               style={{ fontSize: 12, padding: '3px 10px' }}
-                              disabled={!addStockBookId[b.id_article] || busyKey === `add-${b.id_article}`}
+                              disabled={!addStockBookId[b.id_livre] || busyKey === `add-${b.id_livre}`}
                               onClick={() => onAddStock(b)}
                               aria-label={`Ajouter une nouvelle source de stock pour ${b.titre}`}
                             >
