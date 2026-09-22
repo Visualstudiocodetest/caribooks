@@ -133,7 +133,39 @@ def ensure_commande_mutable(commande: models.Commande) -> None:
     OPEN_STATUSES (paid, shipped, cancelled, refunded…) is now rejected.
     """
     if (commande.statut or "").upper() not in OPEN_STATUSES:
-        raise HTTPException(status_code=409, detail="Commande no longer modifiable in its current state")
+        raise HTTPException(status_code=409, detail="Cette commande n’est plus modifiable dans son état actuel.")
+
+
+def lock_commande(db: Session, id_commande: int) -> models.Commande | None:
+    """Take the row lock on a commande before mutating its lignes/total.
+
+    EVERY cart mutation (add/update/delete a ligne, change the shipping method)
+    must call this first. Two reasons, both observed in practice:
+
+    1. Lost totals. recompute_commande_total sums the commande's lignes, and
+       under MySQL's default REPEATABLE READ a concurrent request's snapshot
+       was taken before the other one committed — so each request summed only
+       the lignes it could see and the last writer persisted a total missing
+       the other's lines. Checking out three books at 10 CHF each could store
+       montant_total_chf = 11.00 (one book + shipping) while PostFinance was
+       sent the real 31.00 line items, which then fails the amount
+       cross-check in payment_router._assert_amount_matches_commande
+       ("Le montant du paiement ne correspond pas au total de la commande").
+    2. Deadlocks. reserve_stock takes FOR UPDATE locks on the stock rows; two
+       requests adding different livres to the same cart grabbed those locks in
+       opposite orders and MySQL killed one with "Deadlock found when trying to
+       get lock" — surfacing as a 500 and a silently missing order line.
+
+    Serializing on the parent commande fixes both: only one mutation of a given
+    cart runs at a time, and the locking read means the sum below always sees
+    every committed ligne.
+    """
+    return (
+        db.query(models.Commande)
+        .filter(models.Commande.id_commande == id_commande)
+        .with_for_update()
+        .first()
+    )
 
 
 def recompute_commande_total(db: Session, commande: models.Commande) -> None:
@@ -142,13 +174,24 @@ def recompute_commande_total(db: Session, commande: models.Commande) -> None:
     Called any time a ligne is created/updated/deleted or the shipping method
     changes, so the persisted total always reflects server-authoritative
     prices — never a client-supplied value.
+
+    The lignes are read with `with_for_update()` (a locking read) rather than a
+    plain SELECT: only a locking read returns the latest committed rows under
+    REPEATABLE READ. A plain read uses this transaction's snapshot, which is
+    exactly how a concurrently-added ligne used to be left out of the total.
+    Callers must already hold the commande lock (see lock_commande).
     """
-    lignes_total = (
-        db.query(func.sum(models.LigneCommande.prix_unitaire_chf * models.LigneCommande.quantite))
+    lignes = (
+        db.query(models.LigneCommande)
         .filter(models.LigneCommande.id_commande == commande.id_commande)
-        .scalar()
-    ) or 0
-    commande.montant_total_chf = _chf(Decimal(str(lignes_total)) + Decimal(str(commande.frais_port_chf or 0)))  # type: ignore[assignment]
+        .with_for_update()
+        .all()
+    )
+    lignes_total = sum(
+        (Decimal(str(ligne.prix_unitaire_chf or 0)) * int(ligne.quantite or 0) for ligne in lignes),
+        Decimal("0"),
+    )
+    commande.montant_total_chf = _chf(lignes_total + Decimal(str(commande.frais_port_chf or 0)))  # type: ignore[assignment]
 
 
 def _lock_stock_rows(db: Session, id_livre: int) -> list[models.Stock]:
@@ -175,7 +218,7 @@ def reserve_stock(db: Session, id_livre: int, quantity: int) -> None:
         return
     total_available = sum((s.quantite_disponible or 0) - (s.quantite_reservee or 0) for s in stocks)
     if quantity > total_available:  # type: ignore[operator]
-        raise HTTPException(status_code=400, detail="Not enough stock")
+        raise HTTPException(status_code=400, detail="Stock insuffisant pour cet article.")
     remaining = quantity
     for s in stocks:
         if remaining <= 0:  # type: ignore[operator]
@@ -247,6 +290,37 @@ def release_cart_reservation(db: Session, id_commande: int) -> None:
         release_ligne_reservation(db, ligne)
 
 
+def cancel_other_open_commandes(db: Session, id_utilisateur: int, keep_id_commande: int | None = None) -> int:
+    """Cancel every other still-open (CREATED/PENDING) cart of this user,
+    releasing the stock each one had reserved. Returns how many were cancelled.
+
+    A customer has exactly one cart. Every click on « Passer commande » created
+    a fresh commande, and the previous one stayed CREATED — holding its
+    quantite_reservee for the full 20-minute window. Going back to the basket,
+    removing a book and ordering again therefore reserved the remaining books a
+    second time on top of the first reservation, so with a single copy in stock
+    the retry failed with "Stock insuffisant", and the books the customer had
+    just removed stayed missing from the catalogue (availability =
+    disponible - reservee) until the abandoned carts timed out.
+    """
+    stale = (
+        db.query(models.Commande)
+        .filter(
+            models.Commande.id_utilisateur == id_utilisateur,
+            models.Commande.statut.in_(list(OPEN_STATUSES)),
+        )
+        .all()
+    )
+    cancelled = 0
+    for c in stale:
+        if keep_id_commande is not None and int(c.id_commande) == int(keep_id_commande):
+            continue
+        release_cart_reservation(db, int(c.id_commande))  # type: ignore[arg-type]
+        c.statut = "CANCELLED"  # type: ignore[assignment]
+        cancelled += 1
+    return cancelled
+
+
 def cleanup_expired_carts(db: Session) -> None:
     """Cancel CREATED/PENDING commandes whose cart reservation window has passed.
 
@@ -297,7 +371,7 @@ def cancel_commande(db: Session, commande: models.Commande) -> None:
     """
     cur = (commande.statut or "").upper()
     if cur in ("FINISHED", "CANCELLED", "REFUNDED"):
-        raise HTTPException(status_code=400, detail="Commande already in terminal state")
+        raise HTTPException(status_code=400, detail="Cette commande est déjà clôturée (annulée, remboursée ou terminée).")
     if cur in ("CREATED", "PENDING"):
         release_cart_reservation(db, int(commande.id_commande))  # type: ignore[arg-type]
     commande.statut = "CANCELLED"  # type: ignore[assignment]
@@ -336,13 +410,20 @@ def finalize_commande(db: Session, id_commande: int) -> None:
             # nothing to do if no stock rows exist
             continue
         remaining = ligne.quantite
-        # first reduce reserved counts where possible -- this only releases the
-        # cart-time hold (quantite_reservee), it does NOT touch
-        # quantite_disponible (see the "quantite_disponible is untouched"
-        # tests below): the unit was never subtracted from the physical count
-        # in the first place, so there is nothing here for a refund to give
-        # back. Only the fallback loop below actually removes physical stock,
-        # which is why only *that* gets recorded as a StockMouvement.
+        # Consume the cart-time hold: a sold unit both leaves the physical
+        # count (quantite_disponible) and stops being reserved.
+        #
+        # This used to decrement ONLY quantite_reservee. Since availability is
+        # computed as (disponible - reservee), clearing the hold without
+        # removing the unit handed the sold copies straight back to the
+        # catalogue: a book with 3 copies, 2 of them bought and paid for, went
+        # from availability 1 back to 3 the moment the payment was confirmed —
+        # so the same copies could be sold again, indefinitely, and a sold-out
+        # title never got marked inactive. Verified end to end before the fix
+        # (3 in stock -> 2 sold -> availability 3).
+        #
+        # Every deduction is recorded as a StockMouvement, on this path too, so
+        # refund_commande can credit each unit back to the exact row it left.
         for s in stocks:
             if remaining <= 0:  # type: ignore
                 break
@@ -350,7 +431,15 @@ def finalize_commande(db: Session, id_commande: int) -> None:
             take_from_reserve = min(reserve, remaining)  # type: ignore
             if take_from_reserve > 0:  # type: ignore
                 s.quantite_reservee = reserve - take_from_reserve  # type: ignore
+                s.quantite_disponible = max(0, (s.quantite_disponible or 0) - take_from_reserve)  # type: ignore
                 remaining -= take_from_reserve
+                db.add(
+                    models.StockMouvement(
+                        id_ligne_commande=ligne.id_ligne_commande,
+                        id_stock=s.id_stock,
+                        quantite=take_from_reserve,
+                    )
+                )
         # if still remaining (not fully covered by an existing reservation),
         # deduct from available quantities -- this is a real, permanent
         # reduction of physical stock, so record exactly which row(s) and how

@@ -75,3 +75,47 @@ class BookService:
 
     def delete_book(self, id_livre: int) -> bool:
         return crud_book.delete_book(self.db_session, id_livre)
+
+    def remove_out_of_stock_book(self, id_livre: int) -> models.Livre:
+        """Retirer de la vente un livre qui n'est plus en stock dans aucun magasin.
+
+        Business rules, in order:
+        - the book must exist;
+        - it must have 0 copy physically left across every source_stock (shop),
+          and no copy reserved in an open cart — a reserved copy is still on the
+          shelf, so withdrawing then would pull a book out of a checkout in
+          progress;
+        - if it has never been ordered, the row is deleted outright;
+        - if it has order lines, those must be kept (accounting justificatifs,
+          and ligne_commande.id_livre is ON DELETE RESTRICT), so the book is
+          withdrawn from sale instead: actif = False and its empty stock rows
+          are dropped.
+
+        Returns the withdrawn Livre, or None when the row was deleted outright.
+        """
+        book = crud_book.get_book(self.db_session, id_livre)
+        if book is None:
+            raise HTTPException(status_code=404, detail="Livre introuvable.")
+        in_stock = crud_book.physical_quantity(self.db_session, id_livre)
+        if in_stock > 0:
+            raise HTTPException(
+                status_code=409,
+                detail=(
+                    f"Ce livre est encore en stock ({in_stock} exemplaire"
+                    f"{'s' if in_stock > 1 else ''}). Retirez d’abord le stock restant."
+                ),
+            )
+        reserved = crud_book.reserved_quantity(self.db_session, id_livre)
+        if reserved > 0:
+            raise HTTPException(
+                status_code=409,
+                detail=(
+                    f"Ce livre est réservé dans {reserved} panier"
+                    f"{'s' if reserved > 1 else ''} en cours. Réessayez une fois la "
+                    "réservation expirée ou la commande finalisée."
+                ),
+            )
+        if crud_book.count_book_order_lines(self.db_session, id_livre) == 0:
+            crud_book.delete_book(self.db_session, id_livre)
+            return None
+        return crud_book.withdraw_book(self.db_session, id_livre)

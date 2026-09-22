@@ -270,11 +270,13 @@ def test_local_webhook_finalizes_and_is_idempotent(client: TestClient, register_
     r = client.post("/orders/paiements/webhook/local", json=webhook_payload)
     assert r.status_code == 200, r.text
 
-    # Finalizing a fully-pre-reserved sale only clears the reservation —
-    # quantite_disponible is untouched since the quantity was already reserved.
+    # A sold unit leaves the shelf AND stops being reserved: 5 - 2 = 3 left,
+    # availability 3. Finalizing used to clear only quantite_reservee, which
+    # (availability being disponible - reservee) handed the two paid-for copies
+    # straight back to the catalogue — see finalize_commande.
     stock_after = client.get("/stock/", headers=admin_headers).json()
     row_after = next(s for s in stock_after if s["id_livre"] == id_livre)
-    assert row_after["quantite_disponible"] == 5
+    assert row_after["quantite_disponible"] == 3
     assert row_after["quantite_reservee"] == 0
 
     # Replay the same webhook. Without the idempotency guard, _finalize_commande
@@ -284,7 +286,7 @@ def test_local_webhook_finalizes_and_is_idempotent(client: TestClient, register_
     assert r.status_code == 200, r.text
     stock_replay = client.get("/stock/", headers=admin_headers).json()
     row_replay = next(s for s in stock_replay if s["id_livre"] == id_livre)
-    assert row_replay["quantite_disponible"] == 5  # unchanged — proves idempotency
+    assert row_replay["quantite_disponible"] == 3  # unchanged — proves idempotency
     assert row_replay["quantite_reservee"] == 0
 
 
@@ -343,10 +345,10 @@ def test_postfinance_webhook_finalizes_and_is_idempotent(client: TestClient, reg
         pay_after = client.get(f"/orders/paiements/{pay_id}", headers=headers).json()
         assert pay_after["statut"] == "FULFILL"
 
-        # Finalizing a fully-pre-reserved sale only clears the reservation.
+        # The sold unit leaves the shelf and stops being reserved (4 - 1 = 3).
         stock_after = client.get("/stock/", headers=admin_headers).json()
         row = next(s for s in stock_after if s["id_livre"] == id_livre)
-        assert row["quantite_disponible"] == 4
+        assert row["quantite_disponible"] == 3
         assert row["quantite_reservee"] == 0
 
         # Replay — PostFinance explicitly documents webhooks may be delivered
@@ -360,7 +362,7 @@ def test_postfinance_webhook_finalizes_and_is_idempotent(client: TestClient, reg
         assert r.status_code == 200, r.text
         stock_replay = client.get("/stock/", headers=admin_headers).json()
         row_replay = next(s for s in stock_replay if s["id_livre"] == id_livre)
-        assert row_replay["quantite_disponible"] == 4
+        assert row_replay["quantite_disponible"] == 3  # unchanged — proves idempotency
 
 
 def test_postfinance_iframe_session_and_confirm_local_mode(client: TestClient, register_and_login, uniq: str):
@@ -413,7 +415,7 @@ def test_postfinance_iframe_session_and_confirm_local_mode(client: TestClient, r
 
         stock_after = client.get("/stock/", headers=admin_headers).json()
         row = next(s for s in stock_after if s["id_livre"] == id_livre)
-        assert row["quantite_disponible"] == 2  # unchanged — the reservation is what covered the sale
+        assert row["quantite_disponible"] == 1  # the sold copy left the shelf (2 - 1)
         assert row["quantite_reservee"] == 0
 
         # Idempotency: confirming again must not deduct from quantite_disponible
@@ -422,7 +424,7 @@ def test_postfinance_iframe_session_and_confirm_local_mode(client: TestClient, r
         assert r.status_code == 200, r.text
         stock_replay = client.get("/stock/", headers=admin_headers).json()
         row_replay = next(s for s in stock_replay if s["id_livre"] == id_livre)
-        assert row_replay["quantite_disponible"] == 2
+        assert row_replay["quantite_disponible"] == 1
 
 
 def test_cancel_commande_releases_reservation_immediately(client: TestClient, register_and_login, uniq: str):

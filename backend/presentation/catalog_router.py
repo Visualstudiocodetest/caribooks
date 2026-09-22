@@ -24,6 +24,6 @@ router.include_router(
         read_schema=EtatUsureRead,
         create_schema=EtatUsureCreate,
         update_schema=EtatUsureUpdate,
-        not_found="EtatUsure not found",
+        not_found="État d’usure introuvable.",
     )
 )

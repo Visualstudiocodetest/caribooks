@@ -3,7 +3,7 @@ from typing import Any, Dict, List, Optional
 import httpx
 from fastapi import APIRouter, HTTPException, Request, status
 
-from infrastructure import models
+from infrastructure import crud_book, models
 from presentation.deps import AdminUser, DbSession
 from presentation.schemas import BookCreate, BookRead, BookUpdate
 from services.book_service import BookService
@@ -86,7 +86,7 @@ def get_book(id_livre: int, db: DbSession):
     service = BookService(db)
     book = service.get_book(id_livre)
     if not book:
-        raise HTTPException(status_code=404, detail="Book not found")
+        raise HTTPException(status_code=404, detail="Livre introuvable.")
     return _to_book_read(book)
 
 @router.post("/", response_model=BookRead, status_code=status.HTTP_201_CREATED)
@@ -105,13 +105,40 @@ def update_book(id_livre: int, book_update: BookUpdate, db: DbSession, _admin: A
     service = BookService(db)
     updated = service.update_book(id_livre, book_update.model_dump(exclude_unset=True))
     if not updated:
-        raise HTTPException(status_code=404, detail="Book not found")
+        raise HTTPException(status_code=404, detail="Livre introuvable.")
     return _to_book_read(updated)
+
+@router.post("/{id_livre}/retirer", response_model=Optional[BookRead])
+def remove_out_of_stock_book(id_livre: int, db: DbSession, _admin: AdminUser):
+    """Retirer de la vente un livre épuisé dans tous les magasins.
+
+    Refuse (409) tant qu'il reste au moins un exemplaire disponible. Le livre
+    est supprimé s'il n'a jamais été commandé ; sinon il est désactivé
+    (`actif = false`) pour préserver les lignes de commande existantes, et ses
+    lignes de stock vides sont supprimées. Renvoie le livre retiré, ou `null`
+    lorsqu'il a pu être supprimé définitivement.
+    """
+    service = BookService(db)
+    withdrawn = service.remove_out_of_stock_book(id_livre)
+    return _to_book_read(withdrawn) if withdrawn else None
+
 
 @router.delete("/{id_livre}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_book(id_livre: int, db: DbSession, _admin: AdminUser):
     service = BookService(db)
-    deleted = service.delete_book(id_livre)
-    if not deleted:
-        raise HTTPException(status_code=404, detail="Book not found")
+    if service.get_book(id_livre) is None:
+        raise HTTPException(status_code=404, detail="Livre introuvable.")
+    # ligne_commande.id_livre is ON DELETE RESTRICT: deleting a book that has
+    # ever been ordered used to surface as an unhandled IntegrityError (HTTP
+    # 500, "Erreur lors de la suppression" in the admin UI with no explanation
+    # of what to do instead). Say so, and point at the endpoint that handles it.
+    if crud_book.count_book_order_lines(db, id_livre) > 0:
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                "Ce livre figure déjà dans des commandes et ne peut pas être supprimé. "
+                "Utilisez « Retirer de la vente » pour le retirer du catalogue."
+            ),
+        )
+    service.delete_book(id_livre)
     return None

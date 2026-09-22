@@ -4,7 +4,7 @@ from fastapi import APIRouter, HTTPException, status
 
 from infrastructure import crud_user, models
 from infrastructure.crud_base import CrudBase
-from presentation.auth_schemas import UserRead, UserUpdate
+from presentation.auth_schemas import UserRead, UserSelfUpdate, UserUpdate
 from presentation.deps import AdminUser, CurrentUser, DbSession
 from services import order_service
 
@@ -58,11 +58,20 @@ def get_me(current_user: CurrentUser):
 
 
 @router.put("/me", response_model=UserRead)
-def update_me(payload: UserUpdate, db: DbSession, current_user: CurrentUser):
+def update_me(payload: UserSelfUpdate, db: DbSession, current_user: CurrentUser):
+    """Self-service profile update. Takes UserSelfUpdate, which has no `role`
+    field — see its docstring: accepting UserUpdate here was a privilege
+    escalation (any customer could PUT {"role": "admin"} on their own account)."""
     data = payload.model_dump(exclude_unset=True)
+    new_email = data.get("email")
+    if new_email and str(new_email).lower() != str(current_user.email).lower():
+        # utilisateur.email is UNIQUE: without this check the INSERT failed with
+        # an unhandled IntegrityError (HTTP 500) instead of a usable message.
+        if crud_user.get_user_by_email(db, str(new_email)) is not None:
+            raise HTTPException(status_code=409, detail="Cette adresse e-mail est déjà utilisée.")
     updated = crud_user.update_user(db, int(current_user.id_utilisateur), data)
     if updated is None:
-        raise HTTPException(status_code=404, detail="User not found")
+        raise HTTPException(status_code=404, detail="Utilisateur introuvable.")
     return _serialize_user(updated)
 
 
@@ -134,7 +143,7 @@ def delete_me(db: DbSession, current_user: CurrentUser):
 def get_user(id_utilisateur: int, db: DbSession, _admin: AdminUser):
     u = user_crud.get(db, id_utilisateur)
     if u is None:
-        raise HTTPException(status_code=404, detail="User not found")
+        raise HTTPException(status_code=404, detail="Utilisateur introuvable.")
     return _serialize_user(u)
 
 
@@ -145,10 +154,10 @@ def delete_user(id_utilisateur: int, db: DbSession, _admin: AdminUser):
     RESTRICT, so a real delete would fail with an unhandled DB error as soon as
     the user has any order on record."""
     if int(_admin.id_utilisateur) == id_utilisateur:
-        raise HTTPException(status_code=400, detail="Cannot delete your own account from the admin panel")
+        raise HTTPException(status_code=400, detail="Vous ne pouvez pas supprimer votre propre compte depuis l’administration.")
     u = user_crud.get(db, id_utilisateur)
     if u is None:
-        raise HTTPException(status_code=404, detail="User not found")
+        raise HTTPException(status_code=404, detail="Utilisateur introuvable.")
     if order_service.has_orders_blocking_deletion(db, id_utilisateur):
         raise HTTPException(
             status_code=409,
@@ -164,9 +173,9 @@ def delete_user(id_utilisateur: int, db: DbSession, _admin: AdminUser):
 def update_user(id_utilisateur: int, payload: UserUpdate, db: DbSession, _admin: AdminUser):
     data = payload.model_dump(exclude_unset=True)
     if int(_admin.id_utilisateur) == id_utilisateur and data.get("role") not in (None, "admin"):
-        raise HTTPException(status_code=400, detail="Cannot change your own role away from admin")
+        raise HTTPException(status_code=400, detail="Vous ne pouvez pas retirer votre propre rôle administrateur.")
     updated = crud_user.update_user(db, id_utilisateur, data)
     if updated is None:
-        raise HTTPException(status_code=404, detail="User not found")
+        raise HTTPException(status_code=404, detail="Utilisateur introuvable.")
     return _serialize_user(updated)
 

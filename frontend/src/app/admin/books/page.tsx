@@ -4,7 +4,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { useEffect, useState } from 'react'
 import type { BookRead } from '@/types/api'
-import { listBooks, deleteBook } from '@/services/books'
+import { listBooks, deleteBook, removeOutOfStockBook } from '@/services/books'
 import { getAvailabilityMap } from '@/services/stocks'
 import { ApiError } from '@/services/api'
 
@@ -15,6 +15,8 @@ export default function AdminBooksPage() {
   const [stockMap, setStockMap] = useState<Record<number, number>>({})
   const [search, setSearch] = useState('')
   const [deletingId, setDeletingId] = useState<number | null>(null)
+  const [withdrawingId, setWithdrawingId] = useState<number | null>(null)
+  const [notice, setNotice] = useState<string | null>(null)
 
   useEffect(() => {
     let mounted = true
@@ -38,13 +40,45 @@ export default function AdminBooksPage() {
   async function onDelete(id: number) {
     if (!confirm('Supprimer ce livre ?')) return
     setDeletingId(id)
+    setError(null)
+    setNotice(null)
     try {
       await deleteBook(id)
       setBooks((prev) => prev.filter((x) => x.id_livre !== id))
-    } catch {
-      alert('Erreur lors de la suppression')
+      setNotice('Livre supprimé du catalogue.')
+    } catch (e) {
+      // The backend explains *why* (e.g. the book appears in existing orders
+      // and must be withdrawn instead) — show that rather than a generic
+      // "Erreur lors de la suppression" that left the admin with no next step.
+      setError(e instanceof ApiError ? e.message : 'Erreur lors de la suppression.')
     } finally {
       setDeletingId(null)
+    }
+  }
+
+  /**
+   * "Retirer de la vente" — for a book with no copy left in any shop.
+   * The backend deletes it when it has never been ordered and otherwise
+   * deactivates it (its order lines have to be kept), so reflect both outcomes.
+   */
+  async function onWithdraw(id: number, titre: string) {
+    if (!confirm(`Retirer « ${titre} » de la vente ? Il n’apparaîtra plus dans le catalogue.`)) return
+    setWithdrawingId(id)
+    setError(null)
+    setNotice(null)
+    try {
+      const withdrawn = await removeOutOfStockBook(id)
+      if (withdrawn) {
+        setBooks((prev) => prev.map((x) => (x.id_livre === id ? withdrawn : x)))
+        setNotice('Livre retiré de la vente (conservé pour les commandes existantes).')
+      } else {
+        setBooks((prev) => prev.filter((x) => x.id_livre !== id))
+        setNotice('Livre retiré et supprimé du catalogue.')
+      }
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : 'Retrait impossible.')
+    } finally {
+      setWithdrawingId(null)
     }
   }
 
@@ -57,6 +91,7 @@ export default function AdminBooksPage() {
 
       {loading ? <div className="muted" role="status" aria-live="polite">Chargement…</div> : null}
       {error ? <div className="banner-error" role="alert">{error}</div> : null}
+      {notice ? <div className="banner-success" role="status" aria-live="polite">{notice}</div> : null}
 
       <div>
         <label htmlFor="admin-books-search" className="sr-only">Rechercher un livre par titre, auteur ou ISBN</label>
@@ -126,6 +161,19 @@ export default function AdminBooksPage() {
                         >
                           Modifier
                         </Link>
+                        {/* Only offered once the book is out of stock in every
+                            shop — the backend refuses it otherwise (409). */}
+                        {stock === 0 && b.actif ? (
+                          <button
+                            className="btn"
+                            style={{ fontSize: 12, padding: '4px 10px' }}
+                            disabled={withdrawingId === b.id_livre}
+                            onClick={() => onWithdraw(b.id_livre, b.titre)}
+                            aria-label={`Retirer de la vente le livre ${b.titre}`}
+                          >
+                            {withdrawingId === b.id_livre ? '…' : 'Retirer de la vente'}
+                          </button>
+                        ) : null}
                         <button
                           className="btn"
                           style={{ fontSize: 12, padding: '4px 10px', color: '#dc2626' }}

@@ -74,6 +74,33 @@ class UserUpdate(BaseModel):
     def _country_swiss_only(cls, v: Optional[str]) -> Optional[str]:
         return _validate_swiss_country(v)
 
+class UserSelfUpdate(BaseModel):
+    """What a user may change about their OWN account (PUT /users/me).
+
+    Deliberately has no `role` field, unlike the admin-facing UserUpdate.
+    crud_user.update_user applies whatever it is handed, so reusing UserUpdate
+    here let any authenticated customer send {"role": "admin"} to /users/me and
+    grant themselves the admin panel (verified: the follow-up GET /users/
+    returned 200). Role changes are an admin action only — PUT /users/{id}.
+    """
+
+    nom: Optional[str] = None
+    prenom: Optional[str] = None
+    email: Optional[EmailStr] = None
+    mot_de_passe: Optional[str] = Field(default=None, min_length=8)
+    billing_address_line1: Optional[str] = None
+    billing_address_line2: Optional[str] = None
+    billing_postal_code: Optional[str] = None
+    billing_city: Optional[str] = None
+    billing_country: Optional[str] = None
+    billing_phone: Optional[str] = None
+
+    @field_validator("billing_country")
+    @classmethod
+    def _country_swiss_only(cls, v: Optional[str]) -> Optional[str]:
+        return _validate_swiss_country(v)
+
+
 class LoginRequest(BaseModel):
     username: EmailStr
     password: str

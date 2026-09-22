@@ -11,6 +11,7 @@ All functions expect a SQLAlchemy Session as first argument.
 """
 from typing import Any, List, Optional
 
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from infrastructure import models
@@ -103,6 +104,13 @@ def create_book(db: Session, book: Any) -> models.Livre:
     existing = get_book_by_isbn(db, book.isbn)
     if existing:
         _add_one_to_stock(db, existing.id_livre, id_source_stock)
+        # Re-list it: finalize_commande sets actif = False once a book sells
+        # out, and nothing used to turn that back on when a new copy was taken
+        # in. A restocked title stayed invisible in the catalogue (the home
+        # page only shows books with availability > 0, and /books still marks
+        # it "Inactif") even though the volunteer had just scanned it back in.
+        if not existing.actif:
+            existing.actif = True
         db.commit()
         db.refresh(existing)
         return existing
@@ -140,6 +148,67 @@ def update_book(db: Session, id_livre: int, data: dict) -> Optional[models.Livre
     db.commit()
     db.refresh(db_livre)
     return db_livre
+
+def count_book_order_lines(db: Session, id_livre: int) -> int:
+    """How many order lines reference this book. ligne_commande.id_livre is
+    ON DELETE RESTRICT, so a book that has ever been ordered cannot be deleted
+    — the caller offers withdrawal from sale instead (see book_router)."""
+    return (
+        db.query(models.LigneCommande)
+        .filter(models.LigneCommande.id_livre == id_livre)
+        .count()
+    )
+
+
+def physical_quantity(db: Session, id_livre: int) -> int:
+    """Copies of this book physically held across every source (shop):
+    sum(quantite_disponible).
+
+    This is deliberately NOT availability (disponible - reservee). A copy
+    reserved in a customer's open cart is still on the shelf — treating it as
+    "no longer in stock" would let an admin withdraw a book out from under a
+    checkout in progress.
+    """
+    total = (
+        db.query(func.sum(models.Stock.quantite_disponible))
+        .filter(models.Stock.id_livre == id_livre)
+        .scalar()
+    )
+    return max(0, int(total or 0))
+
+
+def reserved_quantity(db: Session, id_livre: int) -> int:
+    """Copies currently held by open carts across every source."""
+    total = (
+        db.query(func.sum(models.Stock.quantite_reservee))
+        .filter(models.Stock.id_livre == id_livre)
+        .scalar()
+    )
+    return max(0, int(total or 0))
+
+
+def withdraw_book(db: Session, id_livre: int) -> Optional[models.Livre]:
+    """Withdraw a book from sale without destroying its history.
+
+    Used for a book that is out of stock in every shop but has already been
+    ordered at least once: the order lines must stay (accounting/justificatifs,
+    and ligne_commande.id_livre is ON DELETE RESTRICT anyway), so the book is
+    delisted instead — `actif` is cleared, which is what keeps it out of the
+    catalogue.
+
+    Its now-empty stock rows are deliberately kept. They are harmless at
+    quantity 0, stock_mouvement.id_stock references them ON DELETE RESTRICT,
+    and refund_commande needs them to exist to credit a refunded copy back to
+    the exact row it was sold from.
+    """
+    db_livre = db.query(models.Livre).filter(models.Livre.id_livre == id_livre).first()
+    if not db_livre:
+        return None
+    db_livre.actif = False
+    db.commit()
+    db.refresh(db_livre)
+    return db_livre
+
 
 def delete_book(db: Session, id_livre: int) -> bool:
     """Delete a book."""
