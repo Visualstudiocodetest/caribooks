@@ -77,7 +77,7 @@ export default function AdminNewBookPage() {
     setCreated(null)
   }
 
-  async function autofill(isbnValue: string) {
+  const autofill = useCallback(async (isbnValue: string) => {
     setError(null)
     setAutofillLoading(true)
     try {
@@ -106,9 +106,9 @@ export default function AdminNewBookPage() {
     } finally {
       setAutofillLoading(false)
     }
-  }
+  }, [])
 
-  async function handleIsbn(cleaned: string) {
+  const handleIsbn = useCallback(async (cleaned: string) => {
     setIsbn(cleaned)
     setScanSaved(null)
     if (!cleaned) {
@@ -122,11 +122,11 @@ export default function AdminNewBookPage() {
     }
     setExistingBook(null)
     void autofill(cleaned)
-  }
+  }, [autofill])
 
   const onDetect = useCallback((raw: string) => {
     void handleIsbn(cleanIsbn(raw))
-  }, [])
+  }, [handleIsbn])
 
   async function onSaveScan() {
     if (!existingBook) return
@@ -198,9 +198,11 @@ export default function AdminNewBookPage() {
       try {
         const typesArr = await listCatalog<TypeObjetItem>('type-objets')
         setTypeList(typesArr)
-        // default TypeObjet to 'Livre' when available
+        // default TypeObjet to 'Livre' when available. Functional update (not
+        // reading `idType` from the closure) so this effect can stay mount-only
+        // instead of re-fetching the lists every time the user picks a value.
         const def = typesArr.find((t) => t.code === 'BOOK' || (t.libelle || '').toLowerCase() === 'livre')
-        if (def && !idType) setIdType(String(def.id_type_objet))
+        if (def) setIdType((current) => current || String(def.id_type_objet))
       } catch {
         // ignore
       }
@@ -210,8 +212,9 @@ export default function AdminNewBookPage() {
         // Pre-select the last (most recently added) source, per the volunteer
         // workflow: new stock keeps arriving from whichever source was set up
         // most recently, so that's the one most likely to be the right pick.
+        // Functional update, same reasoning as idType above.
         const lastSource = sourcesArr[sourcesArr.length - 1]
-        if (lastSource && !idSource) setIdSource(String(lastSource.id_source_stock))
+        if (lastSource) setIdSource((current) => current || String(lastSource.id_source_stock))
       } catch {
         // ignore
       }
@@ -226,8 +229,8 @@ export default function AdminNewBookPage() {
     if (!raw) return
 
     void handleIsbn(cleanIsbn(raw))
-    // run once on mount
-  }, [])
+    // handleIsbn is stable (useCallback), so this still only fires once on mount.
+  }, [handleIsbn])
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault()

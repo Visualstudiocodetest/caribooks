@@ -119,6 +119,11 @@ export default function AccountPage() {
     try {
       await deleteMyAccount()
       setToken(null)
+      // Hard reload, not router.push(): the account was just anonymized, and
+      // nothing clears the React Query cache on logout (see providers.tsx) --
+      // a soft navigation could leave stale cached profile/order data from
+      // the deleted account reachable in memory for the rest of the session.
+      // eslint-disable-next-line @next/next/no-location-assign-relative-destination
       window.location.href = '/'
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'Suppression impossible')
