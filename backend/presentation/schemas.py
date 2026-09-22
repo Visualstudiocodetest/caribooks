@@ -10,15 +10,20 @@ class ORMBase(BaseModel):
     model_config = {"from_attributes": True}
 
 class BookBase(BaseModel):
+    # Lengths mirror the livre table's columns. Without them an over-long value
+    # reached MySQL and came back as an unhandled DataError — HTTP 500 with the
+    # raw INSERT statement and its parameters in the response body, which both
+    # leaks schema details and gives the admin nothing to act on. Pydantic now
+    # rejects it as a 422 naming the offending field.
     id_etat_usure: int = 1
-    titre: str
-    isbn: str
-    auteur: Optional[str] = None
-    editeur: Optional[str] = None
+    titre: str = Field(..., max_length=255)
+    isbn: str = Field(..., max_length=20)
+    auteur: Optional[str] = Field(default=None, max_length=255)
+    editeur: Optional[str] = Field(default=None, max_length=255)
     date_publication: Optional[date] = None
-    langue: Optional[str] = None
+    langue: Optional[str] = Field(default=None, max_length=50)
     description: Optional[str] = None
-    image_link: Optional[str] = None
+    image_link: Optional[str] = Field(default=None, max_length=500)
     prix_chf: float = Field(..., ge=0)
     actif: bool = True
 
@@ -32,15 +37,17 @@ class BookCreate(BookBase):
 
 class BookUpdate(BaseModel):
     id_etat_usure: Optional[int] = None
-    titre: Optional[str] = None
-    isbn: Optional[str] = None
-    auteur: Optional[str] = None
-    editeur: Optional[str] = None
+    titre: Optional[str] = Field(default=None, max_length=255)
+    isbn: Optional[str] = Field(default=None, max_length=20)
+    auteur: Optional[str] = Field(default=None, max_length=255)
+    editeur: Optional[str] = Field(default=None, max_length=255)
     date_publication: Optional[date] = None
-    langue: Optional[str] = None
+    langue: Optional[str] = Field(default=None, max_length=50)
     description: Optional[str] = None
-    image_link: Optional[str] = None
-    prix_chf: Optional[float] = None
+    image_link: Optional[str] = Field(default=None, max_length=500)
+    # ge=0 matches the ck_livre_prix_chf_nonneg CHECK constraint: a negative
+    # price used to pass validation here and only fail at the database.
+    prix_chf: Optional[float] = Field(default=None, ge=0)
     actif: Optional[bool] = None
 
 class BookRead(BookBase, ORMBase):
@@ -148,7 +155,9 @@ class CommandeRead(CommandeBase, ORMBase):
 class LigneCommandeBase(BaseModel):
     id_commande: int
     id_livre: int
-    quantite: int = Field(..., gt=0)
+    # Upper bound as well as gt=0: reserve_stock returns early for a livre with
+    # no stock rows, so an unbounded quantite went straight into the order total.
+    quantite: int = Field(..., gt=0, le=1000)
 
 
 class LigneCommandeCreate(LigneCommandeBase):
@@ -156,7 +165,7 @@ class LigneCommandeCreate(LigneCommandeBase):
 
 
 class LigneCommandeUpdate(BaseModel):
-    quantite: Optional[int] = Field(default=None, gt=0)
+    quantite: Optional[int] = Field(default=None, gt=0, le=1000)
 
 
 class LigneCommandeRead(LigneCommandeBase, ORMBase):
@@ -200,7 +209,7 @@ class PaiementBase(BaseModel):
     @classmethod
     def _devise_chf_only(cls, v: str) -> str:
         if v != "CHF":
-            raise ValueError("Only CHF is supported")
+            raise ValueError("Seul le franc suisse (CHF) est accepté.")
         return v
 
 
@@ -220,7 +229,7 @@ class PaiementUpdate(BaseModel):
         if v is None:
             return v
         if v != "CHF":
-            raise ValueError("Only CHF is supported")
+            raise ValueError("Seul le franc suisse (CHF) est accepté.")
         return v
 
 

@@ -557,7 +557,10 @@ export function PaymentClient() {
         if (!mounted) return
 
         if (session.error && !session.local_mode) {
-          setError(session.error)
+          // session.error comes straight from PostFinance and is English —
+          // lead with a French sentence the customer can act on, keeping the
+          // provider's wording after it for support/debugging.
+          setError(`Le service de paiement est momentanément indisponible. Réessayez dans un instant. (${session.error})`)
           return
         }
 

@@ -133,15 +133,17 @@ assurer la traçabilité besoin $\rightarrow$ test.
 \midrule
 \endhead
 SF-01 & Authentification et rôles, mot de passe haché & Aucune route de gestion accessible sans authentification. \\
-SF-02 & Ajout d'un livre par scan ISBN, saisie manuelle en secours ; si OpenLibrary ne fournit aucune couverture (ou échoue), photo du livre prise via la caméra arrière du terminal utilisée comme image de secours & Livre reconnu ajouté en moins de 2 minutes. \\
+SF-02 & Ajout d'un livre par scan ISBN, saisie manuelle en secours ; si OpenLibrary ne fournit aucune couverture (ou échoue), photo du livre prise via la caméra arrière du terminal utilisée comme image de secours & Livre reconnu ajouté en moins de 2 minutes ; seul un code-barres ISBN valide (préfixe 978/979 et chiffre de contrôle) est retenu, les autres codes-barres du livre étant ignorés. La lecture automatique dépend de l'API navigateur \texttt{BarcodeDetector}, absente de Safari et de Firefox : la saisie manuelle y est proposée explicitement. \\
 SF-03 & Catalogue et recherche multicritère & Résultat cohérent en moins d'une seconde perçue. \\
 SF-04 & Fiche détaillée & Informations essentielles visibles sans action supplémentaire (la liste de favoris a été reportée au backlog, hors MVP). \\
-SF-05 & Panier avec réservation temporaire du stock & Livre jamais vendu deux fois ; panier abandonné libère le stock automatiquement. \\
+SF-05 & Panier avec réservation temporaire du stock & Livre jamais vendu deux fois (un exemplaire vendu quitte définitivement le stock) ; panier abandonné libère le stock automatiquement, et l'ouverture d'un nouveau panier libère immédiatement le précédent ; le montant total enregistré est toujours égal à la somme des lignes majorée des frais de port, y compris lorsque les articles sont ajoutés simultanément. \\
 SF-06 & Paiement CHF via PostFinance & Paiement réussi en sandbox déclenche le statut \og payée \fg{}. \\
 SF-07 & Livraison restreinte à la Suisse & Seuls deux modes de livraison sont proposés (envoi postal, retrait en magasin), tous deux réservés au territoire suisse ; l'adresse de facturation n'est pas validée côté serveur (limite connue, voir recette). \\
 SF-08 & Back-office bénévole & Gestion d'une annonce sans assistance technique. \\
 SF-09 & Conformité RGPD / nLPD & Demande d'effacement anonymise effectivement les données personnelles ; refusée (409) tant qu'une commande de l'utilisateur n'a pas atteint un statut terminal (payée/expédiée en cours exclue), pour préserver l'obligation de conservation comptable. \\
 SF-10 & Accessibilité de base & Parcours critiques utilisables au clavier. \\
+SF-11 & Retrait d'un livre épuisé & Un administrateur peut retirer du catalogue un livre dont il ne reste aucun exemplaire dans aucun magasin ; l'opération est refusée tant qu'un exemplaire est en stock ou réservé, et les lignes de commande existantes sont préservées. \\
+SF-12 & Messages d'erreur en français & Tout message d'erreur présenté à l'utilisateur final est rédigé en français, y compris les réponses d'erreur génériques de la plateforme (validation, indisponibilité) et les erreurs remontées par le prestataire de paiement. \\
 \bottomrule
 \caption{Spécifications fonctionnelles et critères d'acceptation}
 \end{longtable}
@@ -209,6 +211,8 @@ SF-07 & Livraison restreinte à la Suisse (par choix du mode de livraison) & Con
 SF-08 & Gestion autonome des annonces par un bénévole & Conforme \\
 SF-09 & Export / effacement des données personnelles & Conforme \\
 SF-10 & Parcours critiques utilisables au clavier & Conforme avec réserve (lien d'évitement, focus visible et éléments interactifs natifs sur l'ensemble du site ; pas d'audit RGAA/WCAG externe ni de test avec lecteur d'écran réel) \\
+SF-11 & Retrait d'un livre épuisé dans tous les magasins & Conforme \\
+SF-12 & Messages d'erreur en français pour l'utilisateur final & Conforme avec réserve (le message technique du prestataire de paiement, en anglais, est conservé entre parenthèses après la phrase française, à des fins de support) \\
 \bottomrule
 \caption{Grille de recette du MVP}
 \end{longtable}

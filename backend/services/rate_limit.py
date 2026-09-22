@@ -24,7 +24,7 @@ def check_rate_limit(key: str, max_attempts: int, window_seconds: int) -> None:
         _attempts[key] = recent
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-            detail="Too many attempts. Please try again later.",
+            detail="Trop de tentatives. Réessayez dans quelques minutes.",
         )
     recent.append(now)
     _attempts[key] = recent

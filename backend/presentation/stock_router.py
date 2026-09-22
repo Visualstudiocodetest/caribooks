@@ -37,7 +37,7 @@ def list_sources(db: DbSession):
 def get_source(id_source_stock: int, db: DbSession):
     obj = source_stock_crud.get(db, id_source_stock)
     if obj is None:
-        raise HTTPException(status_code=404, detail="SourceStock not found")
+        raise HTTPException(status_code=404, detail="Source de stock introuvable.")
     return obj
 
 
@@ -60,7 +60,7 @@ def update_source(
 ):
     updated = source_stock_crud.update(db, id_source_stock, payload.model_dump(exclude_unset=True))
     if updated is None:
-        raise HTTPException(status_code=404, detail="SourceStock not found")
+        raise HTTPException(status_code=404, detail="Source de stock introuvable.")
     return updated
 
 
@@ -71,7 +71,7 @@ def delete_source(
     _admin: AdminUser,
 ):
     if not source_stock_crud.delete(db, id_source_stock):
-        raise HTTPException(status_code=404, detail="SourceStock not found")
+        raise HTTPException(status_code=404, detail="Source de stock introuvable.")
     return None
 
 
@@ -119,7 +119,7 @@ def stock_availability(db: DbSession, livre_ids: str | None = None):
 def get_stock(id_stock: int, db: DbSession):
     obj = stock_crud.get(db, id_stock)
     if obj is None:
-        raise HTTPException(status_code=404, detail="Stock not found")
+        raise HTTPException(status_code=404, detail="Stock introuvable.")
     return obj
 
 
@@ -150,7 +150,7 @@ def update_stock(
 ):
     updated = stock_crud.update(db, id_stock, payload.model_dump(exclude_unset=True))
     if updated is None:
-        raise HTTPException(status_code=404, detail="Stock not found")
+        raise HTTPException(status_code=404, detail="Stock introuvable.")
     return updated
 
 
@@ -161,7 +161,7 @@ def delete_stock(
     _admin: AdminUser,
 ):
     if not stock_crud.delete(db, id_stock):
-        raise HTTPException(status_code=404, detail="Stock not found")
+        raise HTTPException(status_code=404, detail="Stock introuvable.")
     return None
 
 
@@ -175,7 +175,7 @@ def _get_stock_for_update(db: Session, id_stock: int) -> models.Stock:
         .first()
     )
     if obj is None:
-        raise HTTPException(status_code=404, detail="Stock not found")
+        raise HTTPException(status_code=404, detail="Stock introuvable.")
     return obj
 
 
@@ -204,7 +204,7 @@ def decrement_stock(
     obj = _get_stock_for_update(db, id_stock)
     qty = payload.qty if payload is not None else 1
     if (obj.quantite_disponible or 0) < qty:
-        raise HTTPException(status_code=400, detail="Not enough stock to decrement")
+        raise HTTPException(status_code=400, detail="Stock insuffisant pour effectuer ce retrait.")
     obj.quantite_disponible = (obj.quantite_disponible or 0) - qty
     db.commit()
     db.refresh(obj)

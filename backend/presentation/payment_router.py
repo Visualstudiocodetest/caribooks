@@ -13,6 +13,7 @@ from presentation.deps import AdminUser, CurrentUser, DbSession
 from presentation.schemas import PaiementCreate, PaiementRead, PaiementUpdate
 from services.order_service import (
     build_pending_paiement,
+    ensure_commande_mutable,
     finalize_commande,
     get_commande_owned,
     get_owned_paiement,
@@ -87,7 +88,13 @@ def _assert_amount_matches_commande(db: Session, id_commande: int, provider_amou
             float(commande.montant_total_chf),
             provider_amount,
         )
-        raise HTTPException(status_code=409, detail="Payment amount does not match order total")
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                "Le montant du paiement ne correspond pas au total de la commande. "
+                "Aucun débit n’a été effectué — reprenez votre commande depuis le panier."
+            ),
+        )
 
 
 @router.get("/paiements", response_model=list[PaiementRead])
@@ -104,7 +111,7 @@ def list_paiements(db: DbSession, current_user: CurrentUser):
 def get_paiement(id_paiement: int, db: DbSession, current_user: CurrentUser):
     obj = get_owned_paiement(db, id_paiement, int(current_user.id_utilisateur))
     if obj is None:
-        raise HTTPException(status_code=404, detail="Paiement not found")
+        raise HTTPException(status_code=404, detail="Paiement introuvable.")
     return obj
 
 
@@ -112,7 +119,7 @@ def get_paiement(id_paiement: int, db: DbSession, current_user: CurrentUser):
 def create_paiement(payload: PaiementCreate, db: DbSession, current_user: CurrentUser):
     commande = get_commande_owned(db, payload.id_commande, int(current_user.id_utilisateur))
     if commande is None:
-        raise HTTPException(status_code=404, detail="Commande not found")
+        raise HTTPException(status_code=404, detail="Commande introuvable.")
     # See build_pending_paiement: a payment always starts PENDING with the
     # commande's own server-computed total, never a client-supplied one.
     return paiement_crud.create(db, build_pending_paiement(payload, commande))
@@ -128,7 +135,13 @@ def create_paiement_postfinance(
     """Create a local paiement and initialize a PostFinance iframe checkout session."""
     commande, lignes, user = load_commande_context(db, payload.id_commande, int(current_user.id_utilisateur))
     if commande is None:
-        raise HTTPException(status_code=404, detail="Commande not found")
+        raise HTTPException(status_code=404, detail="Commande introuvable.")
+    # An empty cart (or one whose lines were all released by cart expiry) has
+    # nothing to charge: PostFinance rejects a zero-amount transaction with an
+    # opaque provider error, so fail here with something the customer can act on.
+    if not lignes:
+        raise HTTPException(status_code=400, detail="Votre commande est vide. Ajoutez des articles avant de payer.")
+    ensure_commande_mutable(commande)
 
     frontend_base_url = os.getenv("FRONTEND_BASE_URL", str(request.base_url).rstrip("/"))
     failed_url = f"{frontend_base_url}/payment?commandeId={payload.id_commande}&status=failed"
@@ -181,22 +194,34 @@ def confirm_paiement_postfinance(
     """Confirm a PostFinance transaction after iframe validation, before submit()."""
     obj = get_owned_paiement(db, id_paiement, int(current_user.id_utilisateur))
     if obj is None:
-        raise HTTPException(status_code=404, detail="Paiement not found")
+        raise HTTPException(status_code=404, detail="Paiement introuvable.")
 
     commande, lignes, user = load_commande_context(db, int(obj.id_commande), int(current_user.id_utilisateur))
     if commande is None:
-        raise HTTPException(status_code=404, detail="Commande not found")
+        raise HTTPException(status_code=404, detail="Commande introuvable.")
 
     transaction_id = getattr(obj, "reference_externe", None)
     if not transaction_id:
-        raise HTTPException(status_code=400, detail="Missing PostFinance transaction reference")
+        raise HTTPException(status_code=400, detail="Référence de transaction PostFinance manquante.")
 
     line_items, billing_address = build_postfinance_checkout_data(commande, lignes, user)
 
     current_tx = get_postfinance_transaction(str(transaction_id))
     version = int(current_tx.get("version") or 1)
-    _assert_amount_matches_commande(db, int(commande.id_commande), current_tx.get("amount"), source="confirm")
 
+    # Confirm FIRST, then cross-check the amount.
+    #
+    # The transaction was created when the payment session opened, from the
+    # commande as it stood then; `line_items` above is rebuilt from the commande
+    # as it stands NOW, and this confirm call is what pushes those current line
+    # items to PostFinance. Checking `current_tx["amount"]` *before* confirming
+    # compared the live commande total against the pre-confirm (stale) amount,
+    # so any legitimate change to the cart between opening the payment page and
+    # paying — or a total that had been left inconsistent by a concurrent
+    # add-to-cart (see order_service.lock_commande) — produced a spurious
+    # "montant ne correspond pas" 409 and blocked a perfectly valid payment.
+    # Re-reading after the confirm compares like with like, and still refuses to
+    # finalize if PostFinance really is holding a different amount.
     pf_resp = confirm_postfinance_transaction(
         transaction_id=str(transaction_id),
         version=version,
@@ -205,6 +230,11 @@ def confirm_paiement_postfinance(
         billing_address=billing_address,
         shipping_address=billing_address,
     )
+    if not pf_resp.get("error"):
+        confirmed_tx = get_postfinance_transaction(str(transaction_id))
+        _assert_amount_matches_commande(
+            db, int(commande.id_commande), confirmed_tx.get("amount"), source="confirm"
+        )
 
     already_finalized = is_postfinance_success_status(str(getattr(obj, "statut", "") or ""))
     if pf_resp.get("local"):
@@ -224,7 +254,15 @@ def confirm_paiement_postfinance(
         db.refresh(obj)
 
     if pf_resp.get("error"):
-        raise HTTPException(status_code=502, detail=str(pf_resp.get("error")))
+        # The provider's own message is English; prefix it with something the
+        # customer can act on rather than surfacing it raw.
+        raise HTTPException(
+            status_code=502,
+            detail=(
+                "Le paiement n’a pas pu être confirmé auprès de PostFinance. "
+                f"Réessayez dans un instant. ({pf_resp.get('error')})"
+            ),
+        )
 
     return {"paiement": obj, "transaction": pf_resp}
 
@@ -239,7 +277,7 @@ def poll_paiement_postfinance(id_paiement: int, db: DbSession, current_user: Cur
     """
     obj = get_owned_paiement(db, id_paiement, int(current_user.id_utilisateur))
     if obj is None:
-        raise HTTPException(status_code=404, detail="Paiement not found")
+        raise HTTPException(status_code=404, detail="Paiement introuvable.")
 
     current_statut = str(getattr(obj, "statut", "") or "")
     # If already in a terminal success state, return without polling (avoids
@@ -271,11 +309,11 @@ async def postfinance_webhook(request: Request, db: DbSession):
     sig_header = request.headers.get("x-signature") or request.headers.get("X-Signature")
 
     if not sig_header:
-        raise HTTPException(status_code=403, detail="Missing webhook signature")
+        raise HTTPException(status_code=403, detail="Signature du webhook manquante.")
 
     raw_body = await request.body()
     if not verify_postfinance_webhook_signature(raw_body, sig_header):
-        raise HTTPException(status_code=403, detail="Invalid webhook signature")
+        raise HTTPException(status_code=403, detail="Signature du webhook invalide.")
 
     payload = await request.json()
 
@@ -328,7 +366,7 @@ def local_payment_webhook(payload: dict, db: DbSession):
     payment-forgery endpoint must never be reachable by a deployment mistake.
     """
     if os.getenv("ENVIRONMENT", "development").strip().lower() not in ("development", "test"):
-        raise HTTPException(status_code=404, detail="Not found")
+        raise HTTPException(status_code=404, detail="Ressource introuvable.")
 
     ref = payload.get("reference") or payload.get("Metadata", {}).get("reference")
     pay_id = payload.get("Id") or payload.get("id")
@@ -370,7 +408,7 @@ def update_paiement(
     any back-office correction is an admin action."""
     obj = db.query(models.Paiement).filter(models.Paiement.id_paiement == id_paiement).first()
     if obj is None:
-        raise HTTPException(status_code=404, detail="Paiement not found")
+        raise HTTPException(status_code=404, detail="Paiement introuvable.")
     # statut is intentionally not part of PaiementUpdate — a payment's status
     # may only change via a verified PostFinance callback (confirm/poll/webhook).
     data = payload.model_dump(exclude_unset=True)
@@ -388,7 +426,7 @@ def delete_paiement(id_paiement: int, db: DbSession, _admin: AdminUser):
     action, never customer self-service."""
     obj = db.query(models.Paiement).filter(models.Paiement.id_paiement == id_paiement).first()
     if obj is None:
-        raise HTTPException(status_code=404, detail="Paiement not found")
+        raise HTTPException(status_code=404, detail="Paiement introuvable.")
     db.delete(obj)
     db.commit()
     return None

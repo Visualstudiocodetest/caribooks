@@ -25,3 +25,14 @@ export function updateBook(id_livre: number, payload: Partial<Omit<BookRead, 'id
 export function deleteBook(id_livre: number): Promise<void> {
   return apiFetch<void>(`/books/${id_livre}`, { method: 'DELETE', auth: true })
 }
+
+/**
+ * Retirer de la vente un livre épuisé dans tous les magasins.
+ *
+ * Le backend supprime le livre s'il n'a jamais été commandé, sinon il le
+ * désactive (`actif = false`) pour préserver les lignes de commande — d'où le
+ * `BookRead | null` en retour. Renvoie une erreur 409 s'il reste du stock.
+ */
+export function removeOutOfStockBook(id_livre: number): Promise<BookRead | null> {
+  return apiFetch<BookRead | null>(`/books/${id_livre}/retirer`, { method: 'POST', auth: true })
+}

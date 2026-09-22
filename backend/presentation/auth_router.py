@@ -22,7 +22,7 @@ def register(user_in: UserCreate, request: Request, db: DbSession):
     check_rate_limit(f"register:{client_host}", max_attempts=5, window_seconds=600)
     existing = crud_user.get_user_by_email(db, user_in.email)
     if existing:
-        raise HTTPException(status_code=400, detail="Email already registered")
+        raise HTTPException(status_code=400, detail="Cette adresse e-mail est déjà utilisée.")
     db_user = crud_user.create_user(db, user_in.model_dump())
     return UserRead(
         id_utilisateur= db_user.id_utilisateur,
@@ -55,7 +55,7 @@ def login_for_access_token(payload: LoginRequest, db: DbSession):
         except Exception:
             verified = False
     if not user or not verified:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Incorrect credentials")
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Adresse e-mail ou mot de passe incorrect.")
     reset_rate_limit(rate_limit_key)
     to_encode = {"sub": user.email, "role": user.role}
     access_token = create_access_token(to_encode, SECRET_KEY, ACCESS_TOKEN_EXPIRE_MINUTES)
@@ -94,14 +94,14 @@ def google_auth(payload: GoogleAuthRequest, request: Request, db: DbSession):
     # was issued *for this app* -- skipping "aud" would let a valid Google ID
     # token issued to a completely different OAuth client be replayed here.
     if not GOOGLE_CLIENT_ID:
-        raise HTTPException(status_code=503, detail="Google sign-in is not configured")
+        raise HTTPException(status_code=503, detail="La connexion Google n’est pas configurée.")
     if info.get("aud") != GOOGLE_CLIENT_ID:
         raise HTTPException(status_code=400, detail="Token Google invalide (audience)")
 
     google_id: str = info.get("sub", "")
     email: str = info.get("email", "")
     if not google_id or not email:
-        raise HTTPException(status_code=400, detail="Token Google incomplet")
+        raise HTTPException(status_code=400, detail="Réponse Google incomplète.")
 
     # Google's tokeninfo returns email_verified as the string "true"/"false" (or a
     # bool). We MUST require a verified email before linking to or creating an account
@@ -111,7 +111,7 @@ def google_auth(payload: GoogleAuthRequest, request: Request, db: DbSession):
     email_verified_raw = info.get("email_verified")
     email_verified = str(email_verified_raw).strip().lower() == "true" or email_verified_raw is True
     if not email_verified:
-        raise HTTPException(status_code=400, detail="Email Google non vérifié")
+        raise HTTPException(status_code=400, detail="Adresse e-mail Google non vérifiée.")
 
     # Find existing user by google_id, then by email (link account)
     user = crud_user.get_user_by_google_id(db, google_id)
