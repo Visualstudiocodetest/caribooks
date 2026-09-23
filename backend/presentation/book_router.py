@@ -18,8 +18,19 @@ router = APIRouter(prefix="/books", tags=["books"])
 # is warm -- the dominant source of "scanning feels slow" for a volunteer
 # scanning many books in a row. httpx.Client is documented as thread-safe for
 # exactly this kind of shared, long-lived use (FastAPI runs sync routes like
-# this one in a thread pool).
-_openlibrary_client = httpx.Client(timeout=8.0, limits=httpx.Limits(max_keepalive_connections=5, max_connections=10))
+# this one in a thread pool). follow_redirects is required: /isbn/{isbn}.json
+# always 302s to the canonical /books/{OLID}.json edition page.
+_openlibrary_client = httpx.Client(
+    timeout=8.0,
+    limits=httpx.Limits(max_keepalive_connections=5, max_connections=10),
+    follow_redirects=True,
+)
+
+# Max number of authors to resolve names for per lookup. Author names aren't
+# inlined in the edition JSON (only /authors/{key} references are), so each
+# one costs an extra request; capped so a many-author anthology can't stall a
+# scan.
+_MAX_AUTHORS_RESOLVED = 3
 
 
 def _to_book_read(db_livre: models.Livre) -> BookRead:
@@ -62,9 +73,46 @@ def get_book_by_isbn(isbn: str, db: DbSession):
     book = service.get_book_by_isbn(isbn)
     return _to_book_read(book) if book else None
 
+def _resolve_author_names(author_refs: List[Dict[str, Any]]) -> List[Dict[str, str]]:
+    names = []
+    for ref in author_refs[:_MAX_AUTHORS_RESOLVED]:
+        key = ref.get("key")
+        if not key:
+            continue
+        try:
+            resp = _openlibrary_client.get(f"https://openlibrary.org{key}.json")
+            resp.raise_for_status()
+            name = resp.json().get("name")
+        except (httpx.HTTPError, ValueError):
+            # A single unresolvable author shouldn't fail the whole lookup --
+            # the title/cover/notes are still worth returning.
+            continue
+        if name:
+            names.append({"name": name})
+    return names
+
+
+def _cover_urls(cover_ids: List[int]) -> Optional[Dict[str, str]]:
+    if not cover_ids:
+        return None
+    cover_id = cover_ids[0]
+    return {
+        "large": f"https://covers.openlibrary.org/b/id/{cover_id}-L.jpg",
+        "medium": f"https://covers.openlibrary.org/b/id/{cover_id}-M.jpg",
+        "small": f"https://covers.openlibrary.org/b/id/{cover_id}-S.jpg",
+    }
+
+
 @router.get("/isbn-metadata/{isbn}")
 def get_isbn_metadata(isbn: str, request: Request) -> Dict[str, Any]:
-    """Proxy ISBN metadata lookup via OpenLibrary (single external source)."""
+    """Proxy ISBN metadata lookup via OpenLibrary (single external source).
+
+    Uses the documented /isbn/{isbn}.json edition endpoint rather than the
+    legacy /api/books?jscmd=data endpoint: OpenLibrary flags that one as
+    legacy/phased-out in its own docs, and as of this writing it returns
+    HTTP 404 for every request (including OpenLibrary's own documented
+    example ISBN), independent of anything this backend sends.
+    """
     client_host = request.client.host if request.client else "unknown"
     # Unauthenticated (scanning happens before the book exists locally), so key
     # by client IP rather than a user id. Bounds how much of the shared
@@ -74,9 +122,7 @@ def get_isbn_metadata(isbn: str, request: Request) -> Dict[str, Any]:
     clean = isbn.strip().upper().replace("-", "")
 
     try:
-        r = _openlibrary_client.get(
-            f"https://openlibrary.org/api/books?bibkeys=ISBN:{clean}&format=json&jscmd=data",
-        )
+        r = _openlibrary_client.get(f"https://openlibrary.org/isbn/{clean}.json")
     except httpx.TimeoutException as e:
         raise HTTPException(
             status_code=504,
@@ -88,6 +134,9 @@ def get_isbn_metadata(isbn: str, request: Request) -> Dict[str, Any]:
             detail="Impossible de contacter OpenLibrary (problème réseau). Vérifiez la connexion internet.",
         ) from e
 
+    if r.status_code == 404:
+        raise HTTPException(status_code=404, detail="ISBN introuvable dans OpenLibrary")
+
     if r.status_code != 200:
         raise HTTPException(
             status_code=502,
@@ -95,18 +144,31 @@ def get_isbn_metadata(isbn: str, request: Request) -> Dict[str, Any]:
         )
 
     try:
-        data = r.json()
+        edition = r.json()
     except ValueError as e:
         raise HTTPException(
             status_code=502,
             detail="Réponse OpenLibrary illisible (format inattendu).",
         ) from e
 
-    book = data.get(f"ISBN:{clean}")
-    if book and book.get("title"):
-        return book
+    title = edition.get("title")
+    if not title:
+        raise HTTPException(status_code=404, detail="ISBN introuvable dans OpenLibrary")
 
-    raise HTTPException(status_code=404, detail="ISBN introuvable dans OpenLibrary")
+    notes = edition.get("notes")
+    if isinstance(notes, dict):
+        notes = notes.get("value")
+
+    return {
+        "title": title,
+        "subtitle": edition.get("subtitle"),
+        "authors": _resolve_author_names(edition.get("authors") or []),
+        "publishers": [{"name": name} for name in edition.get("publishers") or []],
+        "publish_date": edition.get("publish_date"),
+        "by_statement": edition.get("by_statement"),
+        "cover": _cover_urls(edition.get("covers") or []),
+        "notes": notes,
+    }
 
 
 @router.get("/{id_livre}", response_model=BookRead)

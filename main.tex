@@ -1675,27 +1675,39 @@ router = APIRouter(prefix="/books", tags=["books"])
 
 # Module-level, shared across requests: reuses the TCP/TLS connection to
 # openlibrary.org instead of paying a fresh handshake on every scan
-# (~2-3s cold vs ~0.3-0.8s warm).
+# (~2-3s cold vs ~0.3-0.8s warm). follow_redirects=True car
+# /isbn/{isbn}.json redirige (302) vers /books/{OLID}.json.
 _openlibrary_client = httpx.Client(
     timeout=8.0,
     limits=httpx.Limits(max_keepalive_connections=5, max_connections=10),
+    follow_redirects=True,
 )
 
 @router.get("/isbn-metadata/{isbn}")
 def get_isbn_metadata(isbn: str):
-    """Proxy ISBN metadata lookup via OpenLibrary (single external source)."""
+    """Proxy ISBN metadata lookup via OpenLibrary (single external source).
+
+    Utilise l'endpoint documenté /isbn/{isbn}.json plutot que l'ancien
+    /api/books?jscmd=data (marque "legacy" par OpenLibrary et devenu
+    indisponible : HTTP 404 sur toute requete, y compris l'exemple officiel
+    de la documentation).
+    """
     clean = isbn.strip().upper().replace("-", "")
 
     try:
-        r = _openlibrary_client.get(
-            f"https://openlibrary.org/api/books?bibkeys=ISBN:{clean}"
-            "&format=json&jscmd=data",
-        )
+        r = _openlibrary_client.get(f"https://openlibrary.org/isbn/{clean}.json")
         if r.status_code == 200:
-            data = r.json()
-            book = data.get(f"ISBN:{clean}")
-            if book and book.get("title"):
-                return book
+            edition = r.json()
+            if edition.get("title"):
+                # Les auteurs ne sont référencés que par clé (/authors/{id}) ;
+                # le nom est résolu par un appel supplémentaire par auteur
+                # (voir _resolve_author_names), plafonné à 3 auteurs.
+                return {
+                    "title": edition["title"],
+                    "authors": resolve_author_names(edition.get("authors") or []),
+                    "cover": cover_urls(edition.get("covers") or []),
+                    "notes": edition.get("notes"),
+                }
     except Exception:
         pass
 

@@ -561,15 +561,12 @@ def get_isbn_metadata(isbn: str):
 
     # Source unique : OpenLibrary
     r = httpx.get(
-        "https://openlibrary.org/api/books",
-        params={"bibkeys": f"ISBN:{clean}",
-                "format": "json",
-                "jscmd":  "data"},
-        timeout=8)
+        f"https://openlibrary.org/isbn/{clean}.json",
+        follow_redirects=True, timeout=8)
     if r.status_code == 200:
-        book = r.json().get(f"ISBN:{clean}")
-        if book and book.get("title"):
-            return book  # "Divergente - tome 2", Roth...
+        edition = r.json()
+        if edition.get("title"):
+            return build_book(edition)  # "Divergente - tome 2", Roth...
 
     raise HTTPException(404, "ISBN introuvable")
 \end{lstlisting}
