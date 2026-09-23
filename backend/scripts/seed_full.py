@@ -68,7 +68,6 @@ def seed():
         if not admin_password:
             import secrets
             admin_password = secrets.token_urlsafe(14)
-            print(f'[seed] Admin password generated: {admin_password}')
 
         if not db.query(models.Utilisateur).filter(models.Utilisateur.email == admin_email).first():
             crud_user.create_user(db, {
@@ -78,7 +77,6 @@ def seed():
                 'mot_de_passe': admin_password,
                 'role': 'admin',
             })
-            print(f'[seed] Admin account created: {admin_email}')
 
         db.commit()
         print('[seed] Done.')

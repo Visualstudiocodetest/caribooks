@@ -92,9 +92,7 @@ def _assert_amount_matches_commande(db: Session, id_commande: int, provider_amou
             status_code=409,
             detail=(
                 "Le montant du paiement ne correspond pas au total de la commande. "
-                "Aucun débit n’a été effectué — reprenez votre commande depuis le panier. "
-                f"(commande={float(commande.montant_total_chf):.2f} CHF, "
-                f"PostFinance={provider_amount})"
+                "Aucun débit n’a été effectué — reprenez votre commande depuis le panier."
             ),
         )
 
