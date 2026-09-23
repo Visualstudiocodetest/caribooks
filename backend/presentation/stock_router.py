@@ -25,7 +25,7 @@ stock_crud = CrudBase[models.Stock](models.Stock, "id_stock")
 
 
 @router.get("/sources", response_model=list[SourceStockRead])
-def list_sources(db: DbSession):
+def list_sources(db: DbSession, _admin: AdminUser):
     # Explicit order (oldest first): the admin "add book" form pre-selects the
     # *last* entry of this list as the most-recently-added source, which only
     # holds if the ordering is guaranteed rather than left to MySQL's
@@ -34,7 +34,7 @@ def list_sources(db: DbSession):
 
 
 @router.get("/sources/{id_source_stock}", response_model=SourceStockRead)
-def get_source(id_source_stock: int, db: DbSession):
+def get_source(id_source_stock: int, db: DbSession, _admin: AdminUser):
     obj = source_stock_crud.get(db, id_source_stock)
     if obj is None:
         raise HTTPException(status_code=404, detail="Source de stock introuvable.")
@@ -77,7 +77,7 @@ def delete_source(
 
 @router.get("/", response_model=list[StockRead])
 @router.get("", response_model=list[StockRead], include_in_schema=False)
-def list_stock(db: DbSession):
+def list_stock(db: DbSession, _admin: AdminUser):
     # One handler serves both "/stock" and "/stock/" -- see book_router.list_books
     # for why: without this, a missing/extra trailing slash gets 307-redirected
     # by FastAPI straight to this backend's own absolute origin, breaking the
@@ -116,7 +116,7 @@ def stock_availability(db: DbSession, livre_ids: str | None = None):
 
 
 @router.get("/{id_stock}", response_model=StockRead)
-def get_stock(id_stock: int, db: DbSession):
+def get_stock(id_stock: int, db: DbSession, _admin: AdminUser):
     obj = stock_crud.get(db, id_stock)
     if obj is None:
         raise HTTPException(status_code=404, detail="Stock introuvable.")
@@ -203,7 +203,12 @@ def decrement_stock(
 ):
     obj = _get_stock_for_update(db, id_stock)
     qty = payload.qty if payload is not None else 1
-    if (obj.quantite_disponible or 0) < qty:
+    # Never undercut what's already held by open (unexpired) carts: the rest
+    # of the concurrency work in this branch relies on "every reservation is
+    # backed by physical stock" holding, and checking only against the raw
+    # available count let an admin decrement below quantite_reservee (see M-4).
+    free = (obj.quantite_disponible or 0) - (obj.quantite_reservee or 0)  # type: ignore[operator]
+    if free < qty:  # type: ignore[operator]
         raise HTTPException(status_code=400, detail="Stock insuffisant pour effectuer ce retrait.")
     obj.quantite_disponible = (obj.quantite_disponible or 0) - qty
     db.commit()

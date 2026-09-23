@@ -89,6 +89,19 @@ def admin_set_status(id_commande: int, payload: AdminCommandeStatusUpdate, db: D
         db.commit()
         db.refresh(obj)
         return obj
+    if cur in PAID_STATUSES and new_status in TERMINAL_STATUSES:
+        # A PAID (or later) order moved straight to CANCELLED/REFUNDED must go
+        # through the same stock-crediting path as /refund — otherwise the
+        # units finalize_commande sold are leaked forever, and admin_refund_commande
+        # (which requires `cur in PAID_STATUSES`) can never be reached again to
+        # fix it (see H-2).
+        refund_commande(db, int(obj.id_commande))  # type: ignore[arg-type]
+        obj.statut = new_status  # type: ignore[assignment]
+        if new_status == "REFUNDED":
+            db.query(models.Paiement).filter(models.Paiement.id_commande == id_commande).update({"statut": "REFUNDED"})
+        db.commit()
+        db.refresh(obj)
+        return obj
     obj.statut = new_status  # type: ignore[assignment]
     db.commit()
     db.refresh(obj)

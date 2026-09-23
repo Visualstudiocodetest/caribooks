@@ -70,7 +70,15 @@ class BookService:
     def create_book(self, book) -> models.Livre:
         return crud_book.create_book(self.db_session, book)
 
-    def update_book(self, id_livre: int, data: dict) -> Optional[models.Livre]:
+    def update_book(self, id_livre: int, data: dict, base_url: str = "") -> Optional[models.Livre]:
+        # An updated image_link must go through the same SSRF-safe download
+        # pipeline as create (_resolve_image_link -> download_image), rather
+        # than being setattr'd straight from client JSON: otherwise "we always
+        # host our own copy" is only true for books created via POST, and an
+        # arbitrary raw image_link can be stored via PUT (see M-2).
+        if "image_link" in data:
+            data = dict(data)
+            data["image_link"] = self._resolve_image_link(data["image_link"], base_url)
         return crud_book.update_book(self.db_session, id_livre, data)
 
     def delete_book(self, id_livre: int) -> bool:

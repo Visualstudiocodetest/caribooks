@@ -290,14 +290,21 @@ def poll_paiement_postfinance(id_paiement: int, db: DbSession, current_user: Cur
 
     new_status = pf_resp.get("state") or pf_resp.get("status")
     if new_status and not is_postfinance_success_status(current_statut):
+        is_success = is_postfinance_success_status(str(new_status))
+        # Verify the amount BEFORE persisting a success status: raising here
+        # leaves `obj.statut` untouched, so a mismatch doesn't get committed as
+        # "already succeeded" and silently swallowed by the idempotency guard
+        # on every later poll/webhook call (see C-1).
+        if is_success:
+            _assert_amount_matches_commande(db, int(obj.id_commande), pf_resp.get("amount"), source="poll")
+
         obj.statut = str(new_status)  # type: ignore[assignment]
-        if is_postfinance_success_status(str(new_status)):
+        if is_success:
             obj.date_paiement = datetime.now(timezone.utc)  # type: ignore[assignment]
         db.commit()
         db.refresh(obj)
 
-        if is_postfinance_success_status(str(new_status)):
-            _assert_amount_matches_commande(db, int(obj.id_commande), pf_resp.get("amount"), source="poll")
+        if is_success:
             _finalize_paid_order(db, int(obj.id_commande), source="poll")  # type: ignore[arg-type]
 
     return {"paiement": obj, "raw": pf_resp}
@@ -337,18 +344,26 @@ async def postfinance_webhook(request: Request, db: DbSession):
     already_finalized = is_postfinance_success_status(str(getattr(obj, "statut", "") or ""))
 
     new_status = parsed.get("status") or "UNKNOWN"
+    is_new_success = not already_finalized and is_postfinance_success_status(str(new_status))
+
+    # Verify the amount BEFORE persisting a success status (see C-1): if this
+    # raises, `obj.statut` is left untouched instead of being committed as
+    # "already succeeded", which would make the idempotency guard above
+    # silently skip the check and finalize on every later webhook redelivery.
+    if is_new_success:
+        # The webhook payload itself may not carry a reliable amount field, so
+        # re-fetch the transaction from PostFinance directly for the figure to
+        # cross-check against, rather than trusting whatever (if anything) was
+        # in the notification body.
+        provider_tx = get_postfinance_transaction(str(pay_id or ref or obj.reference_externe))  # type: ignore[arg-type]
+        _assert_amount_matches_commande(db, int(obj.id_commande), provider_tx.get("amount"), source="webhook")  # type: ignore[arg-type]
+
     obj.statut = new_status  # type: ignore
     obj.date_paiement = datetime.now(timezone.utc)  # type: ignore
     db.commit()
     db.refresh(obj)
 
-    if not already_finalized and is_postfinance_success_status(str(new_status)):
-        # The webhook payload itself may not carry a reliable amount field, so
-        # re-fetch the transaction from PostFinance directly for the figure to
-        # cross-check against, rather than trusting whatever (if anything) was
-        # in the notification body.
-        provider_tx = get_postfinance_transaction(str(pay_id or ref or obj.reference_externe))
-        _assert_amount_matches_commande(db, int(obj.id_commande), provider_tx.get("amount"), source="webhook")  # type: ignore[arg-type]
+    if is_new_success:
         _finalize_paid_order(db, int(obj.id_commande), source="webhook")  # type: ignore[arg-type]
 
     return {"ok": True}

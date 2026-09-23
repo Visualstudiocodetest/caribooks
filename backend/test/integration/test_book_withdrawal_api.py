@@ -184,6 +184,71 @@ def test_admin_set_status_cancel_releases_the_reservation(client: TestClient, re
     assert avail.get(str(lid)) == 2
 
 
+def test_admin_set_status_paid_to_cancelled_credits_sold_stock_back(
+    client: TestClient, register_and_login, uniq: str
+):
+    """Regression for H-2: forcing a PAID order straight to CANCELLED/REFUNDED
+    via the raw status override used to leave the sold units permanently
+    deducted (no stock-side effect at all) and unrecoverable, since /refund
+    then refuses because the order is no longer PAID."""
+    admin_headers = register_and_login(f"wdH2a_{uniq}@example.com", role="admin")
+    headers = register_and_login(f"wdH2_{uniq}@example.com")
+    lid = _make_book(client, admin_headers, f"WH2{uniq[:6]}")
+    _set_stock(client, admin_headers, lid, uniq, qty=3)
+
+    cid = client.post("/orders/commandes", json={"shipping_method": "POST"}, headers=headers).json()["id_commande"]
+    client.post("/orders/lignes", json={"id_commande": cid, "id_livre": lid, "quantite": 2}, headers=headers)
+
+    r = client.post(f"/orders/admin/commandes/{cid}/advance", headers=admin_headers)
+    assert r.status_code == 200, r.text
+    assert r.json()["statut"] == "PAID"
+
+    avail_paid = client.get("/stock/availability", params={"livre_ids": str(lid)}).json()
+    assert avail_paid.get(str(lid)) == 1  # 3 in stock - 2 sold
+
+    r = client.put(
+        f"/orders/admin/commandes/{cid}/status", json={"statut": "CANCELLED"}, headers=admin_headers
+    )
+    assert r.status_code == 200, r.text
+
+    avail_after = client.get("/stock/availability", params={"livre_ids": str(lid)}).json()
+    assert avail_after.get(str(lid)) == 3, "sold stock must be credited back, not leaked forever"
+
+
+def test_admin_set_status_paid_to_refunded_marks_payments_refunded(
+    client: TestClient, register_and_login, uniq: str
+):
+    """Same H-2 fix, PAID -> REFUNDED transition: stock is credited back AND
+    the order's payment records are marked REFUNDED, matching /refund's own
+    behaviour instead of leaving them showing a stale success status."""
+    admin_headers = register_and_login(f"wdH2ba_{uniq}@example.com", role="admin")
+    headers = register_and_login(f"wdH2b_{uniq}@example.com")
+    lid = _make_book(client, admin_headers, f"WH2B{uniq[:6]}")
+    _set_stock(client, admin_headers, lid, uniq, qty=2)
+
+    cid = client.post("/orders/commandes", json={"shipping_method": "POST"}, headers=headers).json()["id_commande"]
+    client.post("/orders/lignes", json={"id_commande": cid, "id_livre": lid, "quantite": 1}, headers=headers)
+    client.post(
+        "/orders/paiements",
+        json={"id_commande": cid, "reference_externe": f"REF_WDH2B_{uniq}"},
+        headers=headers,
+    )
+
+    r = client.post(f"/orders/admin/commandes/{cid}/advance", headers=admin_headers)
+    assert r.status_code == 200, r.text
+
+    r = client.put(f"/orders/admin/commandes/{cid}/status", json={"statut": "REFUNDED"}, headers=admin_headers)
+    assert r.status_code == 200, r.text
+    assert r.json()["statut"] == "REFUNDED"
+
+    avail_after = client.get("/stock/availability", params={"livre_ids": str(lid)}).json()
+    assert avail_after.get(str(lid)) == 2
+
+    paiements = client.get("/orders/paiements", headers=headers).json()
+    own = [p for p in paiements if p["id_commande"] == cid]
+    assert own and all(p["statut"] == "REFUNDED" for p in own)
+
+
 def test_over_long_isbn_is_a_validation_error_not_a_crash(client: TestClient, register_and_login, uniq: str):
     admin_headers = register_and_login(f"wd10_{uniq}@example.com", role="admin")
     r = client.post(
