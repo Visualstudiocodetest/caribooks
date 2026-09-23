@@ -21,9 +21,8 @@ sequenceDiagram
     Fro->>API: POST .../{id}/confirm-postfinance
     API->>PF: relit la transaction (version)
     API->>PF: confirme la transaction<br/>(lignes de commande à jour)
-    PF-->>API: transaction confirmée
-    API->>PF: relit le montant après confirmation
-    API->>API: vérifie montant PostFinance == montant commande<br/>(tolérance 1 centime) — refuse (409) si écart
+    PF-->>API: transaction confirmée<br/>(montant = 0, pas encore autorisé)
+    Note over API: pas de contrôle de montant ici —<br/>PostFinance ne le calcule qu'après submit()
     API-->>Fro: paiement confirmé
 
     Fro->>PF: soumission réelle (TWINT / carte, CHF)
