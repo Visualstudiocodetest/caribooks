@@ -1,0 +1,19 @@
+%% Diagramme d'activités — Flux d'ajout d'un livre via scan ISBN
+%% Partie 1/2 : identification du livre (pour le slide PowerPoint — voir activites_isbn_slide2.mmd
+%% pour la suite). Le diagramme complet en une seule colonne reste dans activites_isbn.mmd
+%% (utilisé par main.tex, qui dispose de toute la hauteur de page).
+flowchart LR
+    start((" ")) --> a1["Scanner le code-barres ISBN<br/>(JS navigateur)"]
+    a1 --> d1{"Code<br/>reconnu ?"}
+    d1 -->|oui| a2["GET /books/isbn-metadata/{isbn}"]
+    a2 --> d2{"OpenLibrary<br/>trouvé ?"}
+    d1 -->|non| x1(["Saisie manuelle ▼"])
+    d2 -->|non| x1
+    d2 -->|oui| x2(["Préremplir ▼"])
+
+    classDef act fill:#e7f0ff,stroke:#333;
+    classDef dec fill:#ffe3c2,stroke:#9a5b0a;
+    classDef link fill:#f2f2f2,stroke:#888,stroke-dasharray: 4 3,color:#555;
+    class a1,a2 act;
+    class d1,d2 dec;
+    class x1,x2 link;

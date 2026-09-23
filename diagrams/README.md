@@ -33,7 +33,8 @@ rendu est dans `mermaid-config.json` (thème, polices) et `puppeteer-config.json
 | `use_case_payment` | flowchart (cas d'utilisation) | main |
 | `use_case_global` | flowchart (cas d'utilisation) | main + powerpoint |
 | `activites_achat` | flowchart (activités) | main |
-| `activites_isbn` | flowchart (activités) | main + powerpoint |
+| `activites_isbn` | flowchart (activités, 1 colonne) | main |
+| `activites_isbn_slide1` / `activites_isbn_slide2` | flowchart (activités, 2 moitiés) | powerpoint |
 | `sequence_isbn` | sequenceDiagram | main |
 | `sequence_paiement` | sequenceDiagram | main + powerpoint |
 | `sequence_auth` | sequenceDiagram | main |
@@ -56,3 +57,13 @@ PostFinance (iframe + webhook signé + polling de secours).
 
 > Note : les maquettes UI/UX et les décorations restent en TikZ natif dans les
 > `.tex` (pas de type Mermaid équivalent).
+
+> Note : `activites_isbn` (1 colonne, TD) est illisible tel quel sur un slide
+> 16:9 — la mise en page automatique de Mermaid (dagre) ne sait pas répartir un
+> flowchart sur plusieurs rangées au sein d'un même diagramme (la direction
+> `LR`/`TB` d'un `subgraph` est ignorée dès qu'une arête relie deux
+> `subgraph`s). `activites_isbn_slide1`/`slide2` sont donc deux flowcharts
+> `LR` indépendants (chacun avec un bon ratio largeur/hauteur), empilés dans
+> `powerpoint.tex` via `\resizebox` ; les nœuds grisés en pointillé
+> (`Saisie manuelle ▼` / `Préremplir ▼`) dans `slide1` sont des connecteurs
+> visuels vers les vraies activités du même nom qui démarrent `slide2`.
