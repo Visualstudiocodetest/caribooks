@@ -220,8 +220,11 @@ def confirm_paiement_postfinance(
     # paying — or a total that had been left inconsistent by a concurrent
     # add-to-cart (see order_service.lock_commande) — produced a spurious
     # "montant ne correspond pas" 409 and blocked a perfectly valid payment.
-    # Re-reading after the confirm compares like with like, and still refuses to
-    # finalize if PostFinance really is holding a different amount.
+    #
+    # Cross-check against the amount the confirm call itself just returned,
+    # rather than issuing a second GET: a fresh read isn't guaranteed to be
+    # read-after-write consistent with the confirm that just landed, so it
+    # could report a stale amount and produce the same spurious 409.
     pf_resp = confirm_postfinance_transaction(
         transaction_id=str(transaction_id),
         version=version,
@@ -231,9 +234,8 @@ def confirm_paiement_postfinance(
         shipping_address=billing_address,
     )
     if not pf_resp.get("error"):
-        confirmed_tx = get_postfinance_transaction(str(transaction_id))
         _assert_amount_matches_commande(
-            db, int(commande.id_commande), confirmed_tx.get("amount"), source="confirm"
+            db, int(commande.id_commande), pf_resp.get("amount"), source="confirm"
         )
 
     already_finalized = is_postfinance_success_status(str(getattr(obj, "statut", "") or ""))

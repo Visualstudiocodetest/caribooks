@@ -282,11 +282,13 @@ def confirm_postfinance_transaction(
             id=int(transaction_id), space=_space_id(), transaction_pending=pending
         )
         status = _state_str(tx.state)
+        amount = tx.completed_amount if tx.completed_amount is not None else tx.authorization_amount
         return {
             "id": tx.id or transaction_id,
             "status": status,
             "state": status,
             "version": tx.version,
+            "amount": amount,
         }
     except Exception as exc:
         return {"id": transaction_id, "status": "ERROR", "state": "ERROR", "error": str(exc)}
