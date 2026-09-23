@@ -2,11 +2,11 @@ import { apiFetch } from './api'
 import { SourceStock, Stock } from '@/types/api'
 
 export async function listStocks(): Promise<Stock[]> {
-  return apiFetch<Stock[]>('/stock/')
+  return apiFetch<Stock[]>('/stock/', { auth: true })
 }
 
 export function listSources(): Promise<SourceStock[]> {
-  return apiFetch<SourceStock[]>('/stock/sources')
+  return apiFetch<SourceStock[]>('/stock/sources', { auth: true })
 }
 
 export function createSource(payload: { libelle: string; type_source: string; description?: string }): Promise<SourceStock> {
