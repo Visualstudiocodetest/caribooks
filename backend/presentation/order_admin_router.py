@@ -16,7 +16,9 @@ from services.order_service import (
     OPEN_STATUSES,
     PAID_NOT_ADVANCED_STATUSES,
     PAID_STATUSES,
+    TERMINAL_STATUSES,
     cancel_commande,
+    finalize_commande,
     refund_commande,
 )
 
@@ -50,8 +52,8 @@ def admin_get_lignes(id_commande: int, db: DbSession, _admin: AdminUser):
     return [
         LigneCommandeAdminRead(
             **LigneCommandeRead.model_validate(ligne).model_dump(),
-            titre_article=ligne.article.titre if ligne.article else None,
-            sku_article=ligne.article.sku if ligne.article else None,
+            titre_livre=ligne.livre.titre if ligne.livre else None,
+            sku_livre=ligne.livre.sku if ligne.livre else None,
         )
         for ligne in lignes
     ]
@@ -61,10 +63,45 @@ def admin_get_lignes(id_commande: int, db: DbSession, _admin: AdminUser):
 def admin_set_status(id_commande: int, payload: AdminCommandeStatusUpdate, db: DbSession, _admin: AdminUser):
     obj = db.query(models.Commande).filter(models.Commande.id_commande == id_commande).first()
     if obj is None:
-        raise HTTPException(status_code=404, detail="Commande not found")
+        raise HTTPException(status_code=404, detail="Commande introuvable.")
     new_status = payload.statut.upper()
     if new_status not in ALL_STATUSES:
-        raise HTTPException(status_code=400, detail=f"Unknown status {payload.statut}")
+        raise HTTPException(status_code=400, detail=f"Statut inconnu : {payload.statut}")
+    cur = (obj.statut or "").upper()
+    # Route the two stock-affecting transitions through the same helpers the
+    # normal flow uses, instead of only writing the status column. Setting an
+    # unpaid order to PAID by hand used to leave its cart reservation in place
+    # forever (quantite_reservee never cleared, quantite_disponible never
+    # decremented), so the books stayed invisible in the catalogue; setting it
+    # to CANCELLED leaked the reservation the same way.
+    if cur in OPEN_STATUSES and new_status in PAID_STATUSES:
+        finalize_commande(db, int(obj.id_commande))  # type: ignore[arg-type]
+        db.commit()
+        db.refresh(obj)
+        if new_status != "PAID":
+            obj.statut = new_status  # type: ignore[assignment]
+            db.commit()
+            db.refresh(obj)
+        return obj
+    if cur in OPEN_STATUSES and new_status in TERMINAL_STATUSES:
+        cancel_commande(db, obj)
+        obj.statut = new_status  # type: ignore[assignment]
+        db.commit()
+        db.refresh(obj)
+        return obj
+    if cur in PAID_STATUSES and new_status in TERMINAL_STATUSES:
+        # A PAID (or later) order moved straight to CANCELLED/REFUNDED must go
+        # through the same stock-crediting path as /refund — otherwise the
+        # units finalize_commande sold are leaked forever, and admin_refund_commande
+        # (which requires `cur in PAID_STATUSES`) can never be reached again to
+        # fix it (see H-2).
+        refund_commande(db, int(obj.id_commande))  # type: ignore[arg-type]
+        obj.statut = new_status  # type: ignore[assignment]
+        if new_status == "REFUNDED":
+            db.query(models.Paiement).filter(models.Paiement.id_commande == id_commande).update({"statut": "REFUNDED"})
+        db.commit()
+        db.refresh(obj)
+        return obj
     obj.statut = new_status  # type: ignore[assignment]
     db.commit()
     db.refresh(obj)
@@ -75,12 +112,19 @@ def admin_set_status(id_commande: int, payload: AdminCommandeStatusUpdate, db: D
 def admin_advance(id_commande: int, db: DbSession, _admin: AdminUser):
     obj = db.query(models.Commande).filter(models.Commande.id_commande == id_commande).first()
     if obj is None:
-        raise HTTPException(status_code=404, detail="Commande not found")
+        raise HTTPException(status_code=404, detail="Commande introuvable.")
     # Simple state machine for order progression
     cur = (obj.statut or "").upper()
     sm = (obj.shipping_method or "POST").upper()
     if cur in OPEN_STATUSES:
-        obj.statut = "PAID"
+        # finalize_commande turns the cart reservation into an actual stock
+        # decrement and sets statut = "PAID" itself. Writing "PAID" directly
+        # here (the old behaviour) skipped that, so the reserved units were
+        # never consumed nor released and the book stayed out of the catalogue.
+        finalize_commande(db, int(obj.id_commande))  # type: ignore[arg-type]
+        db.commit()
+        db.refresh(obj)
+        return obj
     elif cur == "PAID":
         if sm == "CLICK_COLLECT":
             obj.statut = "AT_RECEPTION"
@@ -102,7 +146,7 @@ def admin_advance(id_commande: int, db: DbSession, _admin: AdminUser):
 def admin_cancel_commande(id_commande: int, db: DbSession, _admin: AdminUser):
     obj = db.query(models.Commande).filter(models.Commande.id_commande == id_commande).first()
     if obj is None:
-        raise HTTPException(status_code=404, detail="Commande not found")
+        raise HTTPException(status_code=404, detail="Commande introuvable.")
     cancel_commande(db, obj)
     db.commit()
     db.refresh(obj)
@@ -119,10 +163,10 @@ def admin_refund_commande(id_commande: int, db: DbSession, _admin: AdminUser):
     """
     obj = db.query(models.Commande).filter(models.Commande.id_commande == id_commande).first()
     if obj is None:
-        raise HTTPException(status_code=404, detail="Commande not found")
+        raise HTTPException(status_code=404, detail="Commande introuvable.")
     cur = (obj.statut or "").upper()
     if cur not in PAID_STATUSES:
-        raise HTTPException(status_code=400, detail=f"Cannot refund from status {cur}")
+        raise HTTPException(status_code=400, detail=f"Remboursement impossible depuis le statut {cur}.")
     refund_commande(db, id_commande)
     obj.statut = "REFUNDED"  # type: ignore[assignment]
     db.query(models.Paiement).filter(models.Paiement.id_commande == id_commande).update({"statut": "REFUNDED"})
@@ -135,10 +179,10 @@ def admin_refund_commande(id_commande: int, db: DbSession, _admin: AdminUser):
 def admin_set_sent(id_commande: int, db: DbSession, _admin: AdminUser):
     obj = db.query(models.Commande).filter(models.Commande.id_commande == id_commande).first()
     if obj is None:
-        raise HTTPException(status_code=404, detail="Commande not found")
+        raise HTTPException(status_code=404, detail="Commande introuvable.")
     cur = (obj.statut or "").upper()
     if cur not in PAID_NOT_ADVANCED_STATUSES:
-        raise HTTPException(status_code=400, detail=f"Cannot mark SENT from status {cur}")
+        raise HTTPException(status_code=400, detail=f"Passage à « Expédiée » impossible depuis le statut {cur}.")
     obj.statut = "SENT"  # type: ignore[assignment]
     db.commit()
     db.refresh(obj)
@@ -149,10 +193,10 @@ def admin_set_sent(id_commande: int, db: DbSession, _admin: AdminUser):
 def admin_set_at_reception(id_commande: int, db: DbSession, _admin: AdminUser):
     obj = db.query(models.Commande).filter(models.Commande.id_commande == id_commande).first()
     if obj is None:
-        raise HTTPException(status_code=404, detail="Commande not found")
+        raise HTTPException(status_code=404, detail="Commande introuvable.")
     cur = (obj.statut or "").upper()
     if cur not in PAID_NOT_ADVANCED_STATUSES:
-        raise HTTPException(status_code=400, detail=f"Cannot mark AT_RECEPTION from status {cur}")
+        raise HTTPException(status_code=400, detail=f"Passage à « En réception » impossible depuis le statut {cur}.")
     obj.statut = "AT_RECEPTION"  # type: ignore[assignment]
     db.commit()
     db.refresh(obj)

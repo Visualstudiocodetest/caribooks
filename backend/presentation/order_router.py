@@ -20,11 +20,13 @@ from services.order_service import (
     SHIPPING_FEES_CHF,
     attach_seconds_left,
     cancel_commande,
+    cancel_other_open_commandes,
     cleanup_expired_carts,
     ensure_commande_mutable,
     generate_numero_commande,
     get_commande_owned,
     get_owned_ligne,
+    lock_commande,
     recompute_commande_total,
     release_ligne_reservation,
     release_stock,
@@ -47,7 +49,7 @@ def get_commande(id_commande: int, db: DbSession, current_user: CurrentUser):
     cleanup_expired_carts(db)
     obj = get_commande_owned(db, id_commande, int(current_user.id_utilisateur))
     if obj is None:
-        raise HTTPException(status_code=404, detail="Commande not found")
+        raise HTTPException(status_code=404, detail="Commande introuvable.")
     return attach_seconds_left(db, obj)
 
 
@@ -56,7 +58,17 @@ def create_commande(payload: CommandeCreate, db: DbSession, current_user: Curren
     cleanup_expired_carts(db)
     shipping_method = (payload.shipping_method or "POST").upper()
     if shipping_method not in SHIPPING_FEES_CHF:
-        raise HTTPException(status_code=400, detail="Invalid shipping method")
+        raise HTTPException(status_code=400, detail="Mode de livraison invalide.")
+    # One cart per customer: drop any previous open cart (and give its reserved
+    # stock straight back) before opening this one — see
+    # order_service.cancel_other_open_commandes for the bug this fixes.
+    abandoned = cancel_other_open_commandes(db, int(current_user.id_utilisateur))
+    if abandoned:
+        logger.info(
+            "create_commande: cancelled %s abandoned cart(s) for user=%s",
+            abandoned,
+            current_user.id_utilisateur,
+        )
     obj = models.Commande(
         id_utilisateur=current_user.id_utilisateur,
         numero_commande=generate_numero_commande(db),
@@ -87,14 +99,17 @@ def update_commande(
 ):
     obj = get_commande_owned(db, id_commande, int(current_user.id_utilisateur))
     if obj is None:
-        raise HTTPException(status_code=404, detail="Commande not found")
+        raise HTTPException(status_code=404, detail="Commande introuvable.")
+    # Changing the shipping method changes frais_port_chf, so it re-totals the
+    # commande — take the same lock every other cart mutation takes.
+    obj = lock_commande(db, id_commande) or obj
     ensure_commande_mutable(obj)
     data = payload.model_dump(exclude_unset=True)
     shipping_method = data.pop("shipping_method", None)
     if shipping_method is not None:
         shipping_method = shipping_method.upper()
         if shipping_method not in SHIPPING_FEES_CHF:
-            raise HTTPException(status_code=400, detail="Invalid shipping method")
+            raise HTTPException(status_code=400, detail="Mode de livraison invalide.")
         obj.shipping_method = shipping_method  # type: ignore[assignment]
         obj.frais_port_chf = SHIPPING_FEES_CHF[shipping_method]  # type: ignore[assignment]
     for k, v in data.items():
@@ -112,7 +127,11 @@ def cancel_own_commande(id_commande: int, db: DbSession, current_user: CurrentUs
     of leaving stock reserved for the full 20-minute cart_expires_at window."""
     obj = get_commande_owned(db, id_commande, int(current_user.id_utilisateur))
     if obj is None:
-        raise HTTPException(status_code=404, detail="Commande not found")
+        raise HTTPException(status_code=404, detail="Commande introuvable.")
+    # Lock first: a cancel released stock concurrently with an in-flight
+    # add-to-cart could otherwise release a reservation the other request was
+    # still creating, leaving quantite_reservee permanently above zero.
+    obj = lock_commande(db, id_commande) or obj
     cancel_commande(db, obj)
     db.commit()
     db.refresh(obj)
@@ -123,7 +142,8 @@ def cancel_own_commande(id_commande: int, db: DbSession, current_user: CurrentUs
 def delete_commande(id_commande: int, db: DbSession, current_user: CurrentUser):
     obj = get_commande_owned(db, id_commande, int(current_user.id_utilisateur))
     if obj is None:
-        raise HTTPException(status_code=404, detail="Commande not found")
+        raise HTTPException(status_code=404, detail="Commande introuvable.")
+    obj = lock_commande(db, id_commande) or obj
     cur = (obj.statut or "").upper()
     if cur in ("CREATED", "PENDING"):
         # Release any reserved stock before deleting — otherwise the cascade
@@ -150,7 +170,7 @@ def list_lignes(db: DbSession, current_user: CurrentUser):
 def get_ligne(id_ligne_commande: int, db: DbSession, current_user: CurrentUser):
     obj = get_owned_ligne(db, id_ligne_commande, int(current_user.id_utilisateur))
     if obj is None:
-        raise HTTPException(status_code=404, detail="LigneCommande not found")
+        raise HTTPException(status_code=404, detail="Ligne de commande introuvable.")
     return obj
 
 
@@ -159,31 +179,52 @@ def create_ligne(payload: LigneCommandeCreate, db: DbSession, current_user: Curr
     cleanup_expired_carts(db)
     c = get_commande_owned(db, payload.id_commande, int(current_user.id_utilisateur))
     if c is None:
-        raise HTTPException(status_code=404, detail="Commande not found")
+        raise HTTPException(status_code=404, detail="Commande introuvable.")
+    # Ownership is checked above; the lock (taken before any stock row is
+    # touched) is what serializes concurrent adds to the same cart. See
+    # order_service.lock_commande: without it the totals raced and the stock
+    # locks deadlocked.
+    c = lock_commande(db, int(payload.id_commande)) or c
     if (c.statut or "").upper() in ("CANCELLED", "FAILED"):
         raise HTTPException(status_code=409, detail="Votre réservation a expiré. Retournez au panier.")
     ensure_commande_mutable(c)
-    article = db.query(models.Article).filter(models.Article.id_article == payload.id_article).first()
-    if article is None:
-        raise HTTPException(status_code=404, detail="Article not found")
+    livre = db.query(models.Livre).filter(models.Livre.id_livre == payload.id_livre).first()
+    if livre is None:
+        raise HTTPException(status_code=404, detail="Livre introuvable.")
     # Unit price always comes from the catalog, never the client — otherwise a
     # tampered request body could set an arbitrary prix_unitaire_chf.
-    unit_price = float(article.prix_chf)  # type: ignore[arg-type]
+    unit_price = float(livre.prix_chf)  # type: ignore[arg-type]
     try:
-        reserve_stock(db, int(payload.id_article), int(payload.quantite))
+        reserve_stock(db, int(payload.id_livre), int(payload.quantite))
 
-        # create the ligne and commit once (for articles without stock rows, we allow creation)
-        obj = models.LigneCommande(
-            id_commande=payload.id_commande,
-            id_article=payload.id_article,
-            quantite=payload.quantite,
-            prix_unitaire_chf=unit_price,
+        # Adding a livre already in this cart bumps the existing ligne instead of
+        # creating a second row for it. A retried/double-submitted checkout used
+        # to produce two lignes for the same book, which the cart UI (keyed by
+        # id_livre) could not show or remove — the customer saw one copy and was
+        # charged for two.
+        obj = (
+            db.query(models.LigneCommande)
+            .filter(
+                models.LigneCommande.id_commande == payload.id_commande,
+                models.LigneCommande.id_livre == payload.id_livre,
+            )
+            .first()
         )
-        db.add(obj)
+        if obj is not None:
+            obj.quantite = int(obj.quantite) + int(payload.quantite)  # type: ignore[assignment]
+            obj.prix_unitaire_chf = unit_price  # type: ignore[assignment]
+        else:
+            obj = models.LigneCommande(
+                id_commande=payload.id_commande,
+                id_livre=payload.id_livre,
+                quantite=payload.quantite,
+                prix_unitaire_chf=unit_price,
+            )
+            db.add(obj)
 
-        # NOTE: we intentionally do NOT set article.actif = False here.
+        # NOTE: we intentionally do NOT set livre.actif = False here.
         # Reserving stock for a cart (which may be abandoned) must not delist the
-        # book from the catalogue. The article is only marked inactive when the
+        # book from the catalogue. The book is only marked inactive when the
         # order is actually paid (see finalize_commande). Over-reservation is
         # still prevented by the "Not enough stock" check above.
 
@@ -198,7 +239,7 @@ def create_ligne(payload: LigneCommandeCreate, db: DbSession, current_user: Curr
     except Exception as e:
         db.rollback()
         logger.exception("Could not create ligne")
-        raise HTTPException(status_code=500, detail="Could not create ligne") from e
+        raise HTTPException(status_code=500, detail="Impossible d’ajouter cet article à la commande.") from e
 
 
 @router.put("/lignes/{id_ligne_commande}", response_model=LigneCommandeRead)
@@ -210,8 +251,9 @@ def update_ligne(
 ):
     obj = get_owned_ligne(db, id_ligne_commande, int(current_user.id_utilisateur))
     if obj is None:
-        raise HTTPException(status_code=404, detail="LigneCommande not found")
-    parent = db.query(models.Commande).filter(models.Commande.id_commande == obj.id_commande).first()
+        raise HTTPException(status_code=404, detail="Ligne de commande introuvable.")
+    # Same lock-the-cart-first rule as create_ligne (see order_service.lock_commande).
+    parent = lock_commande(db, int(obj.id_commande))
     if parent is not None:
         ensure_commande_mutable(parent)
     data = payload.model_dump(exclude_unset=True)
@@ -220,15 +262,14 @@ def update_ligne(
         if new_qty is not None and int(new_qty) != int(obj.quantite):  # type: ignore[arg-type]
             delta = int(new_qty) - int(obj.quantite)  # type: ignore[arg-type]
             if delta > 0:
-                reserve_stock(db, int(obj.id_article), delta)  # type: ignore[arg-type]
+                reserve_stock(db, int(obj.id_livre), delta)  # type: ignore[arg-type]
             else:
-                release_stock(db, int(obj.id_article), -delta)  # type: ignore[arg-type]
+                release_stock(db, int(obj.id_livre), -delta)  # type: ignore[arg-type]
             obj.quantite = int(new_qty)  # type: ignore[assignment]
 
         db.flush()
-        commande = db.query(models.Commande).filter(models.Commande.id_commande == obj.id_commande).first()
-        if commande is not None:
-            recompute_commande_total(db, commande)
+        if parent is not None:
+            recompute_commande_total(db, parent)
         db.commit()
         db.refresh(obj)
         return obj
@@ -238,23 +279,25 @@ def update_ligne(
     except Exception as e:
         db.rollback()
         logger.exception("Could not update ligne")
-        raise HTTPException(status_code=500, detail="Could not update ligne") from e
+        raise HTTPException(status_code=500, detail="Impossible de modifier cette ligne de commande.") from e
 
 
 @router.delete("/lignes/{id_ligne_commande}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_ligne(id_ligne_commande: int, db: DbSession, current_user: CurrentUser):
     obj = get_owned_ligne(db, id_ligne_commande, int(current_user.id_utilisateur))
     if obj is None:
-        raise HTTPException(status_code=404, detail="LigneCommande not found")
-    ensure_commande_mutable(obj.commande)  # type: ignore[attr-defined]
+        raise HTTPException(status_code=404, detail="Ligne de commande introuvable.")
     id_commande = int(obj.id_commande)  # type: ignore[arg-type]
-    if (obj.commande.statut or "").upper() in ("CREATED", "PENDING"):  # type: ignore[attr-defined]
+    # Same lock-the-cart-first rule as create_ligne (see order_service.lock_commande).
+    commande = lock_commande(db, id_commande)
+    if commande is None:
+        raise HTTPException(status_code=404, detail="Commande introuvable.")
+    ensure_commande_mutable(commande)
+    if (commande.statut or "").upper() in ("CREATED", "PENDING"):
         # Release the reservation before deleting — otherwise it leaks forever.
         release_ligne_reservation(db, obj)
     db.delete(obj)
     db.flush()
-    commande = db.query(models.Commande).filter(models.Commande.id_commande == id_commande).first()
-    if commande is not None:
-        recompute_commande_total(db, commande)
+    recompute_commande_total(db, commande)
     db.commit()
     return None

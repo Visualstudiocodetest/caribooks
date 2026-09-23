@@ -204,8 +204,8 @@ function OrderRow({ commande, onAdvanced, defaultExpanded }: { commande: Command
                 lignes.map((l) => (
                   <div key={l.id_ligne_commande} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, fontSize: 13, background: 'var(--color-bg)', border: '1px solid var(--color-border)', borderRadius: 8, padding: '6px 12px' }}>
                     <div style={{ display: 'grid', gap: 1, minWidth: 0 }}>
-                      <span style={{ fontWeight: 700 }}>{l.titre_article ?? `Article #${l.id_article}`}</span>
-                      {l.sku_article ? <span className="muted" style={{ fontSize: 11 }}>SKU : {l.sku_article}</span> : null}
+                      <span style={{ fontWeight: 700 }}>{l.titre_livre ?? `Livre #${l.id_livre}`}</span>
+                      {l.sku_livre ? <span className="muted" style={{ fontSize: 11 }}>SKU : {l.sku_livre}</span> : null}
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
                       <span className="muted">× {l.quantite}</span>

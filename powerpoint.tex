@@ -428,35 +428,6 @@ ESTIAM --- Promotion E3 DAD --- Encadrant : Mhand Boufala}
   \end{center}
 \end{frame}
 
-\begin{frame}{Modèle de données --- Architecture en héritage de table}
-  \begin{columns}[T]
-    \column{0.48\textwidth}
-    \begin{block}{11 tables MySQL}
-      \begin{itemize}\small
-        \item \texttt{article} / \texttt{livre} : héritage 1-1 \textit{(clé primaire partagée)}
-        \item \texttt{etat\_usure}, \texttt{type\_objet}
-        \item \texttt{stock}, \texttt{source\_stock}
-        \item \texttt{utilisateur}, \texttt{commande}
-        \item \texttt{ligne\_commande}, \texttt{paiement}
-        \item \texttt{scan\_isbn} (traçabilité des scans)
-      \end{itemize}
-    \end{block}
-    \column{0.48\textwidth}
-    \begin{alertblock}{\small Pourquoi une table \texttt{type\_objet} plutôt qu'un simple champ \og livre/DVD \fg{} ?}
-      \begin{itemize}\small
-        \item \texttt{livre} étend \texttt{article} par clé primaire partagée (\textit{Table Per Class})
-        \item Un admin ajoute un nouveau type (DVD, jeu\ldots) via l'API, \textbf{sans redéploiement}
-      \end{itemize}
-    \end{alertblock}
-    \vspace{4pt}
-    \begin{exampleblock}{Index de performance}
-      \scriptsize
-      \texttt{idx\_livre\_isbn}, \texttt{idx\_stock\_article},
-      \texttt{idx\_commande\_utilisateur}\ldots
-    \end{exampleblock}
-  \end{columns}
-\end{frame}
-
 \begin{frame}{Modèle de données — Diagramme}
   \begin{center}
   \includegraphics[width=\linewidth,height=0.82\textheight,keepaspectratio]{diagrams/mld.pdf}
@@ -735,10 +706,14 @@ SHIPPING_FEES_CHF = {
     "CLICK_COLLECT": 1.0,
 }
 
-def _lock_stock_rows(db, ids_article):
-    return db.query(models.Stock).filter(
-        models.Stock.id_article.in_(ids_article)
-    ).with_for_update().all()
+def _lock_stock_rows(db, id_livre):
+    return (
+        db.query(models.Stock)
+        .filter(models.Stock.id_livre == id_livre)
+        .order_by(models.Stock.id_stock.asc())
+        .with_for_update()
+        .all()
+    )
 \end{lstlisting}
     \begin{exampleblock}{\small Pourquoi \texttt{FOR UPDATE} ?}
       \begin{itemize}\small

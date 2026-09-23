@@ -3,10 +3,11 @@ from typing import Any, Dict, List, Optional
 import httpx
 from fastapi import APIRouter, HTTPException, Request, status
 
-from infrastructure import models
+from infrastructure import crud_book, models
 from presentation.deps import AdminUser, DbSession
 from presentation.schemas import BookCreate, BookRead, BookUpdate
 from services.book_service import BookService
+from services.rate_limit import check_rate_limit
 
 router = APIRouter(prefix="/books", tags=["books"])
 
@@ -22,23 +23,21 @@ _openlibrary_client = httpx.Client(timeout=8.0, limits=httpx.Limits(max_keepaliv
 
 
 def _to_book_read(db_livre: models.Livre) -> BookRead:
-    article = db_livre.article
-    etat_label = article.etat_usure.libelle if getattr(article, "etat_usure", None) else None
+    etat_label = db_livre.etat_usure.libelle if getattr(db_livre, "etat_usure", None) else None
     return BookRead(
-        id_article=int(db_livre.id_article),
-        id_type_objet=int(article.id_type_objet),
-        id_etat_usure=int(article.id_etat_usure),
-        titre=article.titre,
+        id_livre=int(db_livre.id_livre),
+        id_etat_usure=int(db_livre.id_etat_usure),
+        titre=db_livre.titre,
         isbn=db_livre.isbn,
         auteur=db_livre.auteur,
         editeur=db_livre.editeur,
         date_publication=db_livre.date_publication,
         langue=db_livre.langue,
-        description=article.description,
-        image_link=article.image_link,
-        prix_chf=float(article.prix_chf),
-        actif=bool(article.actif),
-        date_creation=article.date_creation,
+        description=db_livre.description,
+        image_link=db_livre.image_link,
+        prix_chf=float(db_livre.prix_chf),
+        actif=bool(db_livre.actif),
+        date_creation=db_livre.date_creation,
         etat_libelle=etat_label,
     )
 
@@ -64,24 +63,30 @@ def get_book_by_isbn(isbn: str, db: DbSession):
     return _to_book_read(book) if book else None
 
 @router.get("/isbn-metadata/{isbn}")
-def get_isbn_metadata(isbn: str) -> Dict[str, Any]:
+def get_isbn_metadata(isbn: str, request: Request) -> Dict[str, Any]:
     """Proxy ISBN metadata lookup via OpenLibrary (single external source)."""
+    client_host = request.client.host if request.client else "unknown"
+    # Unauthenticated (scanning happens before the book exists locally), so key
+    # by client IP rather than a user id. Bounds how much of the shared
+    # 10-connection OpenLibrary client pool a single client can monopolize, and
+    # how hard we hammer OpenLibrary's own API (see M-3).
+    check_rate_limit(f"isbn_metadata:{client_host}", max_attempts=30, window_seconds=60)
     clean = isbn.strip().upper().replace("-", "")
 
     try:
         r = _openlibrary_client.get(
             f"https://openlibrary.org/api/books?bibkeys=ISBN:{clean}&format=json&jscmd=data",
         )
-    except httpx.TimeoutException as err:
+    except httpx.TimeoutException as e:
         raise HTTPException(
             status_code=504,
             detail="OpenLibrary ne répond pas (délai dépassé). Réessayez dans quelques instants.",
-        ) from err
-    except httpx.RequestError as err:
+        ) from e
+    except httpx.RequestError as e:
         raise HTTPException(
             status_code=502,
             detail="Impossible de contacter OpenLibrary (problème réseau). Vérifiez la connexion internet.",
-        ) from err
+        ) from e
 
     if r.status_code != 200:
         raise HTTPException(
@@ -91,11 +96,11 @@ def get_isbn_metadata(isbn: str) -> Dict[str, Any]:
 
     try:
         data = r.json()
-    except ValueError as err:
+    except ValueError as e:
         raise HTTPException(
             status_code=502,
             detail="Réponse OpenLibrary illisible (format inattendu).",
-        ) from err
+        ) from e
 
     book = data.get(f"ISBN:{clean}")
     if book and book.get("title"):
@@ -104,12 +109,12 @@ def get_isbn_metadata(isbn: str) -> Dict[str, Any]:
     raise HTTPException(status_code=404, detail="ISBN introuvable dans OpenLibrary")
 
 
-@router.get("/{id_article}", response_model=BookRead)
-def get_book(id_article: int, db: DbSession):
+@router.get("/{id_livre}", response_model=BookRead)
+def get_book(id_livre: int, db: DbSession):
     service = BookService(db)
-    book = service.get_book(id_article)
+    book = service.get_book(id_livre)
     if not book:
-        raise HTTPException(status_code=404, detail="Book not found")
+        raise HTTPException(status_code=404, detail="Livre introuvable.")
     return _to_book_read(book)
 
 @router.post("/", response_model=BookRead, status_code=status.HTTP_201_CREATED)
@@ -123,18 +128,47 @@ def create_book(book_in: BookCreate, request: Request, db: DbSession, _admin: Ad
     return _to_book_read(created)
 
 
-@router.put("/{id_article}", response_model=BookRead)
-def update_book(id_article: int, book_update: BookUpdate, db: DbSession, _admin: AdminUser):
+@router.put("/{id_livre}", response_model=BookRead)
+def update_book(id_livre: int, book_update: BookUpdate, request: Request, db: DbSession, _admin: AdminUser):
     service = BookService(db)
-    updated = service.update_book(id_article, book_update.model_dump(exclude_unset=True))
+    updated = service.update_book(
+        id_livre, book_update.model_dump(exclude_unset=True), base_url=str(request.base_url)
+    )
     if not updated:
-        raise HTTPException(status_code=404, detail="Book not found")
+        raise HTTPException(status_code=404, detail="Livre introuvable.")
     return _to_book_read(updated)
 
-@router.delete("/{id_article}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_book(id_article: int, db: DbSession, _admin: AdminUser):
+@router.post("/{id_livre}/retirer", response_model=Optional[BookRead])
+def remove_out_of_stock_book(id_livre: int, db: DbSession, _admin: AdminUser):
+    """Retirer de la vente un livre épuisé dans tous les magasins.
+
+    Refuse (409) tant qu'il reste au moins un exemplaire disponible. Le livre
+    est supprimé s'il n'a jamais été commandé ; sinon il est désactivé
+    (`actif = false`) pour préserver les lignes de commande existantes, et ses
+    lignes de stock vides sont supprimées. Renvoie le livre retiré, ou `null`
+    lorsqu'il a pu être supprimé définitivement.
+    """
     service = BookService(db)
-    deleted = service.delete_book(id_article)
-    if not deleted:
-        raise HTTPException(status_code=404, detail="Book not found")
+    withdrawn = service.remove_out_of_stock_book(id_livre)
+    return _to_book_read(withdrawn) if withdrawn else None
+
+
+@router.delete("/{id_livre}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_book(id_livre: int, db: DbSession, _admin: AdminUser):
+    service = BookService(db)
+    if service.get_book(id_livre) is None:
+        raise HTTPException(status_code=404, detail="Livre introuvable.")
+    # ligne_commande.id_livre is ON DELETE RESTRICT: deleting a book that has
+    # ever been ordered used to surface as an unhandled IntegrityError (HTTP
+    # 500, "Erreur lors de la suppression" in the admin UI with no explanation
+    # of what to do instead). Say so, and point at the endpoint that handles it.
+    if crud_book.count_book_order_lines(db, id_livre) > 0:
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                "Ce livre figure déjà dans des commandes et ne peut pas être supprimé. "
+                "Utilisez « Retirer de la vente » pour le retirer du catalogue."
+            ),
+        )
+    service.delete_book(id_livre)
     return None

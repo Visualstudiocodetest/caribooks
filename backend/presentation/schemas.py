@@ -10,66 +10,50 @@ class ORMBase(BaseModel):
     model_config = {"from_attributes": True}
 
 class BookBase(BaseModel):
-    # Article fields (subset)
-    id_type_objet: int = 1
+    # Lengths mirror the livre table's columns. Without them an over-long value
+    # reached MySQL and came back as an unhandled DataError — HTTP 500 with the
+    # raw INSERT statement and its parameters in the response body, which both
+    # leaks schema details and gives the admin nothing to act on. Pydantic now
+    # rejects it as a 422 naming the offending field.
     id_etat_usure: int = 1
-    titre: str
-    isbn: str
-    auteur: Optional[str] = None
-    editeur: Optional[str] = None
+    titre: str = Field(..., max_length=255)
+    isbn: str = Field(..., max_length=20)
+    auteur: Optional[str] = Field(default=None, max_length=255)
+    editeur: Optional[str] = Field(default=None, max_length=255)
     date_publication: Optional[date] = None
-    langue: Optional[str] = None
+    langue: Optional[str] = Field(default=None, max_length=50)
     description: Optional[str] = None
-    image_link: Optional[str] = None
+    image_link: Optional[str] = Field(default=None, max_length=500)
     prix_chf: float = Field(..., ge=0)
     actif: bool = True
 
 class BookCreate(BookBase):
     # Which SourceStock the book's initial +1 unit is credited to. Optional and
     # BookCreate-only (not part of BookBase, so it never leaks into BookRead —
-    # Article/Livre has no such column, it only steers where the Stock row
-    # lands). Omitted falls back to crud_book's existing default (the oldest
+    # Livre has no such column, it only steers where the Stock row lands).
+    # Omitted falls back to crud_book's existing default (the oldest
     # SourceStock, auto-creating one if none exist yet).
     id_source_stock: Optional[int] = None
 
 class BookUpdate(BaseModel):
-    id_type_objet: Optional[int] = None
     id_etat_usure: Optional[int] = None
-    titre: Optional[str] = None
-    isbn: Optional[str] = None
-    auteur: Optional[str] = None
-    editeur: Optional[str] = None
+    titre: Optional[str] = Field(default=None, max_length=255)
+    isbn: Optional[str] = Field(default=None, max_length=20)
+    auteur: Optional[str] = Field(default=None, max_length=255)
+    editeur: Optional[str] = Field(default=None, max_length=255)
     date_publication: Optional[date] = None
-    langue: Optional[str] = None
+    langue: Optional[str] = Field(default=None, max_length=50)
     description: Optional[str] = None
-    image_link: Optional[str] = None
-    prix_chf: Optional[float] = None
+    image_link: Optional[str] = Field(default=None, max_length=500)
+    # ge=0 matches the ck_livre_prix_chf_nonneg CHECK constraint: a negative
+    # price used to pass validation here and only fail at the database.
+    prix_chf: Optional[float] = Field(default=None, ge=0)
     actif: Optional[bool] = None
 
 class BookRead(BookBase, ORMBase):
-    id_article: int
+    id_livre: int
     date_creation: datetime
     etat_libelle: Optional[str] = None
-
-
-class TypeObjetBase(BaseModel):
-    libelle: str
-    code: str
-    description: Optional[str] = None
-
-
-class TypeObjetCreate(TypeObjetBase):
-    pass
-
-
-class TypeObjetUpdate(BaseModel):
-    libelle: Optional[str] = None
-    code: Optional[str] = None
-    description: Optional[str] = None
-
-
-class TypeObjetRead(TypeObjetBase, ORMBase):
-    id_type_objet: int
 
 
 class EtatUsureBase(BaseModel):
@@ -88,37 +72,6 @@ class EtatUsureUpdate(BaseModel):
 
 class EtatUsureRead(EtatUsureBase, ORMBase):
     id_etat_usure: int
-
-
-class ArticleBase(BaseModel):
-    id_type_objet: int
-    id_etat_usure: int
-    sku: str
-    titre: str
-    description: Optional[str] = None
-    image_link: Optional[str] = None
-    prix_chf: float = Field(..., ge=0)
-    actif: bool = True
-
-
-class ArticleCreate(ArticleBase):
-    pass
-
-
-class ArticleUpdate(BaseModel):
-    id_type_objet: Optional[int] = None
-    id_etat_usure: Optional[int] = None
-    sku: Optional[str] = None
-    titre: Optional[str] = None
-    description: Optional[str] = None
-    image_link: Optional[str] = None
-    prix_chf: Optional[float] = Field(default=None, ge=0)
-    actif: Optional[bool] = None
-
-
-class ArticleRead(ArticleBase, ORMBase):
-    id_article: int
-    date_creation: datetime
 
 
 class SourceStockBase(BaseModel):
@@ -142,7 +95,7 @@ class SourceStockRead(SourceStockBase, ORMBase):
 
 
 class StockBase(BaseModel):
-    id_article: int
+    id_livre: int
     id_source_stock: int
     quantite_disponible: int = Field(default=0, ge=0)
     quantite_reservee: int = Field(default=0, ge=0)
@@ -201,8 +154,10 @@ class CommandeRead(CommandeBase, ORMBase):
 
 class LigneCommandeBase(BaseModel):
     id_commande: int
-    id_article: int
-    quantite: int = Field(..., gt=0)
+    id_livre: int
+    # Upper bound as well as gt=0: reserve_stock returns early for a livre with
+    # no stock rows, so an unbounded quantite went straight into the order total.
+    quantite: int = Field(..., gt=0, le=1000)
 
 
 class LigneCommandeCreate(LigneCommandeBase):
@@ -210,7 +165,7 @@ class LigneCommandeCreate(LigneCommandeBase):
 
 
 class LigneCommandeUpdate(BaseModel):
-    quantite: Optional[int] = Field(default=None, gt=0)
+    quantite: Optional[int] = Field(default=None, gt=0, le=1000)
 
 
 class LigneCommandeRead(LigneCommandeBase, ORMBase):
@@ -219,8 +174,8 @@ class LigneCommandeRead(LigneCommandeBase, ORMBase):
 
 
 class LigneCommandeAdminRead(LigneCommandeRead):
-    titre_article: Optional[str] = None
-    sku_article: Optional[str] = None
+    titre_livre: Optional[str] = None
+    sku_livre: Optional[str] = None
 
 
 class AdminCommandeStatusUpdate(BaseModel):
@@ -254,7 +209,7 @@ class PaiementBase(BaseModel):
     @classmethod
     def _devise_chf_only(cls, v: str) -> str:
         if v != "CHF":
-            raise ValueError("Only CHF is supported")
+            raise ValueError("Seul le franc suisse (CHF) est accepté.")
         return v
 
 
@@ -274,7 +229,7 @@ class PaiementUpdate(BaseModel):
         if v is None:
             return v
         if v != "CHF":
-            raise ValueError("Only CHF is supported")
+            raise ValueError("Seul le franc suisse (CHF) est accepté.")
         return v
 
 
@@ -285,7 +240,7 @@ class PaiementRead(PaiementBase, ORMBase):
 
 
 class ScanISBNBase(BaseModel):
-    id_article_livre: int
+    id_livre: int
     isbn_lu: str
     valide: bool = False
 

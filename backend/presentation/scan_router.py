@@ -33,7 +33,7 @@ def get_scan(id_scan_isbn: int, db: DbSession, current_user: AdminUser):
         .first()
     )
     if obj is None:
-        raise HTTPException(status_code=404, detail="ScanISBN not found")
+        raise HTTPException(status_code=404, detail="Scan ISBN introuvable.")
     return obj
 
 
@@ -41,9 +41,9 @@ def get_scan(id_scan_isbn: int, db: DbSession, current_user: AdminUser):
 @router.post("", response_model=ScanISBNRead, status_code=status.HTTP_201_CREATED, include_in_schema=False)
 def create_scan(payload: ScanISBNCreate, db: DbSession, current_user: AdminUser):
     # ensure referenced livre exists
-    livre = db.query(models.Livre).filter(models.Livre.id_article == payload.id_article_livre).first()
+    livre = db.query(models.Livre).filter(models.Livre.id_livre == payload.id_livre).first()
     if livre is None:
-        raise HTTPException(status_code=404, detail="Livre not found")
+        raise HTTPException(status_code=404, detail="Livre introuvable.")
     obj = models.ScanISBN(id_utilisateur=current_user.id_utilisateur, **payload.model_dump())
     return scan_crud.create(db, obj)
 
@@ -61,7 +61,7 @@ def update_scan(
         .first()
     )
     if obj is None:
-        raise HTTPException(status_code=404, detail="ScanISBN not found")
+        raise HTTPException(status_code=404, detail="Scan ISBN introuvable.")
     data = payload.model_dump(exclude_unset=True)
     for k, v in data.items():
         if hasattr(obj, k):
@@ -79,7 +79,7 @@ def delete_scan(id_scan_isbn: int, db: DbSession, current_user: AdminUser):
         .first()
     )
     if obj is None:
-        raise HTTPException(status_code=404, detail="ScanISBN not found")
+        raise HTTPException(status_code=404, detail="Scan ISBN introuvable.")
     db.delete(obj)
     db.commit()
     return None

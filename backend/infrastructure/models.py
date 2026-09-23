@@ -20,12 +20,9 @@ from sqlalchemy.sql import func
 from infrastructure.db import Base
 
 
-class Article(Base):
-    __tablename__ = "article"
-    id_article = Column(BigInteger, primary_key=True, autoincrement=True)
-    id_type_objet = Column(
-        BigInteger, ForeignKey("type_objet.id_type_objet", ondelete="RESTRICT", onupdate="CASCADE"), nullable=False
-    )
+class Livre(Base):
+    __tablename__ = "livre"
+    id_livre = Column(BigInteger, primary_key=True, autoincrement=True)
     id_etat_usure = Column(
         BigInteger, ForeignKey("etat_usure.id_etat_usure", ondelete="RESTRICT", onupdate="CASCADE"), nullable=False
     )
@@ -36,39 +33,18 @@ class Article(Base):
     prix_chf = Column(DECIMAL(10, 2), nullable=False)
     actif = Column(Boolean, default=True, nullable=False)
     date_creation = Column(TIMESTAMP, nullable=False, server_default=func.now())
-
-    __table_args__ = (CheckConstraint("prix_chf >= 0", name="ck_article_prix_chf_nonneg"),)
-
-    type_objet = relationship("TypeObjet")
-    etat_usure = relationship("EtatUsure")
-    livre = relationship("Livre", back_populates="article", uselist=False)
-    stocks = relationship("Stock", back_populates="article")
-    lignes_commande = relationship("LigneCommande", back_populates="article")
-
-class Livre(Base):
-    __tablename__ = "livre"
-    id_article = Column(
-        BigInteger,
-        ForeignKey("article.id_article", ondelete="CASCADE", onupdate="CASCADE"),
-        primary_key=True,
-    )
     isbn = Column(String(20), unique=True, nullable=False)
     auteur = Column(String(255))
     editeur = Column(String(255))
     date_publication = Column(Date)
     langue = Column(String(50))
-    article = relationship("Article", back_populates="livre")
+
+    __table_args__ = (CheckConstraint("prix_chf >= 0", name="ck_livre_prix_chf_nonneg"),)
+
+    etat_usure = relationship("EtatUsure", back_populates="livres")
+    stocks = relationship("Stock", back_populates="livre", passive_deletes=True)
+    lignes_commande = relationship("LigneCommande", back_populates="livre")
     scans = relationship("ScanISBN", back_populates="livre", cascade="all, delete-orphan", passive_deletes=True)
-
-
-class TypeObjet(Base):
-    __tablename__ = "type_objet"
-    id_type_objet = Column(BigInteger, primary_key=True, autoincrement=True)
-    libelle = Column(String(100), nullable=False)
-    code = Column(String(50), nullable=False, unique=True)
-    description = Column(Text)
-
-    articles = relationship("Article", back_populates="type_objet")
 
 
 class EtatUsure(Base):
@@ -77,7 +53,7 @@ class EtatUsure(Base):
     libelle = Column(String(100), nullable=False, unique=True)
     description = Column(Text)
 
-    articles = relationship("Article", back_populates="etat_usure")
+    livres = relationship("Livre", back_populates="etat_usure")
 
 
 class SourceStock(Base):
@@ -93,8 +69,8 @@ class SourceStock(Base):
 class Stock(Base):
     __tablename__ = "stock"
     id_stock = Column(BigInteger, primary_key=True, autoincrement=True)
-    id_article = Column(
-        BigInteger, ForeignKey("article.id_article", ondelete="CASCADE", onupdate="CASCADE"), nullable=False
+    id_livre = Column(
+        BigInteger, ForeignKey("livre.id_livre", ondelete="CASCADE", onupdate="CASCADE"), nullable=False
     )
     id_source_stock = Column(
         BigInteger,
@@ -106,12 +82,12 @@ class Stock(Base):
     date_mise_a_jour = Column(TIMESTAMP, nullable=False, server_default=func.now())
 
     __table_args__ = (
-        UniqueConstraint("id_article", "id_source_stock", name="uq_stock_article_source"),
+        UniqueConstraint("id_livre", "id_source_stock", name="uq_stock_livre_source"),
         CheckConstraint("quantite_disponible >= 0", name="ck_stock_qte_dispo_nonneg"),
         CheckConstraint("quantite_reservee >= 0", name="ck_stock_qte_res_nonneg"),
     )
 
-    article = relationship("Article", back_populates="stocks")
+    livre = relationship("Livre", back_populates="stocks")
     source_stock = relationship("SourceStock", back_populates="stocks")
 
 class Utilisateur(Base):
@@ -164,8 +140,8 @@ class LigneCommande(Base):
     id_commande = Column(
         BigInteger, ForeignKey("commande.id_commande", ondelete="CASCADE", onupdate="CASCADE"), nullable=False
     )
-    id_article = Column(
-        BigInteger, ForeignKey("article.id_article", ondelete="RESTRICT", onupdate="CASCADE"), nullable=False
+    id_livre = Column(
+        BigInteger, ForeignKey("livre.id_livre", ondelete="RESTRICT", onupdate="CASCADE"), nullable=False
     )
     quantite = Column(Integer, nullable=False)
     prix_unitaire_chf = Column(DECIMAL(10, 2), nullable=False)
@@ -176,7 +152,7 @@ class LigneCommande(Base):
     )
 
     commande = relationship("Commande", back_populates="lignes")
-    article = relationship("Article", back_populates="lignes_commande")
+    livre = relationship("Livre", back_populates="lignes_commande")
     mouvements = relationship("StockMouvement", back_populates="ligne_commande", cascade="all, delete-orphan")
 
 
@@ -232,8 +208,8 @@ class ScanISBN(Base):
     id_utilisateur = Column(
         BigInteger, ForeignKey("utilisateur.id_utilisateur", ondelete="CASCADE", onupdate="CASCADE"), nullable=False
     )
-    id_article_livre = Column(
-        BigInteger, ForeignKey("livre.id_article", ondelete="CASCADE", onupdate="CASCADE"), nullable=False
+    id_livre = Column(
+        BigInteger, ForeignKey("livre.id_livre", ondelete="CASCADE", onupdate="CASCADE"), nullable=False
     )
     isbn_lu = Column(String(20), nullable=False)
     date_scan = Column(TIMESTAMP, nullable=False, server_default=func.now())

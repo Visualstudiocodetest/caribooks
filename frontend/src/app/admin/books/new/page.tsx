@@ -10,13 +10,12 @@ import { listSources } from '@/services/stocks'
 import Image from 'next/image'
 import { lookupIsbn } from '@/services/openlibrary'
 import { fetchRemoteImage, uploadLocalImage } from '@/services/images'
-import { cleanIsbn } from '@/lib/isbn'
+import { cleanIsbn, isValidIsbn } from '@/lib/isbn'
 import { isExternalImage } from '@/lib/images'
 import { useBarcodeScanner } from '@/hooks/useBarcodeScanner'
 import type { BookRead, SourceStock } from '@/types/api'
 
 type EtatItem = { id_etat_usure: number; libelle: string }
-type TypeObjetItem = { id_type_objet: number; libelle: string; code?: string }
 
 export default function AdminNewBookPage() {
   const [titre, setTitre] = useState('')
@@ -24,10 +23,8 @@ export default function AdminNewBookPage() {
   const [auteur, setAuteur] = useState('')
   const [prix, setPrix] = useState('')
   const [idEtat, setIdEtat] = useState('')
-  const [idType, setIdType] = useState('')
   const [idSource, setIdSource] = useState('')
   const [etatList, setEtatList] = useState<EtatItem[]>([])
-  const [typeList, setTypeList] = useState<TypeObjetItem[]>([])
   const [sourceList, setSourceList] = useState<SourceStock[]>([])
   const [imageLink, setImageLink] = useState('')
   const [description, setDescription] = useState('')
@@ -49,11 +46,6 @@ export default function AdminNewBookPage() {
   const [created, setCreated] = useState<BookRead | null>(null)
   const videoRef = useRef<HTMLVideoElement | null>(null)
 
-  function defaultTypeId(): string {
-    const def = typeList.find((t) => t.code === 'BOOK' || (t.libelle || '').toLowerCase() === 'livre')
-    return def ? String(def.id_type_objet) : ''
-  }
-
   // Last-added source (end of the list, ordered by id_source_stock ascending
   // by the backend) is the one most likely to still be in active use — pre-select it.
   function defaultSourceId(): string {
@@ -67,7 +59,6 @@ export default function AdminNewBookPage() {
     setAuteur('')
     setPrix('')
     setIdEtat('')
-    setIdType(defaultTypeId())
     setIdSource(defaultSourceId())
     setImageLink('')
     setDescription('')
@@ -127,7 +118,11 @@ export default function AdminNewBookPage() {
 
   const onDetect = useCallback((raw: string) => {
     void handleIsbn(cleanIsbn(raw))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  // Only stop the camera on a barcode that really is an ISBN — see isValidIsbn.
+  const acceptIsbn = useCallback((raw: string) => isValidIsbn(raw), [])
 
   async function onSaveScan() {
     if (!existingBook) return
@@ -137,7 +132,7 @@ export default function AdminNewBookPage() {
     setError(null)
     try {
       const created = await createScan({
-        id_article_livre: existingBook.id_article,
+        id_livre: existingBook.id_livre,
         isbn_lu: clean,
         valide: false,
       })
@@ -155,13 +150,20 @@ export default function AdminNewBookPage() {
     running: scanning,
     error: scanError,
     setError: setScanError,
+    hasBarcodeDetector,
   } = useBarcodeScanner(videoRef, onDetect, {
+    accept: acceptIsbn,
     cameraErrorMessage: 'Impossible d’accéder à la caméra',
     videoUnavailableMessage: 'Caméra introuvable',
   })
 
   async function onAutofill() {
-    await handleIsbn(cleanIsbn(isbn))
+    const clean = cleanIsbn(isbn)
+    if (clean && !isValidIsbn(clean)) {
+      setError('Cet ISBN semble incorrect (chiffre de contrôle invalide). Vérifiez la saisie.')
+      return
+    }
+    await handleIsbn(clean)
   }
 
   async function onFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
@@ -177,9 +179,13 @@ export default function AdminNewBookPage() {
     try {
       const bitmap = await createImageBitmap(f)
       if (typeof window.BarcodeDetector !== 'undefined') {
-        const detector = new BarcodeDetector({ formats: ['ean_13', 'ean_8', 'qr_code'] })
+        const detector = new BarcodeDetector({ formats: ['ean_13'] })
         const results = await detector.detect(bitmap)
-        const code = results?.[0]?.rawValue
+        // Same rule as the live scanner: take the ISBN among whatever barcodes
+        // the photo happens to contain, not simply the first one decoded.
+        const code = (results || [])
+          .map((r) => (r.rawValue || '').trim())
+          .find((v) => isValidIsbn(v))
         if (code) void handleIsbn(cleanIsbn(code))
       }
     } catch {
@@ -201,15 +207,6 @@ export default function AdminNewBookPage() {
     async function loadLists() {
       try {
         setEtatList(await listCatalog<EtatItem>('etat-usures'))
-      } catch {
-        // ignore
-      }
-      try {
-        const typesArr = await listCatalog<TypeObjetItem>('type-objets')
-        setTypeList(typesArr)
-        // default TypeObjet to 'Livre' when available
-        const def = typesArr.find((t) => t.code === 'BOOK' || (t.libelle || '').toLowerCase() === 'livre')
-        if (def && !idType) setIdType(String(def.id_type_objet))
       } catch {
         // ignore
       }
@@ -245,14 +242,13 @@ export default function AdminNewBookPage() {
     setLoading(true)
     try {
       // simple client-side validation: all fields required (description optional)
-      if (!titre.trim() || !isbn.trim() || !auteur.trim() || !prix.trim() || !idEtat || !idType) {
+      if (!titre.trim() || !isbn.trim() || !auteur.trim() || !prix.trim() || !idEtat) {
         const missing = new Set<string>()
         if (!titre.trim()) missing.add('titre')
         if (!isbn.trim()) missing.add('isbn')
         if (!auteur.trim()) missing.add('auteur')
         if (!prix.trim()) missing.add('prix')
         if (!idEtat) missing.add('etat')
-        if (!idType) missing.add('type')
         setInvalidFields(missing)
         setError('Veuillez remplir tous les champs obligatoires.')
         setLoading(false)
@@ -275,7 +271,6 @@ export default function AdminNewBookPage() {
         }
       }
       const createdBook = await createBook({
-        id_type_objet: Number(idType),
         id_etat_usure: Number(idEtat),
         titre,
         isbn,
@@ -324,7 +319,7 @@ export default function AdminNewBookPage() {
                 <div className="muted">ISBN: {created.isbn}</div>
                 <div className="muted">Prix: CHF {created.prix_chf.toFixed(2)}</div>
               </div>
-              <Link className="btn" href={`/admin/books/${created.id_article}`} aria-label={`Voir la fiche du livre ${created.titre}`}>
+              <Link className="btn" href={`/admin/books/${created.id_livre}`} aria-label={`Voir la fiche du livre ${created.titre}`}>
                 Voir la fiche
               </Link>
             </div>
@@ -353,7 +348,7 @@ export default function AdminNewBookPage() {
                 <div className="muted">ISBN: {existingBook.isbn}</div>
                 <div className="muted">Prix: CHF {existingBook.prix_chf.toFixed(2)}</div>
               </div>
-              <Link className="btn" href={`/admin/books/${existingBook.id_article}`} aria-label={`Voir les détails du livre ${existingBook.titre}`}>
+              <Link className="btn" href={`/admin/books/${existingBook.id_livre}`} aria-label={`Voir les détails du livre ${existingBook.titre}`}>
                 Détails
               </Link>
             </div>
@@ -380,7 +375,17 @@ export default function AdminNewBookPage() {
         <form className="card cardPadding" onSubmit={onSubmit}>
           <div className="form-row">
             <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-              <button className="btn" type="button" onClick={() => void startScanner()}>
+              <button
+                className="btn"
+                type="button"
+                onClick={() => void startScanner()}
+                disabled={!hasBarcodeDetector}
+                title={
+                  hasBarcodeDetector
+                    ? undefined
+                    : 'Votre navigateur ne sait pas lire les codes-barres. Saisissez l’ISBN à la main.'
+                }
+              >
                 Scanner un code-barres
               </button>
               <label className="btn" style={{ cursor: 'pointer' }}>
@@ -434,40 +439,24 @@ export default function AdminNewBookPage() {
             </button>
           </div>
 
-          <div className="two-up">
-            <div>
-              {/* This page only ever creates a Livre (see createBook below), so
-                  the type is locked to "Livre" rather than offered as a free
-                  choice — picking e.g. "DVD" here would silently create a book
-                  row typed as something else. `idType` still resolves to the
-                  right id (see loadLists/defaultTypeId), it's just not editable. */}
-              <label htmlFor="new-book-type" className="sr-only">Type d&apos;objet</label>
-              <select id="new-book-type" className="input" value={idType} disabled required>
-                <option value={idType}>
-                  {typeList.find((t) => String(t.id_type_objet) === idType)?.libelle || 'Livre'}
+          <div>
+            <label htmlFor="new-book-etat" className="sr-only">État du livre</label>
+            <select
+              id="new-book-etat"
+              className="input"
+              value={idEtat}
+              onChange={(e) => { setIdEtat(e.target.value); if (invalidFields.has('etat')) setInvalidFields((s) => { const n = new Set(s); n.delete('etat'); return n }) }}
+              required
+              aria-invalid={invalidFields.has('etat')}
+              aria-describedby={invalidFields.has('etat') ? 'new-book-form-error' : undefined}
+            >
+              <option value="">État</option>
+              {etatList.map((e) => (
+                <option key={e.id_etat_usure} value={String(e.id_etat_usure)}>
+                  {e.libelle}
                 </option>
-              </select>
-            </div>
-
-            <div>
-              <label htmlFor="new-book-etat" className="sr-only">État du livre</label>
-              <select
-                id="new-book-etat"
-                className="input"
-                value={idEtat}
-                onChange={(e) => { setIdEtat(e.target.value); if (invalidFields.has('etat')) setInvalidFields((s) => { const n = new Set(s); n.delete('etat'); return n }) }}
-                required
-                aria-invalid={invalidFields.has('etat')}
-                aria-describedby={invalidFields.has('etat') ? 'new-book-form-error' : undefined}
-              >
-                <option value="">État</option>
-                {etatList.map((e) => (
-                  <option key={e.id_etat_usure} value={String(e.id_etat_usure)}>
-                    {e.libelle}
-                  </option>
-                ))}
-              </select>
-            </div>
+              ))}
+            </select>
           </div>
 
           <div style={{ display: 'grid', gap: 6 }}>
@@ -569,7 +558,20 @@ export default function AdminNewBookPage() {
                 </button>
               </div>
               <div style={{ marginTop: 8 }}>
-                <video ref={videoRef} style={{ width: '100%', borderRadius: 8 }} />
+                {/* playsInline + muted are mandatory on iOS Safari: without
+                    them the browser refuses inline playback and video.play()
+                    rejects, which the hook could only report as a camera
+                    permission error. */}
+                <video
+                  ref={videoRef}
+                  playsInline
+                  muted
+                  autoPlay
+                  style={{ width: '100%', borderRadius: 8 }}
+                />
+                <div className="muted" style={{ fontSize: 13, marginTop: 6 }}>
+                  Cadrez le code-barres ISBN au dos du livre (il commence par 978 ou 979).
+                </div>
               </div>
             </div>
           </div>

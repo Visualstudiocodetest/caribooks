@@ -10,6 +10,7 @@ sequenceDiagram
     Ach->>Fro: choisit un mode de livraison<br/>(POST 9 CHF / CLICK_COLLECT 1 CHF)
     Ach->>Fro: valide le panier
     Fro->>API: POST /orders/commandes
+    API->>BD: annule le panier ouvert précédent<br/>et libère son stock réservé
     API->>BD: INSERT commande (PENDING,<br/>cart_expires_at = +20 min)
     Fro->>API: POST /orders/paiements/postfinance
     API->>PF: crée la transaction
@@ -18,17 +19,18 @@ sequenceDiagram
     Ach->>Fro: saisit ses infos de paiement (iframe)
 
     Fro->>API: POST .../{id}/confirm-postfinance
-    API->>PF: relit la transaction (version, montant)
-    API->>API: vérifie montant PostFinance == montant commande<br/>(tolérance 1 centime) — refuse (409) si écart
-    API->>PF: confirme la transaction
+    API->>PF: relit la transaction (version)
+    API->>PF: confirme la transaction<br/>(lignes de commande à jour)
     PF-->>API: transaction confirmée
+    API->>PF: relit le montant après confirmation
+    API->>API: vérifie montant PostFinance == montant commande<br/>(tolérance 1 centime) — refuse (409) si écart
     API-->>Fro: paiement confirmé
 
     Fro->>PF: soumission réelle (TWINT / carte, CHF)
     Ach->>PF: complète le paiement via iframe
     PF->>API: webhook (signature vérifiée) CAPTURED / PAID
     API->>API: revérifie le montant avant finalisation<br/>— refuse (409) + journalise si écart
-    API->>BD: UPDATE statut (PAID) + finalise le stock
+    API->>BD: UPDATE statut (PAID) + finalise le stock<br/>(exemplaire vendu retiré, réservation levée,<br/>mouvement de stock enregistré)
     API-->>Fro: confirmation
     Fro-->>Ach: page de confirmation
 

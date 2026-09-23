@@ -28,7 +28,7 @@ export default async function HomePage() {
   // A failed availability fetch means "unknown", not "zero everywhere" — the
   // old code couldn't tell the two apart, so any hiccup on this one request
   // emptied the whole catalogue instead of just leaving stock badges off.
-  const available = availabilityResult ? books.filter((b) => availAt(b.id_article) > 0) : books
+  const available = availabilityResult ? books.filter((b) => availAt(b.id_livre) > 0) : books
 
   return (
     <div style={{ display: 'grid', gap: 32 }}>

@@ -198,11 +198,11 @@ def test_get_postfinance_checkout_status(mock_svc):
 
 def test_build_postfinance_line_items():
     ligne = SimpleNamespace(
-        article=SimpleNamespace(sku="sku-1", titre="Mon Livre"),
+        livre=SimpleNamespace(sku="sku-1", titre="Mon Livre"),
         quantite=2,
         prix_unitaire_chf=10.5,
         id_ligne_commande=7,
-        id_article=3,
+        id_livre=3,
     )
     items = build_postfinance_line_items([ligne], frais_port_chf=9.0, shipping_label="Poste", commande_id=42)
 
@@ -221,11 +221,11 @@ def test_build_postfinance_line_items():
 
 def test_build_postfinance_line_items_no_shipping_fee():
     ligne = SimpleNamespace(
-        article=None, quantite=1, prix_unitaire_chf=5.0, id_ligne_commande=1, id_article=9,
+        livre=None, quantite=1, prix_unitaire_chf=5.0, id_ligne_commande=1, id_livre=9,
     )
     items = build_postfinance_line_items([ligne], frais_port_chf=0, shipping_label="Retrait", commande_id=1)
     assert len(items) == 1
-    assert items[0]["name"] == "Article 9"
+    assert items[0]["name"] == "Livre 9"
 
 
 def test_build_postfinance_address():

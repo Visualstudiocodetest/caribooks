@@ -80,10 +80,30 @@ describe('apiFetch', () => {
     expect(err.message).toBe('Commande introuvable')
   })
 
-  it('falls back to a generic message when the error has no detail', async () => {
+  it('falls back to a French message when the error has no detail', async () => {
+    // Every message reaching the customer must be in French — this fallback
+    // used to read "API error (500)".
     fetchMock.mockResolvedValueOnce(jsonResponse({}, { status: 500 }))
     const err = (await apiFetch('/health').catch((e) => e)) as ApiError
     expect(err).toBeInstanceOf(ApiError)
-    expect(err.message).toBe('API error (500)')
+    expect(err.message).toBe('Une erreur est survenue. Réessayez dans un instant.')
+  })
+
+  it('does not stringify a 422 validation detail list', async () => {
+    // FastAPI's request-validation errors put a LIST of per-field objects in
+    // `detail`, not a string: passing it straight to Error() rendered as
+    // "[object Object]" in the UI.
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse({ detail: [{ loc: ['body', 'isbn'], msg: 'String should have at most 20 characters' }] }, { status: 422 }),
+    )
+    const err = (await apiFetch('/books/').catch((e) => e)) as ApiError
+    expect(err.status).toBe(422)
+    expect(err.message).toBe('Certaines informations saisies sont invalides. Vérifiez le formulaire.')
+  })
+
+  it('uses a French message for an unmapped status with no detail', async () => {
+    fetchMock.mockResolvedValueOnce(jsonResponse({}, { status: 418 }))
+    const err = (await apiFetch('/health').catch((e) => e)) as ApiError
+    expect(err.message).toBe('Une erreur est survenue. Réessayez dans un instant.')
   })
 })

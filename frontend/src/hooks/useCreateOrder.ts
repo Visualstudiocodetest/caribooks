@@ -18,15 +18,22 @@ export function useCreateOrder() {
     try {
       const commande = await createCommande({ shipping_method: shippingMethod })
       commandeId = commande.id_commande
-      await Promise.all(
-        items.map((it) =>
-          createLigne({
-            id_commande: commande.id_commande,
-            id_article: it.id_article,
-            quantite: it.quantity,
-          }),
-        ),
-      )
+      // Sequential, not Promise.all. Every createLigne re-totals the commande
+      // and locks the book's stock rows server-side; firing them in parallel
+      // had two concurrent requests interleave on the same cart, which showed
+      // up as an InnoDB deadlock (one line silently lost, HTTP 500) and as a
+      // montant_total_chf that only counted some of the lines — the order then
+      // failing at payment with "le montant ne correspond pas". The server now
+      // serializes these anyway (order_service.lock_commande), so sending them
+      // one at a time costs nothing and keeps a failure attributable to the
+      // exact book that caused it.
+      for (const it of items) {
+        await createLigne({
+          id_commande: commande.id_commande,
+          id_livre: it.id_livre,
+          quantite: it.quantity,
+        })
+      }
       // The cart is intentionally NOT cleared here — it's only cleared once
       // payment actually succeeds (see PaymentClient.tsx). Clearing it right
       // after creating the commande meant that cancelling or abandoning

@@ -6,36 +6,34 @@ from infrastructure import models
 from infrastructure.db import SessionLocal
 
 
-def _make_article(client: TestClient, admin_headers: dict, uniq: str, prix_chf: float = 20.0) -> int:
+def _make_book(client: TestClient, admin_headers: dict, uniq: str, prix_chf: float = 20.0) -> int:
     r = client.post(
-        "/catalog/type-objets",
-        json={"libelle": "Livre", "code": f"DELBOOK_{uniq}", "description": "d"},
-        headers=admin_headers,
-    )
-    assert r.status_code == 201, r.text
-    type_id = r.json()["id_type_objet"]
-    r = client.post(
-        "/catalog/etat-usures", json={"libelle": f"EtatDel_{uniq}", "description": "d"}, headers=admin_headers
-    )
-    assert r.status_code == 201, r.text
-    etat_id = r.json()["id_etat_usure"]
-    r = client.post(
-        "/articles/",
+        "/books/",
         json={
-            "id_type_objet": type_id,
-            "id_etat_usure": etat_id,
-            "sku": f"SKU_DEL_{uniq}",
-            "titre": "Deletion test article",
+            "titre": "Deletion test book",
+            "isbn": f"ISBN_DEL_{uniq}",
+            "auteur": "Deletion Author",
             "prix_chf": prix_chf,
             "actif": True,
         },
         headers=admin_headers,
     )
     assert r.status_code == 201, r.text
-    return r.json()["id_article"]
+    id_livre = r.json()["id_livre"]
+
+    # Creating a book always credits its initial +1 unit to a (possibly
+    # auto-created) default SourceStock (see crud_book.create_book /
+    # _add_one_to_stock) — drop that implicit row so _make_stock's caller
+    # starts from a clean slate (matching the old bare-article fixture,
+    # which had zero stock).
+    stock_rows = client.get("/stock/", headers=admin_headers).json()
+    for s in stock_rows:
+        if s["id_livre"] == id_livre:
+            client.delete(f"/stock/{s['id_stock']}", headers=admin_headers)
+    return id_livre
 
 
-def _make_stock(client: TestClient, admin_headers: dict, uniq: str, article_id: int, qty: int = 10) -> None:
+def _make_stock(client: TestClient, admin_headers: dict, uniq: str, id_livre: int, qty: int = 10) -> None:
     r = client.post(
         "/stock/sources",
         json={"libelle": f"SourceDel_{uniq}", "type_source": "WAREHOUSE", "description": "d"},
@@ -46,7 +44,7 @@ def _make_stock(client: TestClient, admin_headers: dict, uniq: str, article_id: 
     r = client.post(
         "/stock/",
         json={
-            "id_article": article_id,
+            "id_livre": id_livre,
             "id_source_stock": source_id,
             "quantite_disponible": qty,
             "quantite_reservee": 0,

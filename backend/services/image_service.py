@@ -49,14 +49,14 @@ def _resolve_pinned_ip(hostname: str) -> str:
     cloud metadata address, defeating the allowlist entirely.
     """
     if not hostname:
-        raise ValueError("Invalid URL")
+        raise ValueError("URL d’image invalide.")
     try:
         infos = socket.getaddrinfo(hostname, None)
     except socket.gaierror as e:
-        raise ValueError("Could not resolve host") from e
+        raise ValueError("Hôte de l’image introuvable.") from e
     ips = {info[4][0] for info in infos}
     if not ips or not all(_is_public_ip(ip) for ip in ips):
-        raise ValueError("URL host is not allowed")
+        raise ValueError("Cette adresse d’image n’est pas autorisée.")
     # Prefer IPv4 for a simpler literal in the pinned URL; any validated
     # address works equally well since all of them were just checked.
     return next((ip for ip in ips if ":" not in ip), next(iter(ips)))
@@ -82,7 +82,7 @@ def _pin(url: str) -> tuple[str, dict, dict]:
     target for httpx: (pinned_url, headers, extensions). See _resolve_pinned_ip
     for why the hostname must never be re-resolved once validated."""
     if not url or not url.lower().startswith(('http://', 'https://')):
-        raise ValueError('Invalid URL')
+        raise ValueError('URL d’image invalide.')
     parsed = urlparse(url)
     hostname = parsed.hostname
     pinned_ip = _resolve_pinned_ip(hostname or '')
@@ -110,10 +110,10 @@ def save_uploaded_image(
     needs to validate size and content type before writing to disk.
     """
     if len(data) > max_bytes:
-        raise ValueError('Image too large')
+        raise ValueError('Image trop volumineuse (5 Mo maximum).')
     ext = _ext_from_content_type(content_type)
     if not ext or ext not in _ALLOWED_EXTENSIONS:
-        raise ValueError(f"Unsupported image type: {content_type}")
+        raise ValueError(f"Format d’image non pris en charge : {content_type}")
 
     _ensure_dir(save_dir)
     h = hashlib.sha256(data).hexdigest()
@@ -147,7 +147,7 @@ def download_image(
     allowed public host redirect straight into 127.0.0.1/metadata addresses.
     """
     if not url or not url.lower().startswith(('http://', 'https://')):
-        raise ValueError('Invalid URL')
+        raise ValueError('URL d’image invalide.')
 
     _ensure_dir(save_dir)
     # Filename is keyed on the originally-requested URL, not wherever
@@ -163,7 +163,7 @@ def download_image(
                 if resp.status_code in (301, 302, 303, 307, 308):
                     location = resp.headers.get('location')
                     if not location:
-                        raise ValueError('Redirect with no Location header')
+                        raise ValueError('Redirection invalide lors du téléchargement de l’image.')
                     current_url = urljoin(current_url, location)
                     continue
                 resp.raise_for_status()
@@ -177,7 +177,7 @@ def download_image(
                     ext = maybe or 'jpg'
 
                 if ext not in _ALLOWED_EXTENSIONS:
-                    raise ValueError(f"Unsupported image type: {ext}")
+                    raise ValueError(f"Format d’image non pris en charge : {ext}")
 
                 filename = f"{h}.{ext}"
                 tmp_path = os.path.join(save_dir, f"{h}.tmp")
@@ -203,10 +203,10 @@ def download_image(
                                 os.remove(tmp_path)
                             except Exception:
                                 pass
-                            raise Exception('Image too large')
+                            raise Exception('Image trop volumineuse (5 Mo maximum).')
                         f.write(chunk)
 
                 os.replace(tmp_path, final_path)
                 return f"/static/images/books/{filename}"
 
-    raise ValueError('Too many redirects')
+    raise ValueError('Trop de redirections lors du téléchargement de l’image.')

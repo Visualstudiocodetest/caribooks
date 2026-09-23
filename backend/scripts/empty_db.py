@@ -45,11 +45,9 @@ def empty_db():
             'commande',
             'stock',
             'livre',
-            'article',
             'utilisateur',
             'source_stock',
             'etat_usure',
-            'type_objet',
         ]
         for t in tables:
             db.execute(text(f'DELETE FROM {t};'))

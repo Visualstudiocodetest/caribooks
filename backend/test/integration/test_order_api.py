@@ -5,34 +5,35 @@ from unittest.mock import patch
 from fastapi.testclient import TestClient
 
 
-def _make_article(client: TestClient, admin_headers: dict, uniq: str, prix_chf: float = 20.0) -> int:
+def _make_book(client: TestClient, admin_headers: dict, uniq: str, prix_chf: float = 20.0) -> int:
     r = client.post(
-        "/catalog/type-objets",
-        json={"libelle": "Livre", "code": f"ORDBOOK_{uniq}", "description": "d"},
-        headers=admin_headers,
-    )
-    assert r.status_code == 201, r.text
-    type_id = r.json()["id_type_objet"]
-    r = client.post("/catalog/etat-usures", json={"libelle": f"EtatOrd_{uniq}", "description": "d"}, headers=admin_headers)
-    assert r.status_code == 201, r.text
-    etat_id = r.json()["id_etat_usure"]
-    r = client.post(
-        "/articles/",
+        "/books/",
         json={
-            "id_type_objet": type_id,
-            "id_etat_usure": etat_id,
-            "sku": f"SKU_ORD_{uniq}",
-            "titre": "Order article",
+            "titre": "Order book",
+            "isbn": f"ISBN_ORD_{uniq}",
+            "auteur": "Order Author",
             "prix_chf": prix_chf,
             "actif": True,
         },
         headers=admin_headers,
     )
     assert r.status_code == 201, r.text
-    return r.json()["id_article"]
+    id_livre = r.json()["id_livre"]
+
+    # Creating a book always credits its initial +1 unit to a (possibly
+    # auto-created) default SourceStock (see crud_book.create_book /
+    # _add_one_to_stock) — the ISBN-scan intake flow this endpoint models.
+    # These tests then set up their own explicit stock quantities via
+    # _make_stock, so drop that implicit row first to start from a clean
+    # slate (matching the old bare-article fixture, which had zero stock).
+    stock_rows = client.get("/stock/", headers=admin_headers).json()
+    for s in stock_rows:
+        if s["id_livre"] == id_livre:
+            client.delete(f"/stock/{s['id_stock']}", headers=admin_headers)
+    return id_livre
 
 
-def _make_stock(client: TestClient, admin_headers: dict, uniq: str, article_id: int, qty: int = 10) -> None:
+def _make_stock(client: TestClient, admin_headers: dict, uniq: str, id_livre: int, qty: int = 10) -> None:
     r = client.post(
         "/stock/sources",
         json={"libelle": f"SourceOrd_{uniq}", "type_source": "WAREHOUSE", "description": "d"},
@@ -43,7 +44,7 @@ def _make_stock(client: TestClient, admin_headers: dict, uniq: str, article_id: 
     r = client.post(
         "/stock/",
         json={
-            "id_article": article_id,
+            "id_livre": id_livre,
             "id_source_stock": source_id,
             "quantite_disponible": qty,
             "quantite_reservee": 0,
@@ -57,8 +58,8 @@ def test_orders_lignes_paiements_scoped_to_user(client: TestClient, register_and
     headers = register_and_login(f"orders_{uniq}@example.com")
     admin_headers = register_and_login(f"orders_admin_{uniq}@example.com", role="admin")
 
-    article_id = _make_article(client, admin_headers, uniq, prix_chf=20.0)
-    _make_stock(client, admin_headers, uniq, article_id, qty=10)
+    id_livre = _make_book(client, admin_headers, uniq, prix_chf=20.0)
+    _make_stock(client, admin_headers, uniq, id_livre, qty=10)
 
     # Commande: server derives statut/frais_port_chf/montant_total_chf, never the client.
     r = client.post(
@@ -75,10 +76,10 @@ def test_orders_lignes_paiements_scoped_to_user(client: TestClient, register_and
     assert client.get("/orders/commandes", headers=headers).status_code == 200
     assert client.get(f"/orders/commandes/{cmd['id_commande']}", headers=headers).status_code == 200
 
-    # LigneCommande: unit price always comes from the catalog (Article.prix_chf).
+    # LigneCommande: unit price always comes from the catalog (Livre.prix_chf).
     r = client.post(
         "/orders/lignes",
-        json={"id_commande": cmd["id_commande"], "id_article": article_id, "quantite": 2},
+        json={"id_commande": cmd["id_commande"], "id_livre": id_livre, "quantite": 2},
         headers=headers,
     )
     assert r.status_code == 201, r.text
@@ -133,7 +134,7 @@ def test_ligne_price_tampering_is_ignored(client: TestClient, register_and_login
     payment-status bypass."""
     headers = register_and_login(f"orders_tamper_{uniq}@example.com")
     admin_headers = register_and_login(f"orders_tamper_admin_{uniq}@example.com", role="admin")
-    article_id = _make_article(client, admin_headers, uniq, prix_chf=50.0)
+    id_livre = _make_book(client, admin_headers, uniq, prix_chf=50.0)
 
     r = client.post(
         "/orders/commandes",
@@ -146,7 +147,7 @@ def test_ligne_price_tampering_is_ignored(client: TestClient, register_and_login
         "/orders/lignes",
         json={
             "id_commande": cmd["id_commande"],
-            "id_article": article_id,
+            "id_livre": id_livre,
             "quantite": 1,
             "prix_unitaire_chf": 0.01,  # tampered — schema no longer declares this field
         },
@@ -188,14 +189,14 @@ def test_paiement_status_and_amount_not_client_settable(client: TestClient, regi
     verified PostFinance/Payrexx callback may transition a payment's status."""
     headers = register_and_login(f"orders_bypass_{uniq}@example.com")
     admin_headers = register_and_login(f"orders_bypass_admin_{uniq}@example.com", role="admin")
-    article_id = _make_article(client, admin_headers, uniq, prix_chf=100.0)
-    _make_stock(client, admin_headers, uniq, article_id, qty=5)
+    id_livre = _make_book(client, admin_headers, uniq, prix_chf=100.0)
+    _make_stock(client, admin_headers, uniq, id_livre, qty=5)
 
     r = client.post("/orders/commandes", json={"numero_commande": f"CMD_BYP_{uniq}"}, headers=headers)
     cmd = r.json()
     client.post(
         "/orders/lignes",
-        json={"id_commande": cmd["id_commande"], "id_article": article_id, "quantite": 1},
+        json={"id_commande": cmd["id_commande"], "id_livre": id_livre, "quantite": 1},
         headers=headers,
     )
 
@@ -241,14 +242,14 @@ def test_local_webhook_finalizes_and_is_idempotent(client: TestClient, register_
     monkeypatch.setenv("ENVIRONMENT", "test")
     headers = register_and_login(f"orders_webhook_{uniq}@example.com")
     admin_headers = register_and_login(f"orders_webhook_admin_{uniq}@example.com", role="admin")
-    article_id = _make_article(client, admin_headers, uniq, prix_chf=10.0)
-    _make_stock(client, admin_headers, uniq, article_id, qty=5)
+    id_livre = _make_book(client, admin_headers, uniq, prix_chf=10.0)
+    _make_stock(client, admin_headers, uniq, id_livre, qty=5)
 
     r = client.post("/orders/commandes", json={"numero_commande": f"CMD_WH_{uniq}"}, headers=headers)
     cmd = r.json()
     r = client.post(
         "/orders/lignes",
-        json={"id_commande": cmd["id_commande"], "id_article": article_id, "quantite": 2},
+        json={"id_commande": cmd["id_commande"], "id_livre": id_livre, "quantite": 2},
         headers=headers,
     )
     assert r.status_code == 201, r.text
@@ -261,7 +262,7 @@ def test_local_webhook_finalizes_and_is_idempotent(client: TestClient, register_
     assert r.status_code == 201, r.text
 
     stock_before = client.get("/stock/", headers=admin_headers).json()
-    row_before = next(s for s in stock_before if s["id_article"] == article_id)
+    row_before = next(s for s in stock_before if s["id_livre"] == id_livre)
     assert row_before["quantite_disponible"] == 5
     assert row_before["quantite_reservee"] == 2  # reserved by create_ligne
 
@@ -269,11 +270,13 @@ def test_local_webhook_finalizes_and_is_idempotent(client: TestClient, register_
     r = client.post("/orders/paiements/webhook/local", json=webhook_payload)
     assert r.status_code == 200, r.text
 
-    # Finalizing a fully-pre-reserved sale only clears the reservation —
-    # quantite_disponible is untouched since the quantity was already reserved.
+    # A sold unit leaves the shelf AND stops being reserved: 5 - 2 = 3 left,
+    # availability 3. Finalizing used to clear only quantite_reservee, which
+    # (availability being disponible - reservee) handed the two paid-for copies
+    # straight back to the catalogue — see finalize_commande.
     stock_after = client.get("/stock/", headers=admin_headers).json()
-    row_after = next(s for s in stock_after if s["id_article"] == article_id)
-    assert row_after["quantite_disponible"] == 5
+    row_after = next(s for s in stock_after if s["id_livre"] == id_livre)
+    assert row_after["quantite_disponible"] == 3
     assert row_after["quantite_reservee"] == 0
 
     # Replay the same webhook. Without the idempotency guard, _finalize_commande
@@ -282,8 +285,8 @@ def test_local_webhook_finalizes_and_is_idempotent(client: TestClient, register_
     r = client.post("/orders/paiements/webhook/local", json=webhook_payload)
     assert r.status_code == 200, r.text
     stock_replay = client.get("/stock/", headers=admin_headers).json()
-    row_replay = next(s for s in stock_replay if s["id_article"] == article_id)
-    assert row_replay["quantite_disponible"] == 5  # unchanged — proves idempotency
+    row_replay = next(s for s in stock_replay if s["id_livre"] == id_livre)
+    assert row_replay["quantite_disponible"] == 3  # unchanged — proves idempotency
     assert row_replay["quantite_reservee"] == 0
 
 
@@ -313,14 +316,14 @@ def test_postfinance_webhook_requires_valid_signature(client: TestClient, regist
 def test_postfinance_webhook_finalizes_and_is_idempotent(client: TestClient, register_and_login, uniq: str):
     headers = register_and_login(f"orders_pfwh_{uniq}@example.com")
     admin_headers = register_and_login(f"orders_pfwh_admin_{uniq}@example.com", role="admin")
-    article_id = _make_article(client, admin_headers, uniq, prix_chf=15.0)
-    _make_stock(client, admin_headers, uniq, article_id, qty=4)
+    id_livre = _make_book(client, admin_headers, uniq, prix_chf=15.0)
+    _make_stock(client, admin_headers, uniq, id_livre, qty=4)
 
     r = client.post("/orders/commandes", json={"numero_commande": f"CMD_PFWH_{uniq}"}, headers=headers)
     cmd = r.json()
     client.post(
         "/orders/lignes",
-        json={"id_commande": cmd["id_commande"], "id_article": article_id, "quantite": 1},
+        json={"id_commande": cmd["id_commande"], "id_livre": id_livre, "quantite": 1},
         headers=headers,
     )
     r = client.post(
@@ -342,10 +345,10 @@ def test_postfinance_webhook_finalizes_and_is_idempotent(client: TestClient, reg
         pay_after = client.get(f"/orders/paiements/{pay_id}", headers=headers).json()
         assert pay_after["statut"] == "FULFILL"
 
-        # Finalizing a fully-pre-reserved sale only clears the reservation.
+        # The sold unit leaves the shelf and stops being reserved (4 - 1 = 3).
         stock_after = client.get("/stock/", headers=admin_headers).json()
-        row = next(s for s in stock_after if s["id_article"] == article_id)
-        assert row["quantite_disponible"] == 4
+        row = next(s for s in stock_after if s["id_livre"] == id_livre)
+        assert row["quantite_disponible"] == 3
         assert row["quantite_reservee"] == 0
 
         # Replay — PostFinance explicitly documents webhooks may be delivered
@@ -358,8 +361,118 @@ def test_postfinance_webhook_finalizes_and_is_idempotent(client: TestClient, reg
         )
         assert r.status_code == 200, r.text
         stock_replay = client.get("/stock/", headers=admin_headers).json()
-        row_replay = next(s for s in stock_replay if s["id_article"] == article_id)
-        assert row_replay["quantite_disponible"] == 4
+        row_replay = next(s for s in stock_replay if s["id_livre"] == id_livre)
+        assert row_replay["quantite_disponible"] == 3  # unchanged — proves idempotency
+
+
+def test_postfinance_webhook_amount_mismatch_does_not_wedge_order_as_finalized(
+    client: TestClient, register_and_login, uniq: str
+):
+    """Regression for C-1: the amount cross-check must run BEFORE the success
+    status is persisted. Persisting first would make every later webhook
+    redelivery see `already_finalized == True` and silently skip the check and
+    the finalize forever — permanently wedging the order while PostFinance's
+    own records show the payment captured."""
+    headers = register_and_login(f"orders_pfmismatch_{uniq}@example.com")
+    admin_headers = register_and_login(f"orders_pfmismatch_admin_{uniq}@example.com", role="admin")
+    id_livre = _make_book(client, admin_headers, uniq, prix_chf=15.0)
+    _make_stock(client, admin_headers, uniq, id_livre, qty=4)
+
+    r = client.post("/orders/commandes", json={"numero_commande": f"CMD_PFMISM_{uniq}"}, headers=headers)
+    cmd = r.json()
+    client.post(
+        "/orders/lignes",
+        json={"id_commande": cmd["id_commande"], "id_livre": id_livre, "quantite": 1},
+        headers=headers,
+    )
+    r = client.post(
+        "/orders/paiements",
+        json={"id_commande": cmd["id_commande"], "reference_externe": f"REF_PFMISM_{uniq}"},
+        headers=headers,
+    )
+    pay_id = r.json()["id_paiement"]
+
+    webhook_body = {"id": f"REF_PFMISM_{uniq}", "merchantReference": f"REF_PFMISM_{uniq}", "state": "FULFILL"}
+    with (
+        patch("presentation.payment_router.verify_postfinance_webhook_signature", return_value=True),
+        patch("presentation.payment_router.get_postfinance_transaction", return_value={"amount": 999.0}),
+    ):
+        r = client.post(
+            "/orders/paiements/webhook/postfinance",
+            json=webhook_body,
+            headers={"x-signature": "sig"},
+        )
+        assert r.status_code == 409, r.text
+
+    # Must NOT have been committed as success — otherwise the idempotency
+    # guard would treat this as already finalized on the next, honest replay.
+    pay_after = client.get(f"/orders/paiements/{pay_id}", headers=headers).json()
+    assert pay_after["statut"] != "FULFILL"
+    stock_after = client.get("/stock/", headers=admin_headers).json()
+    row = next(s for s in stock_after if s["id_livre"] == id_livre)
+    assert row["quantite_disponible"] == 4
+    assert row["quantite_reservee"] == 1
+
+    # A later, honest webhook (matching amount, incl. the 9 CHF POST shipping
+    # fee added on top of the 15 CHF book) must still finalize normally.
+    with (
+        patch("presentation.payment_router.verify_postfinance_webhook_signature", return_value=True),
+        patch("presentation.payment_router.get_postfinance_transaction", return_value={"amount": 24.0}),
+    ):
+        r = client.post(
+            "/orders/paiements/webhook/postfinance",
+            json=webhook_body,
+            headers={"x-signature": "sig"},
+        )
+        assert r.status_code == 200, r.text
+
+    pay_final = client.get(f"/orders/paiements/{pay_id}", headers=headers).json()
+    assert pay_final["statut"] == "FULFILL"
+
+
+def test_poll_postfinance_amount_mismatch_does_not_wedge_order_as_finalized(
+    client: TestClient, register_and_login, uniq: str
+):
+    """Same C-1 regression as the webhook test above, for the poll-postfinance path."""
+    headers = register_and_login(f"orders_pollmism_{uniq}@example.com")
+    admin_headers = register_and_login(f"orders_pollmism_admin_{uniq}@example.com", role="admin")
+    id_livre = _make_book(client, admin_headers, uniq, prix_chf=20.0)
+    _make_stock(client, admin_headers, uniq, id_livre, qty=5)
+
+    r = client.post("/orders/commandes", json={"numero_commande": f"CMD_POLLMISM_{uniq}"}, headers=headers)
+    cmd = r.json()
+    client.post(
+        "/orders/lignes",
+        json={"id_commande": cmd["id_commande"], "id_livre": id_livre, "quantite": 1},
+        headers=headers,
+    )
+    r = client.post(
+        "/orders/paiements",
+        json={"id_commande": cmd["id_commande"], "reference_externe": f"REF_POLLMISM_{uniq}"},
+        headers=headers,
+    )
+    pay_id = r.json()["id_paiement"]
+
+    mismatched = {"state": "FULFILL", "status": "FULFILL", "amount": 999.0}
+    with patch("presentation.payment_router.get_postfinance_checkout_status", return_value=mismatched):
+        r = client.get(f"/orders/paiements/{pay_id}/poll-postfinance", headers=headers)
+        assert r.status_code == 409, r.text
+
+    pay_after = client.get(f"/orders/paiements/{pay_id}", headers=headers).json()
+    assert pay_after["statut"] != "FULFILL"
+    stock_after = client.get("/stock/", headers=admin_headers).json()
+    row = next(s for s in stock_after if s["id_livre"] == id_livre)
+    assert row["quantite_disponible"] == 5
+    assert row["quantite_reservee"] == 1
+
+    # 20 CHF book + 9 CHF default POST shipping fee = 29 CHF.
+    matching = {"state": "FULFILL", "status": "FULFILL", "amount": 29.0}
+    with patch("presentation.payment_router.get_postfinance_checkout_status", return_value=matching):
+        r = client.get(f"/orders/paiements/{pay_id}/poll-postfinance", headers=headers)
+        assert r.status_code == 200, r.text
+
+    pay_final = client.get(f"/orders/paiements/{pay_id}", headers=headers).json()
+    assert pay_final["statut"] == "FULFILL"
 
 
 def test_postfinance_iframe_session_and_confirm_local_mode(client: TestClient, register_and_login, uniq: str):
@@ -368,14 +481,14 @@ def test_postfinance_iframe_session_and_confirm_local_mode(client: TestClient, r
     be configured in the local/CI environment."""
     headers = register_and_login(f"orders_pfsession_{uniq}@example.com")
     admin_headers = register_and_login(f"orders_pfsession_admin_{uniq}@example.com", role="admin")
-    article_id = _make_article(client, admin_headers, uniq, prix_chf=30.0)
-    _make_stock(client, admin_headers, uniq, article_id, qty=2)
+    id_livre = _make_book(client, admin_headers, uniq, prix_chf=30.0)
+    _make_stock(client, admin_headers, uniq, id_livre, qty=2)
 
     r = client.post("/orders/commandes", json={"numero_commande": f"CMD_PFS_{uniq}"}, headers=headers)
     cmd = r.json()
     client.post(
         "/orders/lignes",
-        json={"id_commande": cmd["id_commande"], "id_article": article_id, "quantite": 1},
+        json={"id_commande": cmd["id_commande"], "id_livre": id_livre, "quantite": 1},
         headers=headers,
     )
 
@@ -411,8 +524,8 @@ def test_postfinance_iframe_session_and_confirm_local_mode(client: TestClient, r
         assert r.json()["paiement"]["statut"] == "AUTHORIZED"
 
         stock_after = client.get("/stock/", headers=admin_headers).json()
-        row = next(s for s in stock_after if s["id_article"] == article_id)
-        assert row["quantite_disponible"] == 2  # unchanged — the reservation is what covered the sale
+        row = next(s for s in stock_after if s["id_livre"] == id_livre)
+        assert row["quantite_disponible"] == 1  # the sold copy left the shelf (2 - 1)
         assert row["quantite_reservee"] == 0
 
         # Idempotency: confirming again must not deduct from quantite_disponible
@@ -420,8 +533,8 @@ def test_postfinance_iframe_session_and_confirm_local_mode(client: TestClient, r
         r = client.post(f"/orders/paiements/{pay_id}/confirm-postfinance", headers=headers)
         assert r.status_code == 200, r.text
         stock_replay = client.get("/stock/", headers=admin_headers).json()
-        row_replay = next(s for s in stock_replay if s["id_article"] == article_id)
-        assert row_replay["quantite_disponible"] == 2
+        row_replay = next(s for s in stock_replay if s["id_livre"] == id_livre)
+        assert row_replay["quantite_disponible"] == 1
 
 
 def test_cancel_commande_releases_reservation_immediately(client: TestClient, register_and_login, uniq: str):
@@ -430,20 +543,20 @@ def test_cancel_commande_releases_reservation_immediately(client: TestClient, re
     book would appear unavailable/hidden from the catalogue for everyone."""
     headers = register_and_login(f"orders_cancel_{uniq}@example.com")
     admin_headers = register_and_login(f"orders_cancel_admin_{uniq}@example.com", role="admin")
-    article_id = _make_article(client, admin_headers, uniq, prix_chf=10.0)
-    _make_stock(client, admin_headers, uniq, article_id, qty=3)
+    id_livre = _make_book(client, admin_headers, uniq, prix_chf=10.0)
+    _make_stock(client, admin_headers, uniq, id_livre, qty=3)
 
     r = client.post("/orders/commandes", json={"numero_commande": f"CMD_CXL_{uniq}"}, headers=headers)
     cmd = r.json()
     r = client.post(
         "/orders/lignes",
-        json={"id_commande": cmd["id_commande"], "id_article": article_id, "quantite": 2},
+        json={"id_commande": cmd["id_commande"], "id_livre": id_livre, "quantite": 2},
         headers=headers,
     )
     assert r.status_code == 201, r.text
 
     stock_before = client.get("/stock/", headers=admin_headers).json()
-    row_before = next(s for s in stock_before if s["id_article"] == article_id)
+    row_before = next(s for s in stock_before if s["id_livre"] == id_livre)
     assert row_before["quantite_reservee"] == 2
 
     r = client.post(f"/orders/commandes/{cmd['id_commande']}/cancel", headers=headers)
@@ -451,7 +564,7 @@ def test_cancel_commande_releases_reservation_immediately(client: TestClient, re
     assert r.json()["statut"] == "CANCELLED"
 
     stock_after = client.get("/stock/", headers=admin_headers).json()
-    row_after = next(s for s in stock_after if s["id_article"] == article_id)
+    row_after = next(s for s in stock_after if s["id_livre"] == id_livre)
     assert row_after["quantite_reservee"] == 0  # released immediately, not after 20 minutes
 
     # Cancelling an already-terminal commande is rejected.
@@ -475,14 +588,14 @@ def test_delete_commande_releases_reservation(client: TestClient, register_and_l
     quantite_reservee — a permanent stock leak with no automatic recovery."""
     headers = register_and_login(f"orders_delcmd_{uniq}@example.com")
     admin_headers = register_and_login(f"orders_delcmd_admin_{uniq}@example.com", role="admin")
-    article_id = _make_article(client, admin_headers, uniq, prix_chf=10.0)
-    _make_stock(client, admin_headers, uniq, article_id, qty=3)
+    id_livre = _make_book(client, admin_headers, uniq, prix_chf=10.0)
+    _make_stock(client, admin_headers, uniq, id_livre, qty=3)
 
     r = client.post("/orders/commandes", json={"numero_commande": f"CMD_DEL_{uniq}"}, headers=headers)
     cmd = r.json()
     r = client.post(
         "/orders/lignes",
-        json={"id_commande": cmd["id_commande"], "id_article": article_id, "quantite": 2},
+        json={"id_commande": cmd["id_commande"], "id_livre": id_livre, "quantite": 2},
         headers=headers,
     )
     assert r.status_code == 201, r.text
@@ -490,21 +603,21 @@ def test_delete_commande_releases_reservation(client: TestClient, register_and_l
     assert client.delete(f"/orders/commandes/{cmd['id_commande']}", headers=headers).status_code == 204
 
     stock_after = client.get("/stock/", headers=admin_headers).json()
-    row_after = next(s for s in stock_after if s["id_article"] == article_id)
+    row_after = next(s for s in stock_after if s["id_livre"] == id_livre)
     assert row_after["quantite_reservee"] == 0
 
 
 def test_delete_ligne_releases_reservation(client: TestClient, register_and_login, uniq: str):
     headers = register_and_login(f"orders_delligne_{uniq}@example.com")
     admin_headers = register_and_login(f"orders_delligne_admin_{uniq}@example.com", role="admin")
-    article_id = _make_article(client, admin_headers, uniq, prix_chf=10.0)
-    _make_stock(client, admin_headers, uniq, article_id, qty=3)
+    id_livre = _make_book(client, admin_headers, uniq, prix_chf=10.0)
+    _make_stock(client, admin_headers, uniq, id_livre, qty=3)
 
     r = client.post("/orders/commandes", json={"numero_commande": f"CMD_DELL_{uniq}"}, headers=headers)
     cmd = r.json()
     r = client.post(
         "/orders/lignes",
-        json={"id_commande": cmd["id_commande"], "id_article": article_id, "quantite": 2},
+        json={"id_commande": cmd["id_commande"], "id_livre": id_livre, "quantite": 2},
         headers=headers,
     )
     assert r.status_code == 201, r.text
@@ -513,7 +626,7 @@ def test_delete_ligne_releases_reservation(client: TestClient, register_and_logi
     assert client.delete(f"/orders/lignes/{ligne_id}", headers=headers).status_code == 204
 
     stock_after = client.get("/stock/", headers=admin_headers).json()
-    row_after = next(s for s in stock_after if s["id_article"] == article_id)
+    row_after = next(s for s in stock_after if s["id_livre"] == id_livre)
     assert row_after["quantite_reservee"] == 0
 
     r = client.get(f"/orders/commandes/{cmd['id_commande']}", headers=headers)
@@ -544,13 +657,13 @@ def test_finalize_marks_order_paid_and_clears_expiry(client: TestClient, registe
     monkeypatch.setenv("ENVIRONMENT", "test")
     headers = register_and_login(f"paid_status_{uniq}@example.com")
     admin_headers = register_and_login(f"paid_status_admin_{uniq}@example.com", role="admin")
-    article_id = _make_article(client, admin_headers, uniq, prix_chf=12.0)
-    _make_stock(client, admin_headers, uniq, article_id, qty=3)
+    id_livre = _make_book(client, admin_headers, uniq, prix_chf=12.0)
+    _make_stock(client, admin_headers, uniq, id_livre, qty=3)
 
     cmd = client.post("/orders/commandes", json={"shipping_method": "POST"}, headers=headers).json()
     client.post(
         "/orders/lignes",
-        json={"id_commande": cmd["id_commande"], "id_article": article_id, "quantite": 1},
+        json={"id_commande": cmd["id_commande"], "id_livre": id_livre, "quantite": 1},
         headers=headers,
     )
     _pay_order_via_local_webhook(client, headers, cmd["id_commande"], uniq)
@@ -571,13 +684,13 @@ def test_paid_order_survives_expiry_cleanup(client: TestClient, register_and_log
     monkeypatch.setenv("ENVIRONMENT", "test")
     headers = register_and_login(f"paid_survive_{uniq}@example.com")
     admin_headers = register_and_login(f"paid_survive_admin_{uniq}@example.com", role="admin")
-    article_id = _make_article(client, admin_headers, uniq, prix_chf=8.0)
-    _make_stock(client, admin_headers, uniq, article_id, qty=3)
+    id_livre = _make_book(client, admin_headers, uniq, prix_chf=8.0)
+    _make_stock(client, admin_headers, uniq, id_livre, qty=3)
 
     cmd = client.post("/orders/commandes", json={"shipping_method": "POST"}, headers=headers).json()
     client.post(
         "/orders/lignes",
-        json={"id_commande": cmd["id_commande"], "id_article": article_id, "quantite": 1},
+        json={"id_commande": cmd["id_commande"], "id_livre": id_livre, "quantite": 1},
         headers=headers,
     )
     _pay_order_via_local_webhook(client, headers, cmd["id_commande"], uniq)
@@ -605,20 +718,20 @@ def test_cannot_add_line_to_paid_order(client: TestClient, register_and_login, u
     monkeypatch.setenv("ENVIRONMENT", "test")
     headers = register_and_login(f"frozen_{uniq}@example.com")
     admin_headers = register_and_login(f"frozen_admin_{uniq}@example.com", role="admin")
-    article_id = _make_article(client, admin_headers, uniq, prix_chf=8.0)
-    _make_stock(client, admin_headers, uniq, article_id, qty=5)
+    id_livre = _make_book(client, admin_headers, uniq, prix_chf=8.0)
+    _make_stock(client, admin_headers, uniq, id_livre, qty=5)
 
     cmd = client.post("/orders/commandes", json={"shipping_method": "POST"}, headers=headers).json()
     client.post(
         "/orders/lignes",
-        json={"id_commande": cmd["id_commande"], "id_article": article_id, "quantite": 1},
+        json={"id_commande": cmd["id_commande"], "id_livre": id_livre, "quantite": 1},
         headers=headers,
     )
     _pay_order_via_local_webhook(client, headers, cmd["id_commande"], uniq)
 
     r = client.post(
         "/orders/lignes",
-        json={"id_commande": cmd["id_commande"], "id_article": article_id, "quantite": 1},
+        json={"id_commande": cmd["id_commande"], "id_livre": id_livre, "quantite": 1},
         headers=headers,
     )
     assert r.status_code == 409, r.text
@@ -640,10 +753,10 @@ def test_numero_commande_is_server_generated(client: TestClient, register_and_lo
 
 def test_stock_increment_rejects_invalid_qty(client: TestClient, register_and_login, uniq: str):
     admin_headers = register_and_login(f"stockqty_admin_{uniq}@example.com", role="admin")
-    article_id = _make_article(client, admin_headers, uniq, prix_chf=8.0)
-    _make_stock(client, admin_headers, uniq, article_id, qty=5)
+    id_livre = _make_book(client, admin_headers, uniq, prix_chf=8.0)
+    _make_stock(client, admin_headers, uniq, id_livre, qty=5)
     stock_rows = client.get("/stock/", headers=admin_headers).json()
-    id_stock = next(s for s in stock_rows if s["id_article"] == article_id)["id_stock"]
+    id_stock = next(s for s in stock_rows if s["id_livre"] == id_livre)["id_stock"]
 
     # negative / zero quantities are rejected by the bounded StockQtyChange model
     assert client.post(f"/stock/{id_stock}/increment", json={"qty": -5}, headers=admin_headers).status_code == 422
@@ -657,15 +770,15 @@ def test_orders_cross_user_isolation(client: TestClient, register_and_login, uni
     owner_headers = register_and_login(f"iso_owner_{uniq}@example.com")
     other_headers = register_and_login(f"iso_other_{uniq}@example.com")
     admin_headers = register_and_login(f"iso_admin_{uniq}@example.com", role="admin")
-    article_id = _make_article(client, admin_headers, uniq, prix_chf=15.0)
-    _make_stock(client, admin_headers, uniq, article_id, qty=5)
+    id_livre = _make_book(client, admin_headers, uniq, prix_chf=15.0)
+    _make_stock(client, admin_headers, uniq, id_livre, qty=5)
 
     cmd = client.post(
         "/orders/commandes", json={"numero_commande": f"CMD_ISO_{uniq}"}, headers=owner_headers
     ).json()
     ligne = client.post(
         "/orders/lignes",
-        json={"id_commande": cmd["id_commande"], "id_article": article_id, "quantite": 1},
+        json={"id_commande": cmd["id_commande"], "id_livre": id_livre, "quantite": 1},
         headers=owner_headers,
     ).json()
     pay = client.post(
@@ -690,7 +803,7 @@ def test_orders_cross_user_isolation(client: TestClient, register_and_login, uni
     # update/delete the commande itself, or edit/delete the payment.
     assert client.post(
         "/orders/lignes",
-        json={"id_commande": cmd["id_commande"], "id_article": article_id, "quantite": 1},
+        json={"id_commande": cmd["id_commande"], "id_livre": id_livre, "quantite": 1},
         headers=other_headers,
     ).status_code == 404
     assert client.put(
@@ -731,7 +844,7 @@ def test_refund_credits_stock_back_to_the_rows_it_was_actually_taken_from(
 ):
     """A sale spanning two stock rows must be refunded back onto those exact
     rows in their original amounts -- not dumped entirely onto whichever row
-    happens to be first for the article.
+    happens to be first for the livre.
 
     Regression test for a real bug found in review: refund_commande used to
     credit the *whole* refunded quantity to a single stock row. The total
@@ -755,7 +868,7 @@ def test_refund_credits_stock_back_to_the_rows_it_was_actually_taken_from(
     from infrastructure.db import SessionLocal
     from services import order_service
 
-    article_id = _make_article(client, register_and_login(f"refund_admin_{uniq}@example.com", role="admin"), uniq, prix_chf=15.0)
+    id_livre = _make_book(client, register_and_login(f"refund_admin_{uniq}@example.com", role="admin"), uniq, prix_chf=15.0)
 
     db = SessionLocal()
     try:
@@ -763,8 +876,8 @@ def test_refund_credits_stock_back_to_the_rows_it_was_actually_taken_from(
         source_b = models.SourceStock(libelle=f"RefundSrcB_{uniq}", type_source="WAREHOUSE")
         db.add_all([source_a, source_b])
         db.flush()
-        stock_a = models.Stock(id_article=article_id, id_source_stock=source_a.id_source_stock, quantite_disponible=1, quantite_reservee=0)
-        stock_b = models.Stock(id_article=article_id, id_source_stock=source_b.id_source_stock, quantite_disponible=5, quantite_reservee=0)
+        stock_a = models.Stock(id_livre=id_livre, id_source_stock=source_a.id_source_stock, quantite_disponible=1, quantite_reservee=0)
+        stock_b = models.Stock(id_livre=id_livre, id_source_stock=source_b.id_source_stock, quantite_disponible=5, quantite_reservee=0)
         db.add_all([stock_a, stock_b])
 
         user = db.query(models.Utilisateur).filter(models.Utilisateur.email == f"refund_admin_{uniq}@example.com").first()
@@ -780,7 +893,7 @@ def test_refund_credits_stock_back_to_the_rows_it_was_actually_taken_from(
         db.flush()
         # quantite=3 against two rows holding 1 and 5, both fully unreserved:
         # finalize's fallback loop must take 1 from A (depleting it) and 2 from B.
-        ligne = models.LigneCommande(id_commande=commande.id_commande, id_article=article_id, quantite=3, prix_unitaire_chf=15.0)
+        ligne = models.LigneCommande(id_commande=commande.id_commande, id_livre=id_livre, quantite=3, prix_unitaire_chf=15.0)
         db.add(ligne)
         db.commit()
 

@@ -136,7 +136,7 @@ export default async function BookDetailPage(props: PageProps<'/books/[id]'>) {
             ) : null}
 
             <AddToCartButton
-              id_article={book.id_article}
+              id_livre={book.id_livre}
               titre={book.titre}
               prix_chf={book.prix_chf}
               image_link={book.image_link}

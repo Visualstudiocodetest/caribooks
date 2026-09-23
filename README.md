@@ -65,13 +65,13 @@ graph LR
    end
 
    subgraph BACKEND
-      API["FastAPI (Uvicorn)<br/>Routers: auth, users, books, catalog, articles, stock, orders (+admin), scans, images"]
+      API["FastAPI (Uvicorn)<br/>Routers: auth, users, books, catalog, stock, orders (+admin), scans, images"]
       Services["Services: jwt_service, book_service (payment helper optional)"]
       Scripts["Scripts: seed_db, migrations"]
    end
 
    subgraph DATA
-      MySQL[("MySQL DB<br/>Tables: utilisateur, commande, paiement, stock, article")]
+      MySQL[("MySQL DB<br/>Tables: utilisateur, commande, paiement, stock, livre")]
       Storage[("Static files / images / CDN")]
    end
 
@@ -182,7 +182,7 @@ sequenceDiagram
    BE->>FE: 200 OK (metadata)
    V->>FE: Fill extra info (condition, price, owner IBAN optional)
    FE->>BE: POST /books (create book with owner_iban)
-   BE->>DB: INSERT article (status: available) with owner_iban
+   BE->>DB: INSERT livre (status: available) with owner_iban
    DB-->>BE: OK
    BE-->>FE: 201 Created (book id)
 
@@ -201,13 +201,13 @@ graph LR
    end
 
    subgraph BACKEND
-      API["FastAPI (Uvicorn)<br/>Routers: auth, users, books, catalog, articles, stock, orders (+admin), scans, images"]
+      API["FastAPI (Uvicorn)<br/>Routers: auth, users, books, catalog, stock, orders (+admin), scans, images"]
       Services["Services: jwt_service, book_service (payment helper optional)"]
       Scripts["Scripts: seed_db, migrations"]
    end
 
    subgraph DATA
-      MySQL[("MySQL DB<br/>Tables: utilisateur, commande, paiement, stock, article")]
+      MySQL[("MySQL DB<br/>Tables: utilisateur, commande, paiement, stock, livre")]
       Storage[("Static files / images / CDN")]
    end
 

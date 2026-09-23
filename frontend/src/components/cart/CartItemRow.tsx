@@ -11,10 +11,10 @@ export default function CartItemRow({
   onSetQuantity,
 }: {
   item: CartItem
-  onRemove: (id_article: number) => void
-  onSetQuantity: (id_article: number, q: number) => void
+  onRemove: (id_livre: number) => void
+  onSetQuantity: (id_livre: number, q: number) => void
 }) {
-  const { available } = useAvailability(item.id_article)
+  const { available } = useAvailability(item.id_livre)
   const outOfStock = available !== null && available < 1
 
   useEffect(() => {
@@ -23,18 +23,18 @@ export default function CartItemRow({
     // filtered out), silently removing an item the user still has in their cart.
     // A transiently out-of-stock item stays visible and is flagged instead.
     if (available !== null && available >= 1 && item.quantity > available) {
-      onSetQuantity(item.id_article, available)
+      onSetQuantity(item.id_livre, available)
     }
-  }, [available, item.quantity, item.id_article, onSetQuantity])
+  }, [available, item.quantity, item.id_livre, onSetQuantity])
 
   const decrease = () => {
-    if (item.quantity <= 1) return onRemove(item.id_article)
-    onSetQuantity(item.id_article, item.quantity - 1)
+    if (item.quantity <= 1) return onRemove(item.id_livre)
+    onSetQuantity(item.id_livre, item.quantity - 1)
   }
 
   const increase = () => {
     if (available === null || item.quantity + 1 > available) return
-    onSetQuantity(item.id_article, item.quantity + 1)
+    onSetQuantity(item.id_livre, item.quantity + 1)
   }
 
   return (
@@ -51,8 +51,8 @@ export default function CartItemRow({
         ) : null}
       </div>
 
-      <div className="qty-controls" role="group" aria-labelledby={`qty-label-${item.id_article}`}>
-        <span id={`qty-label-${item.id_article}`} className="visually-hidden">
+      <div className="qty-controls" role="group" aria-labelledby={`qty-label-${item.id_livre}`}>
+        <span id={`qty-label-${item.id_livre}`} className="visually-hidden">
           {`Quantité pour ${item.titre}`}
         </span>
         <button className="btn" type="button" onClick={decrease} aria-label={`Diminuer la quantité de ${item.titre}`}>
@@ -75,7 +75,7 @@ export default function CartItemRow({
         <button
           className="btn"
           type="button"
-          onClick={() => onRemove(item.id_article)}
+          onClick={() => onRemove(item.id_livre)}
           aria-label={`Retirer ${item.titre} du panier`}
         >
           Retirer

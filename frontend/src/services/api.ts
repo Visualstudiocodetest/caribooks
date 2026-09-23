@@ -1,5 +1,31 @@
 type ApiErrorPayload = {
-  detail?: string
+  // FastAPI returns a plain string for HTTPException(detail=...), but a LIST of
+  // per-field objects for a 422 request-validation error.
+  detail?: string | unknown[]
+}
+
+// HTTP statuses the user can act on, phrased in French. Anything a route raises
+// explicitly carries its own French `detail`; this only covers the responses
+// FastAPI/the platform produce on their own (validation errors, gateway
+// failures), which are English and were previously shown raw — or, for a 422,
+// serialized as "[object Object]" because `detail` is a list there, not a string.
+const STATUS_MESSAGES_FR: Record<number, string> = {
+  400: 'Requête invalide.',
+  401: 'Session expirée. Reconnectez-vous.',
+  403: 'Vous n’avez pas les droits nécessaires pour cette action.',
+  404: 'Ressource introuvable.',
+  409: 'Cette action entre en conflit avec l’état actuel. Rechargez la page.',
+  422: 'Certaines informations saisies sont invalides. Vérifiez le formulaire.',
+  429: 'Trop de tentatives. Réessayez dans quelques minutes.',
+  500: 'Une erreur est survenue. Réessayez dans un instant.',
+  502: 'Service momentanément indisponible. Réessayez dans un instant.',
+  503: 'Service momentanément indisponible. Réessayez dans un instant.',
+  504: 'Le service met trop de temps à répondre. Réessayez dans un instant.',
+}
+
+function frenchMessageFor(status: number, detail: ApiErrorPayload['detail']): string {
+  if (typeof detail === 'string' && detail.trim()) return detail
+  return STATUS_MESSAGES_FR[status] ?? 'Une erreur est survenue. Réessayez dans un instant.'
 }
 
 // Dispatched on window whenever an authenticated request comes back 401, so
@@ -87,7 +113,7 @@ export async function apiFetch<T>(
       window.dispatchEvent(new Event(UNAUTHORIZED_EVENT))
     }
     const maybeDetail = (payload as ApiErrorPayload | undefined)?.detail
-    throw new ApiError(maybeDetail || `API error (${res.status})`, res.status, payload)
+    throw new ApiError(frenchMessageFor(res.status, maybeDetail), res.status, payload)
   }
 
   return payload as T

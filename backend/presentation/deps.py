@@ -53,12 +53,12 @@ def get_current_user(
         payload = decode_access_token(token, SECRET_KEY)
         email = payload.get("sub")
         if email is None:
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Jeton d’authentification invalide.")
     except Exception as e:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Could not validate credentials") from e
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Session expirée ou invalide. Reconnectez-vous.") from e
     user = crud_user.get_user_by_email(db, email)
     if user is None:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Utilisateur introuvable.")
     return user
 
 
@@ -67,7 +67,7 @@ CurrentUser = Annotated[models.Utilisateur, Depends(get_current_user)]
 
 def require_admin(current_user: CurrentUser) -> models.Utilisateur:
     if str(current_user.role) != "admin":  # type: ignore
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin privileges required")
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Droits administrateur requis.")
     return current_user
 
 

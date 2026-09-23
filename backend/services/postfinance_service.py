@@ -52,18 +52,18 @@ def build_postfinance_line_items(
 ) -> List[Dict[str, Any]]:
     items: List[Dict[str, Any]] = []
     for ligne in lignes:
-        article = getattr(ligne, "article", None)
-        sku = getattr(article, "sku", None) if article is not None else None
-        titre = getattr(article, "titre", None) if article is not None else None
+        livre = getattr(ligne, "livre", None)
+        sku = getattr(livre, "sku", None) if livre is not None else None
+        titre = getattr(livre, "titre", None) if livre is not None else None
         qty = int(getattr(ligne, "quantite", 1) or 1)
         unit_price = float(getattr(ligne, "prix_unitaire_chf", 0) or 0)
         ligne_id = getattr(ligne, "id_ligne_commande", 0)
-        article_id = getattr(ligne, "id_article", 0)
+        livre_id = getattr(ligne, "id_livre", 0)
         items.append(
             {
                 "uniqueId": f"ligne-{ligne_id}",
-                "sku": sku or f"article-{article_id}",
-                "name": (titre or f"Article {article_id}")[:150],
+                "sku": sku or f"livre-{livre_id}",
+                "name": (titre or f"Livre {livre_id}")[:150],
                 "quantity": qty,
                 "amountIncludingTax": round(unit_price * qty, 2),
                 "type": "PRODUCT",

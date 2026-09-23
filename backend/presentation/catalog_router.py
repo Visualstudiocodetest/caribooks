@@ -9,28 +9,11 @@ from presentation.schemas import (
     EtatUsureCreate,
     EtatUsureRead,
     EtatUsureUpdate,
-    TypeObjetCreate,
-    TypeObjetRead,
-    TypeObjetUpdate,
 )
 
 router = APIRouter(prefix="/catalog", tags=["catalog"])
 
-type_objet_crud = CrudBase[models.TypeObjet](models.TypeObjet, "id_type_objet")
 etat_usure_crud = CrudBase[models.EtatUsure](models.EtatUsure, "id_etat_usure")
-
-router.include_router(
-    simple_crud_router(
-        prefix="",
-        tags=["catalog"],
-        path="type-objets",
-        crud=type_objet_crud,
-        read_schema=TypeObjetRead,
-        create_schema=TypeObjetCreate,
-        update_schema=TypeObjetUpdate,
-        not_found="TypeObjet not found",
-    )
-)
 
 router.include_router(
     simple_crud_router(
@@ -41,6 +24,6 @@ router.include_router(
         read_schema=EtatUsureRead,
         create_schema=EtatUsureCreate,
         update_schema=EtatUsureUpdate,
-        not_found="EtatUsure not found",
+        not_found="État d’usure introuvable.",
     )
 )

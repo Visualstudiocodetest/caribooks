@@ -61,9 +61,9 @@ Environnement de développement sécurisé & Secrets via \texttt{.env} (jamais v
 Authentification & Inscription, connexion par mot de passe et via Google Sign-In (OAuth), JWT, rôles utilisateur/administrateur \\
 Stockage sécurisé des identifiants & Hashage des mots de passe (bcrypt), champ nullable pour les comptes Google \\
 Validation des données entrantes & Schémas Pydantic sur toutes les routes FastAPI \\
-Contrôle des permissions & Dépendance FastAPI \texttt{AdminUser} = \texttt{Annotated[..., Depends(require\_admin)]}, isolation inter-utilisateurs testée (\texttt{test\_orders\_cross\_user\_isolation}) \\
+Contrôle des permissions & Dépendance FastAPI \texttt{AdminUser} = \texttt{Annotated[..., Depends(require\_admin)]}, isolation inter-utilisateurs testée (\texttt{test\_orders\_cross\_user\_isolation}) ; schémas de saisie distincts selon le demandeur (\texttt{UserSelfUpdate} sans champ \texttt{role} pour \texttt{PUT /users/me}, \texttt{UserUpdate} pour l'administrateur), correctif d'une élévation de privilèges vérifiée puis verrouillée par tests (\texttt{test\_security\_regressions.py}) \\
 Prévention des injections SQL & Requêtes paramétrées via SQLAlchemy \\
-Prévention des vulnérabilités OWASP & Limitation du taux de requêtes sur l'authentification (\texttt{rate\_limit.py}), protection SSRF sur la récupération d'images distantes (\texttt{test\_image\_service\_ssrf.py}) \\
+Prévention des vulnérabilités OWASP & Limitation du taux de requêtes sur l'authentification (\texttt{rate\_limit.py}), protection SSRF sur la récupération d'images distantes (\texttt{test\_image\_service\_ssrf.py}), correction d'une élévation de privilèges (A01 \textit{Broken Access Control}) sur \texttt{PUT /users/me} et suppression des fuites de détails techniques dans les réponses d'erreur (bornes de longueur Pydantic remplaçant des \texttt{DataError} SQL renvoyées en \texttt{500}) \\
 Conformité RGPD / nLPD & Export et effacement (anonymisation) des données personnelles \\
 Accessibilité de l'interface & Attributs \texttt{alt}, \texttt{aria-label}/\texttt{aria-live}, lien d'évitement, focus clavier visible et tableaux sémantiques sur l'ensemble du site (vitrine et back-office) ; pas d'audit RGAA/WCAG externe ni de test lecteur d'écran réel (limites assumées, cf. mémoire) \\
 \bottomrule
@@ -86,7 +86,7 @@ Accès aux données & Couche SQLAlchemy, CRUD générique réutilisable (\texttt
 API REST & Endpoints FastAPI documentés, validés par Pydantic \\
 Interface web découplée du back-end & Frontend Next.js / React / TypeScript \\
 Intégration de services tiers & OpenLibrary (métadonnées), PostFinance (paiement), Google OAuth (connexion) \\
-Cohérence en environnement concurrent & Réservation temporaire de stock (verrou \texttt{with\_for\_update}), libération automatique à expiration \\
+Cohérence en environnement concurrent & Réservation temporaire de stock (verrou \texttt{with\_for\_update}), libération automatique à expiration ; sérialisation des mutations d'un panier par verrou sur la ligne \texttt{commande} et recalcul du total par lecture verrouillante, corrigeant sous \texttt{REPEATABLE READ} un total erroné et un interblocage InnoDB reproduits en test (\texttt{test\_cart\_integrity.py}) \\
 \bottomrule
 \caption{Compétences Bloc 2}
 \end{longtable}

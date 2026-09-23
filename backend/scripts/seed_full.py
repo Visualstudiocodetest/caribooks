@@ -31,10 +31,6 @@ def upsert(db, model, lookup_field: str, lookup_value, **fields):
 def seed():
     db = SessionLocal()
     try:
-        # ── Type objets ──────────────────────────────────────────────────────
-        upsert(db, models.TypeObjet, 'code', 'BOOK', libelle='Livre')
-        upsert(db, models.TypeObjet, 'code', 'DVD',  libelle='DVD')
-
         # ── États d'usure ────────────────────────────────────────────────────
         for lib in ('Neuf', 'Très bon état', 'Bon état', 'Usagé'):
             upsert(db, models.EtatUsure, 'libelle', lib)
@@ -45,10 +41,8 @@ def seed():
         # ── Livre de démonstration ───────────────────────────────────────────
         SAMPLE_ISBN = '9780062316097'
         if not db.query(models.Livre).filter(models.Livre.isbn == SAMPLE_ISBN).first():
-            to_book = db.query(models.TypeObjet).filter(models.TypeObjet.code == 'BOOK').first()
-            etat    = db.query(models.EtatUsure).filter(models.EtatUsure.libelle == 'Bon état').first()
-            article = models.Article(
-                id_type_objet=to_book.id_type_objet,
+            etat = db.query(models.EtatUsure).filter(models.EtatUsure.libelle == 'Bon état').first()
+            livre = models.Livre(
                 id_etat_usure=etat.id_etat_usure,
                 sku=SAMPLE_ISBN,
                 titre='The Alchemist',
@@ -56,13 +50,13 @@ def seed():
                 image_link=None,
                 prix_chf=9.90,
                 actif=True,
+                isbn=SAMPLE_ISBN,
+                auteur='Paulo Coelho',
             )
-            db.add(article)
-            db.flush()
-            db.add(models.Livre(id_article=article.id_article, isbn=SAMPLE_ISBN, auteur='Paulo Coelho'))
+            db.add(livre)
             db.flush()
             db.add(models.Stock(
-                id_article=article.id_article,
+                id_livre=livre.id_livre,
                 id_source_stock=ss.id_source_stock,
                 quantite_disponible=5,
                 quantite_reservee=0,

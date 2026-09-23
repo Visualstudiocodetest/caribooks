@@ -8,7 +8,8 @@ sequenceDiagram
     participant BD as BD MySQL
 
     Ben->>Nav: scanne le code-barres
-    Nav->>Nav: décode l'ISBN
+    Nav->>Nav: décode tous les EAN-13 de l'image<br/>et ne retient que l'ISBN valide<br/>(préfixe 978/979 + chiffre de contrôle)
+    note over Nav: BarcodeDetector absent (Safari, Firefox)<br/>→ saisie manuelle proposée explicitement
     Nav->>API: GET /books/by-isbn/{isbn}
     API->>BD: SELECT livre (par ISBN)
 
@@ -37,7 +38,7 @@ sequenceDiagram
         API->>OL: télécharge l'image (SSRF-protégé,<br/>IP figée, redirection suivie manuellement)
         API-->>Nav: /static/images/books/{hash}.jpg
         Nav->>API: POST /books
-        API->>BD: INSERT livre
+        API->>BD: INSERT livre (ou +1 en stock et<br/>réactivation si l'ISBN existe déjà)
         API-->>Nav: livre créé
         Nav-->>Ben: confirmation "livre ajouté au catalogue"<br/>+ bouton "Ajouter un nouveau livre" (pas de redirection)
     end
