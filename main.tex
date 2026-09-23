@@ -92,10 +92,19 @@
 \hypersetup{
     colorlinks=true,
     linkcolor=black,
-    filecolor=magenta,      
+    filecolor=magenta,
     urlcolor=blue,
     pdftitle={Mémoire CARIBOOKS - Alexandre REY},
 }
+\usepackage{xurl} % permet à \url de couper n'importe où (évite les URL trop longues qui débordent)
+
+% Les identifiants de code (\texttt{...}) contiennent souvent de longs noms
+% avec underscores (ex. verify_postfinance_webhook_signature) : sans point de
+% coupure, ces mots uniques dépassaient la marge droite (overfull hbox). On
+% autorise une coupure de ligne après chaque \_ pour que ces identifiants se
+% comportent comme un mot normal en fin de ligne.
+\let\origunderscore\_
+\renewcommand{\_}{\origunderscore\allowbreak}
 
 % Style SQL listings
 \lstdefinestyle{sqlstyle}{
@@ -131,6 +140,16 @@
     numberstyle=\tiny\color{gray},
     numbersep=5pt,
     tabsize=4,
+}
+
+% listings ne décode pas nativement les octets UTF-8 multi-octets des
+% caractères accentués utilisés dans les commentaires/docstrings des
+% extraits de code (annexes) ; ce mapping évite les erreurs
+% "Invalid UTF-8 byte" à la compilation.
+\lstset{
+    literate=%
+    {à}{{\`a}}1
+    {é}{{\'e}}1
 }
 
 % Boîte "À compléter"
@@ -319,7 +338,7 @@ Il existe plusieurs plateformes de revente de livres et d'objets d'occasion sur 
 \renewcommand{\arraystretch}{1.4}
 \begin{tabular}{@{}p{2.8cm}p{1.8cm}p{2cm}p{2cm}p{2cm}p{2.5cm}@{}}
 \toprule
-\textbf{Solution} & \textbf{Devise CHF} & \textbf{Scan ISBN} & \textbf{Back-office simplifié} & \textbf{Coût} & \textbf{Personnalisable} \\
+\textbf{Solution} & \textbf{Devise CHF} & \textbf{Scan ISBN} & \textbf{Back-office simplifié} & \textbf{Coût} & \textbf{Personnalis\-able} \\
 \midrule
 Momox & \textcolor{red}{Non} & \textcolor{green}{Oui} & \textcolor{red}{Non} & Gratuit & \textcolor{red}{Non} \\
 Vinted & \textcolor{red}{Non} & \textcolor{red}{Non} & \textcolor{green}{Partiel} & Gratuit & \textcolor{red}{Non} \\
@@ -626,7 +645,7 @@ Documentation et certification &
     \label{fig:sequence_auth}
 \end{figure}
 
-\noindent Le diagramme de séquence d'authentification décrit deux flux alternatifs. Par mot de passe : l'utilisateur soumet ses identifiants → FastAPI valide l'email/mot de passe en base (SQLAlchemy + bcrypt) → si valide, un JWT signé est généré et retourné. Via Google Sign-In : le frontend obtient un jeton d'identité Google → l'API le fait vérifier par \texttt{oauth2.googleapis.com/tokeninfo} → l'audience du jeton (\texttt{aud}) doit correspondre au \texttt{GOOGLE\_CLIENT\_ID} configuré, échec fermé si celui-ci est absent, pour empêcher qu'un jeton Google valide mais émis pour une autre application soit rejoué ici → l'email vérifié est utilisé pour retrouver ou créer le compte via son \texttt{google\_id} → un JWT est émis de la même façon. Dans les deux cas, le frontend stocke le token, chaque requête protégée envoie le token dans l'en-tête \texttt{Authorization: Bearer <token>}, et la dépendance FastAPI \texttt{get\_current\_user} vérifie la signature et extrait le rôle.
+\noindent Le diagramme de séquence d'authentification décrit deux flux alternatifs. Par mot de passe : l'utilisateur soumet ses identifiants → FastAPI valide l'email/mot de passe en base (SQLAlchemy + bcrypt) → si valide, un JWT signé est généré et retourné. Via Google Sign-In : le frontend obtient un jeton d'identité Google → l'API le fait vérifier par \texttt{oauth2.\allowbreak googleapis.\allowbreak com/\allowbreak tokeninfo} → l'audience du jeton (\texttt{aud}) doit correspondre au \texttt{GOOGLE\_CLIENT\_ID} configuré, échec fermé si celui-ci est absent, pour empêcher qu'un jeton Google valide mais émis pour une autre application soit rejoué ici → l'email vérifié est utilisé pour retrouver ou créer le compte via son \texttt{google\_id} → un JWT est émis de la même façon. Dans les deux cas, le frontend stocke le token, chaque requête protégée envoie le token dans l'en-tête \texttt{Authorization: Bearer <token>}, et la dépendance FastAPI \texttt{get\_current\_user} vérifie la signature et extrait le rôle.
 
 \begin{figure}[h]
     \centering
@@ -768,7 +787,7 @@ au plus près des retours de démonstration de la commanditaire ; la maquette Fi
 la référence de la structure initiale de navigation, illustrée ci-dessous par la vue mobile de
 l'écran de scan ISBN telle qu'implémentée.
 
-\includegraphics[width=\textwidth]{vue_telephone.png}
+\noindent\includegraphics[width=\textwidth,height=0.82\textheight,keepaspectratio]{vue_telephone.png}
 
 % --- CHAPITRE 3 ---
 \chapter{Réalisation et mise en \oe{}uvre}
@@ -815,11 +834,11 @@ Le backend suit une \textbf{architecture en couches} inspirée des principes de 
 
 \subsection{Module authentification}
 
-Le module d'authentification expose trois endpoints : \texttt{POST /auth/register} (création de compte, renvoie un \texttt{201} ou un \texttt{400} si l'email existe déjà), \texttt{POST /auth/token} (connexion par email/mot de passe, convention OAuth2) et \texttt{POST /auth/google} (connexion via \textbf{Google Sign-In} : le jeton d'identité Google est vérifié auprès de \texttt{oauth2.googleapis.com/tokeninfo}, l'email doit être vérifié côté Google, puis le compte est retrouvé ou créé via son \texttt{google\_id}). Pour la connexion par mot de passe, l'utilisateur est récupéré par email via \texttt{crud\_user}, et le mot de passe est vérifié avec \texttt{pwdlib} (bcrypt) ; le champ \texttt{mot\_de\_passe\_hash} est nullable, car les comptes créés via Google n'en possèdent pas. Si les identifiants sont valides, un JWT signé en \textbf{HS256} est généré (\texttt{jwt\_service.create\_access\_token}), contenant l'email (\texttt{sub}), le rôle et une expiration de \textbf{480 minutes}. Les trois routes d'authentification sont protégées par un \textit{rate limiting} applicatif (\texttt{services/rate\_limit.py}) contre le \textit{credential stuffing}. La protection des routes repose sur deux dépendances FastAPI : \texttt{get\_current\_user} (décode et valide le token via le schéma \texttt{HTTPBearer}) et \texttt{require\_admin} (contrôle du rôle \texttt{admin}) — il n'existe que deux rôles, \texttt{admin} et \texttt{user}. Au démarrage, l'application refuse de fonctionner avec une \texttt{SECRET\_KEY} correspondant à une valeur faible ou de type \og placeholder \fg{} connue (quel que soit l'environnement) ; en son absence totale, une clé aléatoire est générée pour la session en cours.
+Le module d'authentification expose trois endpoints : \texttt{POST /auth/register} (création de compte, renvoie un \texttt{201} ou un \texttt{400} si l'email existe déjà), \texttt{POST /auth/token} (connexion par email/mot de passe, convention OAuth2) et \texttt{POST /auth/google} (connexion via \textbf{Google Sign-In} : le jeton d'identité Google est vérifié auprès de \texttt{oauth2.\allowbreak googleapis.\allowbreak com/\allowbreak tokeninfo}, l'email doit être vérifié côté Google, puis le compte est retrouvé ou créé via son \texttt{google\_id}). Pour la connexion par mot de passe, l'utilisateur est récupéré par email via \texttt{crud\_user}, et le mot de passe est vérifié avec \texttt{pwdlib} (bcrypt) ; le champ \texttt{mot\_de\_passe\_hash} est nullable, car les comptes créés via Google n'en possèdent pas. Si les identifiants sont valides, un JWT signé en \textbf{HS256} est généré (\texttt{jwt\_service.create\_access\_token}), contenant l'email (\texttt{sub}), le rôle et une expiration de \textbf{480 minutes}. Les trois routes d'authentification sont protégées par un \textit{rate limiting} applicatif (\texttt{services/rate\_limit.py}) contre le \textit{credential stuffing}. La protection des routes repose sur deux dépendances FastAPI : \texttt{get\_current\_user} (décode et valide le token via le schéma \texttt{HTTPBearer}) et \texttt{require\_admin} (contrôle du rôle \texttt{admin}) — il n'existe que deux rôles, \texttt{admin} et \texttt{user}. Au démarrage, l'application refuse de fonctionner avec une \texttt{SECRET\_KEY} correspondant à une valeur faible ou de type \og placeholder \fg{} connue (quel que soit l'environnement) ; en son absence totale, une clé aléatoire est générée pour la session en cours.
 
 \subsection{Module catalogue, livres et stock}
 
-Le catalogue s'appuie sur une classe CRUD générique typée (\texttt{CrudBase}) réutilisée par tous les routers, ce qui factorise les opérations \texttt{list / get / create / update / delete}. Le \texttt{catalog\_router} gère désormais le seul référentiel des états d'usure (\texttt{/catalog/etat-usures}), le \texttt{book\_router} expose les livres (notamment \texttt{GET /books/by-isbn/\{isbn\}} et \texttt{GET /books/\{id\_livre\}}) via un \texttt{BookService} dédié, et le \texttt{stock\_router} pilote les quantités disponibles et réservées. Les lectures du catalogue sont publiques ; les opérations d'écriture exigent un utilisateur authentifié (et un rôle \texttt{admin} pour la création de livres). Côté frontend, la page d'accueil (\texttt{app/page.tsx}) \textbf{est} le catalogue complet (recherche, filtre par état, tri, pagination visuelle) : une ancienne page \texttt{/catalog} redondante, qui dupliquait le même appel \texttt{listBooks}/\texttt{getAvailabilityMap} en version tronquée, a été supprimée afin de n'avoir plus qu'un seul point d'entrée pour parcourir le catalogue. Une classification par catégorie/genre (table \texttt{categorie}, association N-N \texttt{article\_categorie}) avait été mise en place au niveau de l'ancienne API générique \texttt{/articles}, mais n'a jamais été reliée au parcours de création/édition d'un livre (\texttt{/books}) : le formulaire d'ajout n'exposait pas ce champ, et celui d'édition l'exposait sans que le schéma \texttt{BookUpdate} ne le transmette au service, si bien qu'aucun livre n'a jamais reçu de catégorie en pratique. Ces tables, la case à cocher correspondante côté back-office et le filtre catalogue associé ont été supprimés (migration \texttt{20260912\_drop\_categorie\_tables.sql}) plutôt que maintenus non fonctionnels. L'API générique \texttt{/articles} elle-même — vestige de l'architecture en héritage de table (\texttt{article}/\texttt{type\_objet}) — a depuis été supprimée à son tour, la plateforme ne vendant que des livres : la création, la modification et la suppression d'un exemplaire passent désormais exclusivement par \texttt{/books}.
+Le catalogue s'appuie sur une classe CRUD générique typée (\texttt{CrudBase}) réutilisée par tous les routers, ce qui factorise les opérations \texttt{list / get / create / update / delete}. Le \texttt{catalog\_router} gère désormais le seul référentiel des états d'usure (\texttt{/catalog/\allowbreak etat-usures}), le \texttt{book\_router} expose les livres (notamment \texttt{GET /books/\allowbreak by-isbn/\{isbn\}} et \texttt{GET /books/\allowbreak\{id\_livre\}}) via un \texttt{BookService} dédié, et le \texttt{stock\_router} pilote les quantités disponibles et réservées. Les lectures du catalogue sont publiques ; les opérations d'écriture exigent un utilisateur authentifié (et un rôle \texttt{admin} pour la création de livres). Côté frontend, la page d'accueil (\texttt{app/page.tsx}) \textbf{est} le catalogue complet (recherche, filtre par état, tri, pagination visuelle) : une ancienne page \texttt{/catalog} redondante, qui dupliquait le même appel \texttt{listBooks}\allowbreak/\texttt{getAvailabilityMap} en version tronquée, a été supprimée afin de n'avoir plus qu'un seul point d'entrée pour parcourir le catalogue. Une classification par catégorie/genre (table \texttt{categorie}, association N-N \texttt{article\_categorie}) avait été mise en place au niveau de l'ancienne API générique \texttt{/articles}, mais n'a jamais été reliée au parcours de création/édition d'un livre (\texttt{/books}) : le formulaire d'ajout n'exposait pas ce champ, et celui d'édition l'exposait sans que le schéma \texttt{BookUpdate} ne le transmette au service, si bien qu'aucun livre n'a jamais reçu de catégorie en pratique. Ces tables, la case à cocher correspondante côté back-office et le filtre catalogue associé ont été supprimés (migration \texttt{20260912\_drop\_categorie\_tables.sql}) plutôt que maintenus non fonctionnels. L'API générique \texttt{/articles} elle-même — vestige de l'architecture en héritage de table (\texttt{article}\allowbreak/\texttt{type\_objet}) — a depuis été supprimée à son tour, la plateforme ne vendant que des livres : la création, la modification et la suppression d'un exemplaire passent désormais exclusivement par \texttt{/books}.
 
 \subsection{Module scan ISBN}
 
@@ -858,7 +877,7 @@ Le \texttt{order\_router} gère le cycle de vie des commandes (\texttt{commande}
 
 Le back-office réutilise les mêmes endpoints sécurisés pour offrir aux bénévoles une interface de gestion des annonces (création via scan ISBN ou saisie manuelle, modification, suppression) et de suivi du stock, sans exposer la complexité technique sous-jacente. Un module dédié, \texttt{order\_admin\_router}, permet en outre à un administrateur de piloter le cycle de vie d'une commande : avancement au statut suivant, annulation, remboursement, marquage \og envoyée \fg{} / \og à réception \fg{}, ainsi qu'une \textbf{surcharge manuelle du statut} vers n'importe quelle valeur (\texttt{PUT /orders/admin/commandes/\{id\}/status}) pour les cas exceptionnels. L'ensemble de ces routes est réservé au rôle \texttt{admin} et fait l'objet d'un test d'isolation inter-utilisateurs dédié (\texttt{test\_orders\_cross\_user\_isolation}), qui vérifie qu'un client ne peut ni consulter ni modifier les commandes d'un autre client, et qu'un utilisateur non-administrateur reçoit un \texttt{403} sur toutes les routes \texttt{/orders/admin/*}. Lorsque cette surcharge manuelle fait passer une commande d'un statut payé (\texttt{PAID}, \texttt{SENT}, \texttt{AT\_RECEPTION}\dots) vers un statut terminal (\texttt{CANCELLED}, \texttt{REFUNDED}), elle recrédite désormais le stock vendu via la même logique que \texttt{/refund} — un correctif nécessaire, car la version initiale se contentait d'écrire la colonne de statut sans recréditer le stock, ce qui laissait des exemplaires vendus définitivement indisponibles et rendait le vrai remboursement inatteignable ensuite (celui-ci exige que la commande soit encore dans un statut payé).
 
-Côté frontend, l'ensemble de la section \texttt{/admin} est protégé par un layout dédié (\texttt{app/admin/layout.tsx}) qui revérifie le rôle auprès du backend (\texttt{GET /users/me}) plutôt que de faire confiance au rôle décodé localement depuis le JWT. Un visiteur non connecté qui tente d'accéder à une page d'administration est \textbf{redirigé automatiquement} vers \texttt{/login} avec un message (\og Vous devez être connecté avec un compte administrateur pour accéder à cette page \fg{}) et un paramètre \texttt{returnTo} pour revenir sur la page demandée après connexion ; un utilisateur connecté mais non-administrateur reste en revanche sur une page \og Accès refusé \fg{}, une redirection vers la connexion n'ayant pas de sens pour un compte déjà authentifié.
+Côté frontend, l'ensemble de la section \texttt{/admin} est protégé par un layout dédié (\texttt{app/\allowbreak admin/\allowbreak layout.tsx}) qui revérifie le rôle auprès du backend (\texttt{GET /users/me}) plutôt que de faire confiance au rôle décodé localement depuis le JWT. Un visiteur non connecté qui tente d'accéder à une page d'administration est \textbf{redirigé automatiquement} vers \texttt{/login} avec un message (\og Vous devez être connecté avec un compte administrateur pour accéder à cette page \fg{}) et un paramètre \texttt{returnTo} pour revenir sur la page demandée après connexion ; un utilisateur connecté mais non-administrateur reste en revanche sur une page \og Accès refusé \fg{}, une redirection vers la connexion n'ayant pas de sens pour un compte déjà authentifié.
 
 \paragraph{Gestion des utilisateurs et du stock.} Deux écrans complètent le back-office. La page \texttt{/admin/stock} liste l'ensemble des articles avec leurs quantités disponibles et réservées, avec recherche par titre. La page \texttt{/admin/users} liste tous les comptes (recherche par nom ou e-mail) et permet à un administrateur de promouvoir un utilisateur au rôle \texttt{admin}, de rétrograder un administrateur, ou d'anonymiser un compte (même logique et même garde-fou que l'auto-suppression, cf. \S RGPD ci-après) — trois actions exposées par le \texttt{user\_router} (\texttt{GET /users/}, \texttt{PUT /users/\{id\}}, \texttt{DELETE /users/\{id\}}), réservées au rôle \texttt{admin} et validées par le schéma Pydantic \texttt{UserUpdate} (plutôt qu'un dictionnaire libre, afin que les contraintes de validation — notamment la longueur minimale du mot de passe — s'appliquent aussi bien à la modification d'un profil par son titulaire qu'à celle d'un tiers par un administrateur). Un administrateur ne peut ni changer son propre rôle, ni supprimer son propre compte depuis cette interface, ce qui évite qu'il se prive lui-même de ses droits par erreur.
 
@@ -913,7 +932,7 @@ L'utilisation de l'\textbf{ORM SQLAlchemy} protège nativement l'application con
     \item \textbf{Changement de prestataire de paiement :} Le prestataire initialement envisagé (Payrexx) a été remplacé par \textbf{PostFinance}, dont l'environnement de test sandbox ne nécessite pas de carte bancaire réelle avant la mise en production, ce qui a considérablement facilité le développement et les tests du tunnel de paiement.
     \item \textbf{Gestion du périmètre fonctionnel :} La demandeuse, dans son rôle de Product Owner informelle, souhaitait régulièrement ajouter de nouvelles fonctionnalités. Appliquer une gestion stricte du périmètre MVP, en expliquant les contraintes de temps et en reportant les demandes aux phases suivantes, a été un apprentissage professionnel important.
     \item \textbf{Conciliation apprentissage / projet personnel :} Le développement réalisé uniquement en soirée (17h–20h, 3 jours par semaine) a imposé une discipline de planification rigoureuse pour maintenir la progression du projet tout en respectant les engagements de la formation en alternance.
-    \item \textbf{Incompatibilité \texttt{output: 'standalone'} avec Vercel :} cette option Next.js, ajoutée pour permettre un déploiement conteneurisé (\texttt{Dockerfile}) sans dépendre du répertoire de travail du processus, était appliquée sans condition dans \texttt{next.config.js} — y compris lors des builds sur \textbf{Vercel}, qui empaquette pourtant les applications Next.js lui-même et ne l'attend pas. Combinée à un \texttt{vercel.json} historique qui fixe explicitement le \textit{builder} \texttt{@vercel/next} plutôt que de laisser Vercel détecter le projet automatiquement, cette option faisait déployer le serveur \og standalone \fg{} sans l'étape de copie manuelle des fichiers statiques (\texttt{.next/static}, \texttt{public/}) que seul le \texttt{Dockerfile} effectue : chaque script JavaScript ou feuille de style hachée renvoyait un \texttt{404} en production, empêchant toute page nécessitant de l'hydratation côté client (dont le back-office) de se charger. Diagnostiqué en reproduisant localement le même mode de \textit{build} (\texttt{next start} avec \texttt{output: standalone}), puis corrigé en n'appliquant cette option que hors de l'environnement Vercel (détecté via la variable \texttt{VERCEL}, positionnée automatiquement par sa propre chaîne de build).
+    \item \textbf{Incompatibilité \texttt{output: 'standalone'} avec Vercel :} cette option Next.js, ajoutée pour permettre un déploiement conteneurisé (\texttt{Dockerfile}) sans dépendre du répertoire de travail du processus, était appliquée sans condition dans \texttt{next.config.js} — y compris lors des builds sur \textbf{Vercel}, qui empaquette pourtant les applications Next.js lui-même et ne l'attend pas. Combinée à un \texttt{vercel.json} historique qui fixe explicitement le \textit{builder} \texttt{@vercel/\allowbreak next} plutôt que de laisser Vercel détecter le projet automatiquement, cette option faisait déployer le serveur \og standalone \fg{} sans l'étape de copie manuelle des fichiers statiques (\texttt{.next/static}, \texttt{public/}) que seul le \texttt{Dockerfile} effectue : chaque script JavaScript ou feuille de style hachée renvoyait un \texttt{404} en production, empêchant toute page nécessitant de l'hydratation côté client (dont le back-office) de se charger. Diagnostiqué en reproduisant localement le même mode de \textit{build} (\texttt{next start} avec \texttt{output: standalone}), puis corrigé en n'appliquant cette option que hors de l'environnement Vercel (détecté via la variable \texttt{VERCEL}, positionnée automatiquement par sa propre chaîne de build).
 \end{itemize}
 
 % --- CHAPITRE 4 ---
@@ -982,11 +1001,11 @@ stock, livraison postale (frais fixe 9 CHF).
 \textbf{Étape} & \textbf{Donnée en entrée} & \textbf{Attendu} & \textbf{Obtenu} \\
 \midrule
 \endhead
-1. Création commande & \texttt{POST /orders/commandes} & Commande \texttt{CREATED}, frais de port 9 CHF & Conforme : \texttt{statut=CREATED}, \texttt{frais\_port\_chf=9.0} \\
-2. Ajout au panier & \texttt{POST /orders/lignes} (article, quantité 1) & Stock réservé (+1) & Conforme : \texttt{quantite\_reservee} passe de 0 à 1 (disponible inchangé à 3) \\
-3. Initiation paiement & \texttt{POST /orders/paiements} (référence externe) & Paiement \texttt{PENDING}, montant = prix + port & Conforme : \texttt{statut=PENDING}, \texttt{montant\_chf=21.5} (12.5 + 9.0) \\
-4. Callback paiement réussi & \texttt{POST /orders/paiements/webhook/local} (\texttt{status=AUTHORIZED}) & Webhook accepté, commande finalisée & Conforme : \texttt{\{"ok": true\}} \\
-5. Statut final & \texttt{GET /orders/commandes/\{id\}} & Commande \texttt{PAID}, montant total = 21,50 CHF & Conforme : \texttt{statut=PAID}, \texttt{montant\_total\_chf=21.5} \\
+1. Création commande & \texttt{POST /orders/\allowbreak commandes} & Commande \texttt{CREATED}, frais de port 9 CHF & Conforme : \texttt{statut=CREATED}, \texttt{frais\_port\_chf=9.0} \\
+2. Ajout au panier & \texttt{POST /orders/\allowbreak lignes} (article, quantité 1) & Stock réservé (+1) & Conforme : \texttt{quantite\_reservee} passe de 0 à 1 (disponible inchangé à 3) \\
+3. Initiation paiement & \texttt{POST /orders/\allowbreak paiements} (référence externe) & Paiement \texttt{PENDING}, montant = prix + port & Conforme : \texttt{statut=PENDING}, \texttt{montant\_chf=21.5} (12.5 + 9.0) \\
+4. Callback paiement réussi & \texttt{POST /orders/\allowbreak paiements/\allowbreak webhook/\allowbreak local} (\texttt{status=AUTHORIZED}) & Webhook accepté, commande finalisée & Conforme : \texttt{\{"ok": true\}} \\
+5. Statut final & \texttt{GET /orders/\allowbreak commandes/\{id\}} & Commande \texttt{PAID}, montant total = 21,50 CHF & Conforme : \texttt{statut=PAID}, \texttt{montant\_total\_chf=21.5} \\
 6. Stock final & \texttt{GET /stock/} & Exemplaire vendu retiré du stock, réservation levée & Conforme : \texttt{quantite\_disponible=2}, \texttt{quantite\_reservee=0} (disponibilité 2) \\
 \bottomrule
 \caption{Jeu d'essai — parcours commande et paiement}
@@ -1020,8 +1039,8 @@ PostFinance est court-circuitée hors production.
 \textbf{Étape} & \textbf{Donnée en entrée} & \textbf{Attendu} & \textbf{Obtenu} \\
 \midrule
 \endhead
-1. ISBN reconnu & \texttt{GET /books/isbn-metadata/9782070413119} & 200, métadonnées OpenLibrary préremplies & Conforme : 200, titre \og Madame Bovary \fg{}, auteur, éditeur et couverture retournés \\
-2. ISBN inconnu & \texttt{GET /books/isbn-metadata/9780000000001} & 404, bascule en saisie manuelle & Conforme : 404 \texttt{\{"detail": "ISBN introuvable"\}} \\
+1. ISBN reconnu & \texttt{GET /books/\allowbreak isbn-metadata/\allowbreak 9782070413119} & 200, métadonnées OpenLibrary préremplies & Conforme : 200, titre \og Madame Bovary \fg{}, auteur, éditeur et couverture retournés \\
+2. ISBN inconnu & \texttt{GET /books/\allowbreak isbn-metadata/\allowbreak 9780000000001} & 404, bascule en saisie manuelle & Conforme : 404 \texttt{\{"detail": "ISBN introuvable"\}} \\
 \bottomrule
 \caption{Jeu d'essai — parcours scan ISBN}
 \end{longtable}
@@ -1039,9 +1058,9 @@ ISBN ou un contrôle de cohérence titre/couverture avant préremplissage).
 
 \section{Résultats obtenus}
 
-La suite de tests automatisés a été exécutée avec \textbf{pytest} et l'extension \texttt{pytest-cov} côté backend, et avec \textbf{Vitest} côté frontend. L'intégralité des tests passe : \textbf{70 tests backend sur 70} (unitaires, d'intégration via \texttt{TestClient}, et un test fonctionnel de bout en bout) et \textbf{31 tests frontend sur 31}, soit \textbf{101 tests au total, 100\,\% de réussite}.
+La suite de tests automatisés a été exécutée avec \textbf{pytest} et l'extension \texttt{pytest-cov} côté backend, et avec \textbf{Vitest} côté frontend. L'intégralité des tests passe : \textbf{112 tests backend sur 112} (unitaires, d'intégration via \texttt{TestClient}, et un test fonctionnel de bout en bout) et \textbf{39 tests frontend sur 39}, soit \textbf{151 tests au total, 100\,\% de réussite}.
 
-\noindent Sur le code de production backend (hors fichiers de tests), la \textbf{couverture atteint 78\,\%} (2\,113 instructions analysées, 457 non couvertes) ; en incluant les fichiers de tests eux-mêmes dans le calcul, \texttt{pytest-cov} rapporte 85\,\% sur l'ensemble du dépôt \texttt{backend/}. Le tableau ci-dessous synthétise la couverture des principaux modules :
+\noindent Sur le code de production backend (hors fichiers de tests), la \textbf{couverture atteint 82\,\%} (2\,206 instructions analysées, 394 non couvertes) ; en incluant les fichiers de tests eux-mêmes dans le calcul, \texttt{pytest-cov} rapporte 89\,\% sur l'ensemble du dépôt \texttt{backend/}. Le tableau ci-dessous synthétise la couverture des principaux modules :
 
 \vspace{5pt}
 
@@ -1052,35 +1071,35 @@ La suite de tests automatisés a été exécutée avec \textbf{pytest} et l'exte
 \toprule
 \textbf{Module} & \textbf{Instructions} & \textbf{Couverture} \\
 \midrule
-\texttt{infrastructure/models.py}         & 129 & 100\,\% \\
+\texttt{infrastructure/models.py}         & 126 & 100\,\% \\
 \texttt{infrastructure/db.py}             & 13  & 100\,\% \\
-\texttt{presentation/auth\_schemas.py}    & 45  & 100\,\% \\
-\texttt{services/jwt\_service.py}         & 14  & 100\,\% \\
+\texttt{presentation/catalog\_router.py}  & 9   & 100\,\% \\
+\texttt{services/jwt\_service.py}         & 16  & 100\,\% \\
 \texttt{services/rate\_limit.py}          & 18  & 100\,\% \\
-\texttt{presentation/schemas.py}          & 191 & 97\,\% \\
-\texttt{presentation/deps.py}             & 41  & 93\,\% \\
-\texttt{presentation/auth\_router.py}     & 73  & 90\,\% \\
-\texttt{presentation/catalog\_router.py}  & 58  & 90\,\% \\
-\texttt{presentation/order\_router.py}    & 163 & 80\,\% \\
-\texttt{services/postfinance\_service.py} & 151 & 82\,\% \\
-\texttt{services/order\_service.py}       & 164 & 77\,\% \\
-\texttt{presentation/payment\_router.py}  & 194 & 73\,\% \\
-\texttt{presentation/user\_router.py}     & 74  & 47\,\% \\
-\texttt{presentation/order\_admin\_router.py} & 103 & 38\,\% \\
-\texttt{services/image\_service.py}       & 103 & 41\,\% \\
+\texttt{presentation/schemas.py}          & 154 & 96\,\% \\
+\texttt{presentation/auth\_schemas.py}    & 75  & 95\,\% \\
+\texttt{presentation/deps.py}             & 44  & 93\,\% \\
+\texttt{presentation/auth\_router.py}     & 72  & 90\,\% \\
+\texttt{presentation/order\_router.py}    & 173 & 80\,\% \\
+\texttt{presentation/payment\_router.py}  & 207 & 86\,\% \\
+\texttt{presentation/user\_router.py}     & 71  & 86\,\% \\
+\texttt{services/order\_service.py}       & 195 & 86\,\% \\
+\texttt{services/postfinance\_service.py} & 152 & 83\,\% \\
+\texttt{services/image\_service.py}       & 120 & 56\,\% \\
+\texttt{presentation/order\_admin\_router.py} & 129 & 53\,\% \\
 \midrule
-\textbf{TOTAL (code de production)} & \textbf{2\,113} & \textbf{78\,\%} \\
+\textbf{TOTAL (code de production)} & \textbf{2\,206} & \textbf{82\,\%} \\
 \bottomrule
 \end{tabular}
 \caption{Couverture de code par module (\texttt{pytest --cov})}
 \label{tab:couverture}
 \end{table}
 
-\noindent Les modèles de données, les schémas de validation et les modules d'authentification et de catalogue sont très bien couverts (90\,\% à 100\,\%). Après la refactorisation SOLID/KISS qui a scindé l'ancien \texttt{order\_router} monolithique en trois modules (\texttt{order\_router}, \texttt{payment\_router}, \texttt{order\_admin\_router}), le routeur de commandes proprement dit atteint désormais 80\,\% de couverture, et le service PostFinance (\texttt{postfinance\_service}, 82\,\%) a gagné plusieurs points grâce aux nouveaux tests du contrôle de cohérence du montant payé (voir \og Vérification du montant PostFinance \fg{}, section~\ref{sec:module-commande-paiement}). Les modules les moins couverts sont désormais le service de traitement d'images (\texttt{image\_service}, 41\,\%), le routeur d'administration des commandes (\texttt{order\_admin\_router}, 38\,\%, dont les chemins de succès sont couverts mais pas encore tous les cas d'erreur) et le routeur utilisateur (\texttt{user\_router}, 47\,\%) :
-\vspace{5px}
+\noindent Les modèles de données, les schémas de validation et les modules d'authentification et de catalogue sont très bien couverts (90\,\% à 100\,\%). Après la refactorisation SOLID/KISS qui a scindé l'ancien \texttt{order\_router} monolithique en trois modules (\texttt{order\_router}, \texttt{payment\_router}, \texttt{order\_admin\_router}), le routeur de commandes proprement dit atteint désormais 80\,\% de couverture, le service PostFinance (\texttt{postfinance\_service}, 83\,\%) et le routeur de paiement (\texttt{payment\_router}, 86\,\%) ont gagné plusieurs points grâce aux nouveaux tests du contrôle de cohérence du montant payé (voir \og Vérification du montant PostFinance \fg{}, section~\ref{sec:module-commande-paiement}), et le routeur utilisateur (\texttt{user\_router}, 86\,\%) a bénéficié des tests de sécurité ajoutés lors de la revue (\texttt{test\_security\_regressions.py}, \texttt{test\_user\_deletion.py}). Les modules les moins couverts sont désormais le routeur d'administration des commandes (\texttt{order\_admin\_router}, 53\,\%, dont les chemins de succès sont couverts mais pas encore tous les cas d'erreur) et le service de traitement d'images (\texttt{image\_service}, 56\,\%) :
+\vspace{5pt}
 ce sont les parties identifiées comme prioritaires pour la consolidation (voir la section \og Limites et bugs restants \fg{}). Aucun test de charge ni de performance n'a été réalisé dans le cadre de ce MVP.
 
-\includegraphics[width=\textwidth]{PYTEST_RESULT_SCREENSHOT.png}
+\noindent\includegraphics[width=\textwidth,height=0.82\textheight,keepaspectratio]{PYTEST_RESULT_SCREENSHOT.png}
 
 \section{Analyse des performances}
 
@@ -1091,10 +1110,10 @@ Aucune campagne formelle de tests de performance ou de charge (\textit{benchmark
 À l'issue de cette première itération, plusieurs limites et points de consolidation ont été identifiés :
 
 \begin{itemize}
-    \item \textbf{Fiabilisation du paiement :} plusieurs correctifs ont déjà été apportés (bug de fuseau horaire provoquant de fausses expirations de réservation, session de paiement obsolète après redirection, en-tête CSP bloquant les scripts PostFinance/Google) mais le module reste celui dont la couverture de tests est la plus faible parmi les routeurs (\texttt{payment\_router} à 74\,\%) et mérite une consolidation continue.
+    \item \textbf{Fiabilisation du paiement :} plusieurs correctifs ont déjà été apportés (bug de fuseau horaire provoquant de fausses expirations de réservation, session de paiement obsolète après redirection, en-tête CSP bloquant les scripts PostFinance/Google) ; le tunnel PostFinance reste le module le plus critique à surveiller, même si sa couverture de tests (\texttt{payment\_router} à 86\,\%) s'est nettement améliorée depuis les nouveaux tests du contrôle de montant.
     \item \textbf{Interface mobile :} certains écrans de l'interface mobile restent à affiner pour une expérience pleinement responsive.
-    \item \textbf{Suivi des commandes côté administrateur :} la fonctionnalité de base (avancement, annulation, remboursement, surcharge de statut) est désormais implémentée et testée ; il reste à enrichir l'ergonomie (filtres avancés, export) et le traitement d'erreurs plus fin (\texttt{order\_admin\_router} à 38\,\% de couverture).
-    \item \textbf{Couverture de tests :} le service de traitement d'images (41\,\%) et le routeur utilisateur (47\,\%) restent les modules à renforcer en priorité.
+    \item \textbf{Suivi des commandes côté administrateur :} la fonctionnalité de base (avancement, annulation, remboursement, surcharge de statut) est désormais implémentée et testée ; il reste à enrichir l'ergonomie (filtres avancés, export) et le traitement d'erreurs plus fin (\texttt{order\_admin\_router} à 53\,\% de couverture, le module le moins couvert du dépôt).
+    \item \textbf{Couverture de tests :} le service de traitement d'images (\texttt{image\_service}, 56\,\%) reste le module à renforcer en priorité après \texttt{order\_admin\_router}.
     \item \textbf{Sauvegarde et restauration de la base de données :} seule la \textbf{structure} du schéma est reproductible de façon fiable, via les scripts SQL versionnés du dossier \texttt{backend/migrations/} appliqués automatiquement au déploiement (annexe~\ref{lst:ddl}). Il n'existe en revanche aucune procédure de sauvegarde/restauration automatisée des \textbf{données} de production (ex. \texttt{mysqldump} planifié) : c'est une limite assumée de ce MVP, identifiée comme axe prioritaire avant une montée en charge réelle du service.
 \end{itemize}
 
@@ -1161,7 +1180,7 @@ En complément des tests automatisés, deux outils d'analyse statique ont été 
     \texttt{raise ... from}, variable ambiguë \texttt{l} renommée, ligne longue reformatée), le
     dépôt est désormais \textbf{intégralement conforme} (\texttt{ruff check .} : \og All checks
     passed \fg{}).
-    \item \textbf{ESLint} (frontend Next.js) : configuré dans \texttt{frontend/eslint.config.mjs}
+    \item \textbf{ESLint} (frontend Next.js) : configuré dans \texttt{frontend/\allowbreak eslint.config.mjs}
     avec le \textit{preset} \texttt{next/core-web-vitals} et \texttt{next/typescript}. La
     configuration bridgeait ces \textit{presets} via \texttt{FlatCompat.extends(...)} (le motif
     généré par les anciennes versions de \texttt{create-next-app}) ; cette passerelle, prévue pour
@@ -1169,15 +1188,15 @@ En complément des tests automatisés, deux outils d'analyse statique ont été 
     utilisée par \texttt{eslint-config-next} (des tableaux \textit{flat config} natifs dont les
     objets de \textit{plugin} s'auto-référencent), et faisait planter \texttt{eslint .} avant même
     l'analyse du premier fichier (\og Converting circular structure to JSON \fg{}) — donc en CI
-    comme en local. Corrigé en important directement \texttt{eslint-config-next/core-web-vitals}
-    et \texttt{eslint-config-next/typescript} (déjà des tableaux \textit{flat config}), sans passer
+    comme en local. Corrigé en important directement \texttt{eslint-config-next/\allowbreak core-web-vitals}
+    et \texttt{eslint-config-next/\allowbreak typescript} (déjà des tableaux \textit{flat config}), sans passer
     par cette passerelle. Une fois le blocage levé, l'analyse a pu tourner pour de vrai et a
     remonté 18 erreurs jusque-là invisibles : deux bogues réels d'ordre de déclaration (variable
     utilisée avant sa déclaration dans le même composant), corrigés par réordonnancement sans
     changement de comportement ; deux tableaux de dépendances de \texttt{useCallback} incomplets,
     corrigés en y ajoutant les \textit{setters} \texttt{useState} manquants (stables par
     construction, donc sans effet sur le comportement) ; et douze occurrences de la règle
-    \texttt{react-hooks/set-state-in-effect}, qui signale comme une erreur le motif \og charger les
+    \texttt{react-hooks/\allowbreak set-state-in-effect}, qui signale comme une erreur le motif \og charger les
     données au montage \fg{} utilisé de façon idiomatique dans tout le projet — y compris dans le
     contrôle d'accès du back-office (\texttt{admin/layout.tsx}), déjà vérifié fonctionnel de bout en
     bout. Réécrire ces douze composants pour satisfaire cette règle récente aurait constitué une
@@ -1290,11 +1309,11 @@ Ce projet a permis de concevoir et de déployer une application e-commerce full-
 Malgré l'atteinte des objectifs du MVP, plusieurs limites subsistent à la fin de cette première itération :
 
 \begin{itemize}
-    \item \textbf{Paiement à consolider :} plusieurs bugs de production ont été corrigés en cours de route (fuseau horaire, session obsolète, CSP) ; le tunnel PostFinance reste le module le plus critique à surveiller, avec la couverture de tests la plus faible parmi les routeurs (\texttt{payment\_router}, 74\,\%).
-    \item \textbf{Suivi des commandes :} la gestion des commandes côté administrateur (avancement, annulation, remboursement, surcharge de statut) est implémentée et testée ; son ergonomie et sa couverture de tests (40\,\%) restent perfectibles.
+    \item \textbf{Paiement à consolider :} plusieurs bugs de production ont été corrigés en cours de route (fuseau horaire, session obsolète, CSP) ; le tunnel PostFinance reste le module le plus critique à surveiller, malgré une couverture de tests désormais confortable (\texttt{payment\_router}, 86\,\%).
+    \item \textbf{Suivi des commandes :} la gestion des commandes côté administrateur (avancement, annulation, remboursement, surcharge de statut) est implémentée et testée ; son ergonomie et sa couverture de tests (\texttt{order\_admin\_router}, 53\,\%) restent perfectibles.
     \item \textbf{Interface mobile :} certains écrans restent à affiner pour une expérience pleinement responsive.
     \item \textbf{Fonctionnalités hors MVP :} la messagerie acheteur-vendeur, les favoris, les avis et l'estimation automatique de prix n'ont pas été implémentés (renvoyés aux phases 2 et 3).
-    \item \textbf{Couverture de tests :} à renforcer en priorité sur le service de traitement d'images (41\,\%) et le routeur utilisateur (47\,\%).
+    \item \textbf{Couverture de tests :} à renforcer en priorité sur le service de traitement d'images (\texttt{image\_service}, 56\,\%).
 \end{itemize}
 
 \section*{Perspectives d'évolution}
@@ -1721,8 +1740,9 @@ def get_isbn_metadata(isbn: str):
 
 
 
-\includegraphics[width=\textwidth]{Fast_API_SWAGGER_OVERVIEW.png}
-\includegraphics[width=\textwidth]{SWAGGER_LOGIN_DETAIL.png}
+\noindent\includegraphics[width=\textwidth,height=0.82\textheight,keepaspectratio]{Fast_API_SWAGGER_OVERVIEW.png}
+
+\noindent\includegraphics[width=\textwidth,height=0.82\textheight,keepaspectratio]{SWAGGER_LOGIN_DETAIL.png}
 
 \section*{Annexe F — Diagrammes UML détaillés}
 

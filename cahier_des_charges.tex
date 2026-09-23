@@ -118,7 +118,7 @@ Acheteur & \texttt{user} & Trouver et acheter un livre & Rechercher, filtrer, co
 \caption{Acteurs du système}
 \end{longtable}
 
-\noindent\textbf{Gouvernance :} la commanditaire valide les livrables de sprint ; Alexandre REY
+\noindent\textbf{Gouvernance :} la commanditaire valide les livrables au fil des démonstrations ; Alexandre REY
 conçoit et développe seul la solution ; l'encadrant pédagogique valide la conformité au
 référentiel CDA.
 
@@ -173,8 +173,10 @@ déploiement continu par pipeline GitHub Actions (SSH, service systemd, sans con
 tests automatisés avant déploiement.
 
 \noindent\textbf{Contraintes organisationnelles :} développement solo en alternance
-(environ 18h/sprint), projet de 3 mois en 6 sprints de 2 semaines, méthode Agile Scrum
-simplifiée, aucun budget dédié.
+(soirées de 17h--20h, environ 3 par semaine), projet mené sur environ 3 mois en flux continu
+de type \textbf{Kanban} plutôt qu'en sprints à durée fixe — un développeur solo en apprentissage
+ne travaillant pas à intervalle régulier, ce découpage colle davantage à la réalité qu'un Scrum
+classique —, aucun budget dédié.
 
 \section{Livrables, planning et risques}
 
@@ -182,9 +184,12 @@ simplifiée, aucun budget dédié.
 présent cahier des charges, liste des compétences, support de soutenance, suite de tests
 automatisés (CI), documentation API (Swagger/OpenAPI).
 
-\noindent\textbf{Planning :} 6 sprints de 2 semaines — environnement \& modélisation (S1),
-authentification (S2), ajout de livre / scan ISBN (S3), catalogue \& fiche livre (S4),
-paiement (S5), back-office, tests et déploiement (S6).
+\noindent\textbf{Planning :} flux continu structuré en cinq grandes phases (voir le détail et
+les livrables de chacune dans le mémoire de projet) plutôt qu'en sprints calendaires figés :
+fondations (environnement, CI/CD, modélisation BDD) ; cœur fonctionnel (authentification, ajout
+de livre / scan ISBN, tunnel de paiement, panier et stock) ; fiabilisation et sécurité (durcissement,
+mise en place de la CI) ; consolidation admin (suivi des commandes) ; documentation et
+certification.
 
 \noindent\textbf{Principaux risques :} livres sans ISBN (mitigation : saisie manuelle) ;
 vente simultanée du même exemplaire (mitigation : réservation temporaire de stock) ; dérive
@@ -193,7 +198,7 @@ de métadonnées (mitigation : saisie manuelle en secours).
 
 \section{Recette}
 
-La recette est réalisée par démonstration à la commanditaire, en fin de sprint puis en fin de
+La recette est réalisée par démonstration à la commanditaire, à chaque étape marquante puis en fin de
 projet, sur la base des critères d'acceptation de la section 4.
 
 \begin{longtable}{@{}L{1.3cm}L{8.5cm}L{3.9cm}@{}}
