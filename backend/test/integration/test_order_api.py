@@ -537,6 +537,93 @@ def test_postfinance_iframe_session_and_confirm_local_mode(client: TestClient, r
         assert row_replay["quantite_disponible"] == 1
 
 
+def test_confirm_postfinance_amount_match_finalizes(client: TestClient, register_and_login, uniq: str):
+    """The confirm path must finalize when the amount PostFinance's own
+    confirm response reports matches the commande total -- cross-checking
+    against that response directly rather than a second, possibly-stale GET
+    (see the "spurious amount-mismatch 409" fix)."""
+    headers = register_and_login(f"orders_confirmok_{uniq}@example.com")
+    admin_headers = register_and_login(f"orders_confirmok_admin_{uniq}@example.com", role="admin")
+    id_livre = _make_book(client, admin_headers, uniq, prix_chf=15.0)
+    _make_stock(client, admin_headers, uniq, id_livre, qty=4)
+
+    cmd = client.post("/orders/commandes", json={"numero_commande": f"CMD_CONFIRMOK_{uniq}"}, headers=headers).json()
+    client.post(
+        "/orders/lignes",
+        json={"id_commande": cmd["id_commande"], "id_livre": id_livre, "quantite": 1},
+        headers=headers,
+    )
+    r = client.post(
+        "/orders/paiements",
+        json={"id_commande": cmd["id_commande"], "reference_externe": f"REF_CONFIRMOK_{uniq}"},
+        headers=headers,
+    )
+    pay_id = r.json()["id_paiement"]
+
+    # 15 CHF book + 9 CHF default POST shipping = 24 CHF.
+    fake_confirm = {
+        "id": f"REF_CONFIRMOK_{uniq}", "status": "FULFILL", "state": "FULFILL", "version": 1, "amount": 24.0,
+    }
+    with (
+        patch("presentation.payment_router.get_postfinance_transaction", return_value={"version": 1}),
+        patch("presentation.payment_router.confirm_postfinance_transaction", return_value=fake_confirm),
+    ):
+        r = client.post(f"/orders/paiements/{pay_id}/confirm-postfinance", headers=headers)
+        assert r.status_code == 200, r.text
+
+    pay_final = client.get(f"/orders/paiements/{pay_id}", headers=headers).json()
+    assert pay_final["statut"] == "FULFILL"
+    stock_after = client.get("/stock/", headers=admin_headers).json()
+    row = next(s for s in stock_after if s["id_livre"] == id_livre)
+    assert row["quantite_disponible"] == 3
+    assert row["quantite_reservee"] == 0
+
+
+def test_confirm_postfinance_amount_mismatch_does_not_wedge_order_as_finalized(
+    client: TestClient, register_and_login, uniq: str
+):
+    """Regression: confirm-postfinance must reject an amount the confirm
+    response itself reports as not matching the commande total (not just the
+    poll/webhook paths already covered above), and must not leave the order
+    finalized or its stock reservation released."""
+    headers = register_and_login(f"orders_confirmmism_{uniq}@example.com")
+    admin_headers = register_and_login(f"orders_confirmmism_admin_{uniq}@example.com", role="admin")
+    id_livre = _make_book(client, admin_headers, uniq, prix_chf=15.0)
+    _make_stock(client, admin_headers, uniq, id_livre, qty=4)
+
+    cmd = client.post(
+        "/orders/commandes", json={"numero_commande": f"CMD_CONFIRMMISM_{uniq}"}, headers=headers
+    ).json()
+    client.post(
+        "/orders/lignes",
+        json={"id_commande": cmd["id_commande"], "id_livre": id_livre, "quantite": 1},
+        headers=headers,
+    )
+    r = client.post(
+        "/orders/paiements",
+        json={"id_commande": cmd["id_commande"], "reference_externe": f"REF_CONFIRMMISM_{uniq}"},
+        headers=headers,
+    )
+    pay_id = r.json()["id_paiement"]
+
+    fake_confirm = {
+        "id": f"REF_CONFIRMMISM_{uniq}", "status": "FULFILL", "state": "FULFILL", "version": 1, "amount": 999.0,
+    }
+    with (
+        patch("presentation.payment_router.get_postfinance_transaction", return_value={"version": 1}),
+        patch("presentation.payment_router.confirm_postfinance_transaction", return_value=fake_confirm),
+    ):
+        r = client.post(f"/orders/paiements/{pay_id}/confirm-postfinance", headers=headers)
+        assert r.status_code == 409, r.text
+
+    pay_after = client.get(f"/orders/paiements/{pay_id}", headers=headers).json()
+    assert pay_after["statut"] != "FULFILL"
+    stock_after = client.get("/stock/", headers=admin_headers).json()
+    row = next(s for s in stock_after if s["id_livre"] == id_livre)
+    assert row["quantite_disponible"] == 4
+    assert row["quantite_reservee"] == 1
+
+
 def test_cancel_commande_releases_reservation_immediately(client: TestClient, register_and_login, uniq: str):
     """Customer-facing cancel: previously the only way to release a cart
     reservation was the 20-minute cart_expires_at expiry, during which the

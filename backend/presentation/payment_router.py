@@ -251,8 +251,24 @@ def confirm_paiement_postfinance(
         # rather than serializing as an empty object.
         db.refresh(obj)
     elif pf_resp.get("state") or pf_resp.get("status"):
-        obj.statut = str(pf_resp.get("state") or pf_resp.get("status"))  # type: ignore[assignment]
+        # This used to only persist `obj.statut` and never call
+        # _finalize_paid_order, unlike the local/poll/webhook branches. A real
+        # PostFinance confirm reporting a success state (e.g. AUTHORIZED) left
+        # the payment looking done without ever decrementing stock or clearing
+        # the cart reservation -- and since poll_paiement_postfinance returns
+        # early once the status already reads as success, nothing downstream
+        # ever finalized it either. The order was stuck forever: stock stayed
+        # reserved, the book could never be withdrawn, and any retry hit the
+        # amount-check against an already non-pending PostFinance transaction.
+        new_status = str(pf_resp.get("state") or pf_resp.get("status"))
+        is_success = is_postfinance_success_status(new_status)
+        obj.statut = new_status  # type: ignore[assignment]
+        if is_success:
+            obj.date_paiement = datetime.now(timezone.utc)  # type: ignore[assignment]
         db.commit()
+        db.refresh(obj)
+        if is_success and not already_finalized:
+            _finalize_paid_order(db, int(obj.id_commande), source="confirm")  # type: ignore[arg-type]
         db.refresh(obj)
 
     if pf_resp.get("error"):
