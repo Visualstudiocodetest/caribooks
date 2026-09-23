@@ -211,22 +211,16 @@ def confirm_paiement_postfinance(
     current_tx = get_postfinance_transaction(str(transaction_id))
     version = int(current_tx.get("version") or 1)
 
-    # Confirm FIRST, then cross-check the amount.
-    #
-    # The transaction was created when the payment session opened, from the
-    # commande as it stood then; `line_items` above is rebuilt from the commande
-    # as it stands NOW, and this confirm call is what pushes those current line
-    # items to PostFinance. Checking `current_tx["amount"]` *before* confirming
-    # compared the live commande total against the pre-confirm (stale) amount,
-    # so any legitimate change to the cart between opening the payment page and
-    # paying — or a total that had been left inconsistent by a concurrent
-    # add-to-cart (see order_service.lock_commande) — produced a spurious
-    # "montant ne correspond pas" 409 and blocked a perfectly valid payment.
-    #
-    # Cross-check against the amount the confirm call itself just returned,
-    # rather than issuing a second GET: a fresh read isn't guaranteed to be
-    # read-after-write consistent with the confirm that just landed, so it
-    # could report a stale amount and produce the same spurious 409.
+    # No amount cross-check here. `confirm` runs *before* the iframe's own
+    # submit() actually authorizes the transaction with PostFinance, and at
+    # this stage PostFinance hasn't computed a real amount for it yet: both
+    # completed_amount and authorization_amount come back as a bare 0 (not
+    # None), which used to read as a genuine mismatch against any non-zero
+    # commande total and produce a "montant ne correspond pas" 409 on every
+    # single payment. The amount is only meaningful once authorization has
+    # actually happened, which is exactly what poll_paiement_postfinance /
+    # postfinance_webhook already verify (see _assert_amount_matches_commande
+    # there) before finalizing.
     pf_resp = confirm_postfinance_transaction(
         transaction_id=str(transaction_id),
         version=version,
@@ -235,10 +229,6 @@ def confirm_paiement_postfinance(
         billing_address=billing_address,
         shipping_address=billing_address,
     )
-    if not pf_resp.get("error"):
-        _assert_amount_matches_commande(
-            db, int(commande.id_commande), pf_resp.get("amount"), source="confirm"
-        )
 
     already_finalized = is_postfinance_success_status(str(getattr(obj, "statut", "") or ""))
     if pf_resp.get("local"):
