@@ -9,6 +9,8 @@ erDiagram
     LIGNE_COMMANDE }o--|| LIVRE : "porte sur"
     UTILISATEUR ||--o{ SCAN_ISBN : "scanne"
     SCAN_ISBN }o--|| LIVRE : "concerne"
+    LIGNE_COMMANDE ||--o{ STOCK_MOUVEMENT : "a déduit"
+    STOCK ||--o{ STOCK_MOUVEMENT : "a été mouvementé"
 
     ETAT_USURE { string libelle }
     SOURCE_STOCK { string libelle string type_source }
@@ -19,3 +21,4 @@ erDiagram
     LIGNE_COMMANDE { int quantite decimal prix_unitaire_chf }
     PAIEMENT { string reference_externe decimal montant_chf string statut }
     SCAN_ISBN { string isbn_lu boolean valide }
+    STOCK_MOUVEMENT { int quantite datetime date_mouvement }

@@ -64,6 +64,11 @@ const SUCCESS_STATUSES = new Set(['CAPTURED', 'PAID', 'COMPLETED', 'AUTHORIZED',
 // Terminal PostFinance failure states — the card was refused, or the transaction
 // was voided/declined. These are definitive (no point polling further).
 const FAILURE_STATUSES = new Set(['FAILED', 'DECLINE', 'DECLINED', 'VOIDED', 'VOID'])
+// Commande-level statuses (backend order_service.PAID_STATUSES) that mean this
+// order has already been paid, however long ago. Re-entering /payment (reload,
+// bookmark, back button) after success must route straight to the success
+// screen instead of offering to pay again — see H-1.
+const ALREADY_PAID_COMMANDE_STATUSES = new Set(['PAID', 'CAPTURED', 'COMPLETED', 'SENT', 'AT_RECEPTION', 'FINISHED'])
 
 const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms))
 
@@ -355,7 +360,12 @@ export function PaymentClient() {
     setPaying(false)
     setError(null)
     setPhase('success')
-  }, [clear])
+    // The book(s) just sold must stop showing as available immediately, not
+    // after the availability query's 30s staleTime lapses — releaseAfterFailure
+    // already does this on the failure path; the success path was missing it
+    // (see M-5).
+    refreshAvailability()
+  }, [clear, refreshAvailability])
 
   const handlerRef = useRef<PostFinanceIframeHandler | null>(null)
   const handlerMethodRef = useRef<number | null>(null)
@@ -466,6 +476,15 @@ export function PaymentClient() {
         const cmd = await getCommande(commandeId)
         if (!mounted) return
         setCommande(cmd)
+
+        // Re-entering this page (reload / bookmark / back button) after the
+        // order was already paid must never fall through to creating a new
+        // PostFinance session — check the commande's own server-side status
+        // before looking at the URL's status/paiementId params (see H-1).
+        if (ALREADY_PAID_COMMANDE_STATUSES.has(String(cmd.statut || '').toUpperCase())) {
+          markPaymentSucceeded()
+          return
+        }
 
         const statusParam = searchParams.get('status')
         const paiementIdParam = Number(searchParams.get('paiementId'))

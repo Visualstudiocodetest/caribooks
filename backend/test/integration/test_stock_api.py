@@ -45,8 +45,8 @@ def test_stock_and_sources_crud(client: TestClient, register_and_login, uniq: st
     )
     assert r.status_code == 201, r.text
     source = r.json()
-    assert client.get("/stock/sources").status_code == 200
-    assert client.get(f"/stock/sources/{source['id_source_stock']}").status_code == 200
+    assert client.get("/stock/sources", headers=headers).status_code == 200
+    assert client.get(f"/stock/sources/{source['id_source_stock']}", headers=headers).status_code == 200
 
     r = client.put(f"/stock/sources/{source['id_source_stock']}", json={"description": "u"}, headers=headers)
     assert r.status_code == 200
@@ -64,8 +64,8 @@ def test_stock_and_sources_crud(client: TestClient, register_and_login, uniq: st
     )
     assert r.status_code == 201, r.text
     st = r.json()
-    assert client.get("/stock/").status_code == 200
-    assert client.get(f"/stock/{st['id_stock']}").status_code == 200
+    assert client.get("/stock/", headers=headers).status_code == 200
+    assert client.get(f"/stock/{st['id_stock']}", headers=headers).status_code == 200
 
     r = client.put(f"/stock/{st['id_stock']}", json={"quantite_disponible": 7}, headers=headers)
     assert r.status_code == 200
@@ -103,3 +103,43 @@ def test_stock_write_requires_admin(client: TestClient, register_and_login, uniq
     ).status_code == 403
     assert client.post("/stock/1/increment", json={"qty": 1}, headers=user_headers).status_code == 403
     assert client.post("/stock/1/decrement", json={"qty": 1}, headers=user_headers).status_code == 403
+
+
+def test_stock_reads_require_admin(client: TestClient, register_and_login, uniq: str):
+    """Regression for M-1: /stock/* reads must not be reachable anonymously or
+    by a non-admin, only /stock/availability (the public aggregate) stays open."""
+    user_headers = register_and_login(f"stock_reader_{uniq}@example.com", role="user")
+    for headers in (None, user_headers):
+        assert client.get("/stock/sources", headers=headers).status_code in (401, 403)
+        assert client.get("/stock/sources/1", headers=headers).status_code in (401, 403)
+        assert client.get("/stock/", headers=headers).status_code in (401, 403)
+        assert client.get("/stock/1", headers=headers).status_code in (401, 403)
+    assert client.get("/stock/availability").status_code == 200
+
+
+def test_decrement_stock_cannot_undercut_open_reservations(client: TestClient, register_and_login, uniq: str):
+    """Regression for M-4: decrementing available stock must not drop it below
+    what's already reserved by open carts (quantite_disponible - quantite_reservee)."""
+    headers = register_and_login(f"stock_decr_{uniq}@example.com", role="admin")
+    id_livre = _make_book(client, headers, uniq)
+    r = client.post(
+        "/stock/sources",
+        json={"libelle": f"DecrSrc_{uniq}", "type_source": "WAREHOUSE", "description": "d"},
+        headers=headers,
+    )
+    source_id = r.json()["id_source_stock"]
+    r = client.post(
+        "/stock/",
+        json={"id_livre": id_livre, "id_source_stock": source_id, "quantite_disponible": 5, "quantite_reservee": 3},
+        headers=headers,
+    )
+    assert r.status_code == 201, r.text
+    id_stock = r.json()["id_stock"]
+
+    # 5 disponible, 3 reservee -> only 2 units are free to remove.
+    r = client.post(f"/stock/{id_stock}/decrement", json={"qty": 4}, headers=headers)
+    assert r.status_code == 400, r.text
+
+    r = client.post(f"/stock/{id_stock}/decrement", json={"qty": 2}, headers=headers)
+    assert r.status_code == 200, r.text
+    assert r.json()["quantite_disponible"] == 3

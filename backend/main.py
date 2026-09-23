@@ -27,7 +27,13 @@ tags_metadata = [
     {"name": "users", "description": "Profil de l'utilisateur connecté (RGPD/nLPD : export et effacement) et administration des comptes."},
     {"name": "books", "description": "Catalogue des livres et récupération des métadonnées ISBN via OpenLibrary."},
     {"name": "catalog", "description": "Liste de référence : états d'usure."},
-    {"name": "stock", "description": "Sources de stock et quantités disponibles (réservé aux administrateurs)."},
+    {
+        "name": "stock",
+        "description": (
+            "Sources de stock et quantités disponibles (réservé aux administrateurs, "
+            "à l'exception de /stock/availability qui est l'agrégat public utilisé par la vitrine)."
+        ),
+    },
     {"name": "scans", "description": "Historique des scans ISBN réalisés en recyclerie."},
     {"name": "orders", "description": "Panier et commandes de l'utilisateur connecté."},
     {"name": "orders-payments", "description": "Paiements PostFinance Checkout et webhooks associés."},

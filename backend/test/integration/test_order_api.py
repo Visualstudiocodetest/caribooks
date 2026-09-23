@@ -365,6 +365,116 @@ def test_postfinance_webhook_finalizes_and_is_idempotent(client: TestClient, reg
         assert row_replay["quantite_disponible"] == 3  # unchanged — proves idempotency
 
 
+def test_postfinance_webhook_amount_mismatch_does_not_wedge_order_as_finalized(
+    client: TestClient, register_and_login, uniq: str
+):
+    """Regression for C-1: the amount cross-check must run BEFORE the success
+    status is persisted. Persisting first would make every later webhook
+    redelivery see `already_finalized == True` and silently skip the check and
+    the finalize forever — permanently wedging the order while PostFinance's
+    own records show the payment captured."""
+    headers = register_and_login(f"orders_pfmismatch_{uniq}@example.com")
+    admin_headers = register_and_login(f"orders_pfmismatch_admin_{uniq}@example.com", role="admin")
+    id_livre = _make_book(client, admin_headers, uniq, prix_chf=15.0)
+    _make_stock(client, admin_headers, uniq, id_livre, qty=4)
+
+    r = client.post("/orders/commandes", json={"numero_commande": f"CMD_PFMISM_{uniq}"}, headers=headers)
+    cmd = r.json()
+    client.post(
+        "/orders/lignes",
+        json={"id_commande": cmd["id_commande"], "id_livre": id_livre, "quantite": 1},
+        headers=headers,
+    )
+    r = client.post(
+        "/orders/paiements",
+        json={"id_commande": cmd["id_commande"], "reference_externe": f"REF_PFMISM_{uniq}"},
+        headers=headers,
+    )
+    pay_id = r.json()["id_paiement"]
+
+    webhook_body = {"id": f"REF_PFMISM_{uniq}", "merchantReference": f"REF_PFMISM_{uniq}", "state": "FULFILL"}
+    with (
+        patch("presentation.payment_router.verify_postfinance_webhook_signature", return_value=True),
+        patch("presentation.payment_router.get_postfinance_transaction", return_value={"amount": 999.0}),
+    ):
+        r = client.post(
+            "/orders/paiements/webhook/postfinance",
+            json=webhook_body,
+            headers={"x-signature": "sig"},
+        )
+        assert r.status_code == 409, r.text
+
+    # Must NOT have been committed as success — otherwise the idempotency
+    # guard would treat this as already finalized on the next, honest replay.
+    pay_after = client.get(f"/orders/paiements/{pay_id}", headers=headers).json()
+    assert pay_after["statut"] != "FULFILL"
+    stock_after = client.get("/stock/", headers=admin_headers).json()
+    row = next(s for s in stock_after if s["id_livre"] == id_livre)
+    assert row["quantite_disponible"] == 4
+    assert row["quantite_reservee"] == 1
+
+    # A later, honest webhook (matching amount, incl. the 9 CHF POST shipping
+    # fee added on top of the 15 CHF book) must still finalize normally.
+    with (
+        patch("presentation.payment_router.verify_postfinance_webhook_signature", return_value=True),
+        patch("presentation.payment_router.get_postfinance_transaction", return_value={"amount": 24.0}),
+    ):
+        r = client.post(
+            "/orders/paiements/webhook/postfinance",
+            json=webhook_body,
+            headers={"x-signature": "sig"},
+        )
+        assert r.status_code == 200, r.text
+
+    pay_final = client.get(f"/orders/paiements/{pay_id}", headers=headers).json()
+    assert pay_final["statut"] == "FULFILL"
+
+
+def test_poll_postfinance_amount_mismatch_does_not_wedge_order_as_finalized(
+    client: TestClient, register_and_login, uniq: str
+):
+    """Same C-1 regression as the webhook test above, for the poll-postfinance path."""
+    headers = register_and_login(f"orders_pollmism_{uniq}@example.com")
+    admin_headers = register_and_login(f"orders_pollmism_admin_{uniq}@example.com", role="admin")
+    id_livre = _make_book(client, admin_headers, uniq, prix_chf=20.0)
+    _make_stock(client, admin_headers, uniq, id_livre, qty=5)
+
+    r = client.post("/orders/commandes", json={"numero_commande": f"CMD_POLLMISM_{uniq}"}, headers=headers)
+    cmd = r.json()
+    client.post(
+        "/orders/lignes",
+        json={"id_commande": cmd["id_commande"], "id_livre": id_livre, "quantite": 1},
+        headers=headers,
+    )
+    r = client.post(
+        "/orders/paiements",
+        json={"id_commande": cmd["id_commande"], "reference_externe": f"REF_POLLMISM_{uniq}"},
+        headers=headers,
+    )
+    pay_id = r.json()["id_paiement"]
+
+    mismatched = {"state": "FULFILL", "status": "FULFILL", "amount": 999.0}
+    with patch("presentation.payment_router.get_postfinance_checkout_status", return_value=mismatched):
+        r = client.get(f"/orders/paiements/{pay_id}/poll-postfinance", headers=headers)
+        assert r.status_code == 409, r.text
+
+    pay_after = client.get(f"/orders/paiements/{pay_id}", headers=headers).json()
+    assert pay_after["statut"] != "FULFILL"
+    stock_after = client.get("/stock/", headers=admin_headers).json()
+    row = next(s for s in stock_after if s["id_livre"] == id_livre)
+    assert row["quantite_disponible"] == 5
+    assert row["quantite_reservee"] == 1
+
+    # 20 CHF book + 9 CHF default POST shipping fee = 29 CHF.
+    matching = {"state": "FULFILL", "status": "FULFILL", "amount": 29.0}
+    with patch("presentation.payment_router.get_postfinance_checkout_status", return_value=matching):
+        r = client.get(f"/orders/paiements/{pay_id}/poll-postfinance", headers=headers)
+        assert r.status_code == 200, r.text
+
+    pay_final = client.get(f"/orders/paiements/{pay_id}", headers=headers).json()
+    assert pay_final["statut"] == "FULFILL"
+
+
 def test_postfinance_iframe_session_and_confirm_local_mode(client: TestClient, register_and_login, uniq: str):
     """The actual frontend-used flow. PostFinance itself is mocked so this test
     is deterministic regardless of whether real sandbox credentials happen to

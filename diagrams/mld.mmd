@@ -9,6 +9,8 @@ erDiagram
     commande ||--o{ paiement : "id_commande"
     utilisateur ||--o{ scan_isbn : "id_utilisateur"
     livre ||--o{ scan_isbn : "id_livre"
+    ligne_commande ||--o{ stock_mouvement : "id_ligne_commande"
+    stock ||--o{ stock_mouvement : "id_stock"
 
     etat_usure {
         bigint id_etat_usure PK
@@ -76,4 +78,11 @@ erDiagram
         bigint id_livre FK
         string isbn_lu
         bool valide
+    }
+    stock_mouvement {
+        bigint id_mouvement PK
+        bigint id_ligne_commande FK
+        bigint id_stock FK
+        int quantite
+        datetime date_mouvement
     }

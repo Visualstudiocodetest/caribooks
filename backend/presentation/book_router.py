@@ -7,6 +7,7 @@ from infrastructure import crud_book, models
 from presentation.deps import AdminUser, DbSession
 from presentation.schemas import BookCreate, BookRead, BookUpdate
 from services.book_service import BookService
+from services.rate_limit import check_rate_limit
 
 router = APIRouter(prefix="/books", tags=["books"])
 
@@ -62,23 +63,50 @@ def get_book_by_isbn(isbn: str, db: DbSession):
     return _to_book_read(book) if book else None
 
 @router.get("/isbn-metadata/{isbn}")
-def get_isbn_metadata(isbn: str) -> Dict[str, Any]:
+def get_isbn_metadata(isbn: str, request: Request) -> Dict[str, Any]:
     """Proxy ISBN metadata lookup via OpenLibrary (single external source)."""
+    client_host = request.client.host if request.client else "unknown"
+    # Unauthenticated (scanning happens before the book exists locally), so key
+    # by client IP rather than a user id. Bounds how much of the shared
+    # 10-connection OpenLibrary client pool a single client can monopolize, and
+    # how hard we hammer OpenLibrary's own API (see M-3).
+    check_rate_limit(f"isbn_metadata:{client_host}", max_attempts=30, window_seconds=60)
     clean = isbn.strip().upper().replace("-", "")
 
     try:
         r = _openlibrary_client.get(
             f"https://openlibrary.org/api/books?bibkeys=ISBN:{clean}&format=json&jscmd=data",
         )
-        if r.status_code == 200:
-            data = r.json()
-            book = data.get(f"ISBN:{clean}")
-            if book and book.get("title"):
-                return book
-    except Exception:
-        pass
+    except httpx.TimeoutException as e:
+        raise HTTPException(
+            status_code=504,
+            detail="OpenLibrary ne répond pas (délai dépassé). Réessayez dans quelques instants.",
+        ) from e
+    except httpx.RequestError as e:
+        raise HTTPException(
+            status_code=502,
+            detail="Impossible de contacter OpenLibrary (problème réseau). Vérifiez la connexion internet.",
+        ) from e
 
-    raise HTTPException(status_code=404, detail="ISBN introuvable")
+    if r.status_code != 200:
+        raise HTTPException(
+            status_code=502,
+            detail=f"OpenLibrary a répondu avec une erreur (HTTP {r.status_code}). Le service est peut-être indisponible.",
+        )
+
+    try:
+        data = r.json()
+    except ValueError as e:
+        raise HTTPException(
+            status_code=502,
+            detail="Réponse OpenLibrary illisible (format inattendu).",
+        ) from e
+
+    book = data.get(f"ISBN:{clean}")
+    if book and book.get("title"):
+        return book
+
+    raise HTTPException(status_code=404, detail="ISBN introuvable dans OpenLibrary")
 
 
 @router.get("/{id_livre}", response_model=BookRead)
@@ -101,9 +129,11 @@ def create_book(book_in: BookCreate, request: Request, db: DbSession, _admin: Ad
 
 
 @router.put("/{id_livre}", response_model=BookRead)
-def update_book(id_livre: int, book_update: BookUpdate, db: DbSession, _admin: AdminUser):
+def update_book(id_livre: int, book_update: BookUpdate, request: Request, db: DbSession, _admin: AdminUser):
     service = BookService(db)
-    updated = service.update_book(id_livre, book_update.model_dump(exclude_unset=True))
+    updated = service.update_book(
+        id_livre, book_update.model_dump(exclude_unset=True), base_url=str(request.base_url)
+    )
     if not updated:
         raise HTTPException(status_code=404, detail="Livre introuvable.")
     return _to_book_read(updated)
