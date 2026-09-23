@@ -15,8 +15,8 @@ export default function ConditionsUtilisationPage() {
       <h2>1. Présentation du service</h2>
       <p>
         Caribooks est une plateforme de vente de livres de seconde main exploitée par{' '}
-        <strong>[NOM_ENTITE_LEGALE]</strong>, [FORME_JURIDIQUE], dont le siège social est situé au{' '}
-        [ADRESSE_COMPLETE], Suisse (ci-après &laquo;&nbsp;Caribooks&nbsp;&raquo;).
+        <strong>Caritas</strong>, dont le siège social est situé au{' '}
+        1 rue de la Paix, 1200 Genève, Suisse (ci-après &laquo;&nbsp;Caribooks&nbsp;&raquo;).
       </p>
       <p>
         Le service permet aux utilisateurs de parcourir le catalogue, d&apos;ajouter des articles
@@ -54,7 +54,7 @@ export default function ConditionsUtilisationPage() {
       <p>
         Les livraisons sont effectuées exclusivement en Suisse. Le délai indicatif est de 3 à 5
         jours ouvrés. L&apos;option Click &amp; Collect permet de retirer votre commande
-        directement auprès de [NOM_ENTITE_LEGALE] à l&apos;adresse [ADRESSE_COLLECTE].
+        directement auprès de La Recyclerie Caritas à l&apos;adresse Chemin de la Milice Plan les Ouates.
       </p>
 
       <h2>6. Droit de rétractation</h2>
@@ -62,7 +62,7 @@ export default function ConditionsUtilisationPage() {
         Conformément au droit suisse, les articles de seconde main vendus via cette plateforme ne
         sont pas soumis au droit de rétractation légal applicable aux biens neufs. Toutefois,
         Caribooks s&apos;engage à traiter tout litige avec bienveillance. Contactez-nous à{' '}
-        <a href="mailto:[EMAIL_CONTACT]">[EMAIL_CONTACT]</a> dans les 14 jours suivant la
+        <a href="mailto:alexandre.rey@estiam.com">alexandre.rey@estiam.com</a> dans les 14 jours suivant la
         réception.
       </p>
 
@@ -82,13 +82,13 @@ export default function ConditionsUtilisationPage() {
       <h2>9. Droit applicable</h2>
       <p>
         Les présentes conditions sont soumises au droit suisse. Tout litige sera soumis à la
-        juridiction exclusive des tribunaux de [CANTON], Suisse.
+        juridiction exclusive des tribunaux de Genève, Suisse.
       </p>
 
       <h2>10. Contact</h2>
       <p>
         Pour toute question relative aux présentes conditions :{' '}
-        <a href="mailto:[EMAIL_CONTACT]">[EMAIL_CONTACT]</a>
+        <a href="mailto:alexandre.rey@estiam.com">alexandre.rey@estiam.com</a>
       </p>
 
       <hr style={{ margin: '32px 0', border: 'none', borderTop: '1px solid var(--color-border)' }} />
