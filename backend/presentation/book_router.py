@@ -72,15 +72,36 @@ def get_isbn_metadata(isbn: str) -> Dict[str, Any]:
         r = _openlibrary_client.get(
             f"https://openlibrary.org/api/books?bibkeys=ISBN:{clean}&format=json&jscmd=data",
         )
-        if r.status_code == 200:
-            data = r.json()
-            book = data.get(f"ISBN:{clean}")
-            if book and book.get("title"):
-                return book
-    except Exception:
-        pass
+    except httpx.TimeoutException:
+        raise HTTPException(
+            status_code=504,
+            detail="OpenLibrary ne répond pas (délai dépassé). Réessayez dans quelques instants.",
+        )
+    except httpx.RequestError:
+        raise HTTPException(
+            status_code=502,
+            detail="Impossible de contacter OpenLibrary (problème réseau). Vérifiez la connexion internet.",
+        )
 
-    raise HTTPException(status_code=404, detail="ISBN introuvable")
+    if r.status_code != 200:
+        raise HTTPException(
+            status_code=502,
+            detail=f"OpenLibrary a répondu avec une erreur (HTTP {r.status_code}). Le service est peut-être indisponible.",
+        )
+
+    try:
+        data = r.json()
+    except ValueError:
+        raise HTTPException(
+            status_code=502,
+            detail="Réponse OpenLibrary illisible (format inattendu).",
+        )
+
+    book = data.get(f"ISBN:{clean}")
+    if book and book.get("title"):
+        return book
+
+    raise HTTPException(status_code=404, detail="ISBN introuvable dans OpenLibrary")
 
 
 @router.get("/{id_article}", response_model=BookRead)
